@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %} Telefono Home Page {% endblock %}
+{% block content%}
+	<ul class="nav nav-tabs">
+		<li class="nav-item">
+			<a class="nav-link active" href="/">Nummernfeld </a>
+		</li>
+		<li class="nav-item">
+			<a class="nav-link" href="/list">Liste</a>
+		</li>
+		<li class="nav-item">
+			<a class="nav-link" href="/upload">Upload</a>
+		</li>
+	</ul>
+	<div class="container-fluid">
+		<form action="#" method="post">
+			<p>Nummer die anrufen soll:</p>
+			<p><input type="number" name="nm" /></p>
+			<p><input type="submit" value="let it call"/></p>
+		</form>
+		<p>{{content}}</p>
+	</div>
+{% endblock %}

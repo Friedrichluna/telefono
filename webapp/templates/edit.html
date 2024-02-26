@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Edit Value</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css">
+</head>
+<body>
+    <div class="container mt-5">
+        <h2>Namen Bearbeiten</h2>
+        <form method="post">
+            <div class="form-group">
+                <label for="new_value">Neuer Name:</label>
+                <input type="text" class="form-control" id="new_value" name="new_value" value="{{ value }}" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Speichern</button>
+        </form>
+    </div>
+</body>
+</html>
