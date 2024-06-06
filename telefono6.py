@@ -144,6 +144,7 @@ def wait_for_digit (DialInUse, DialCounter, contButton, led):
 	dialedDigit = 0
 	switch = False
 	timeCounter = 0
+	trueZero = False
 	while True:
 		sleep(0.001)
 		timeCounter = timeCounter + 1
@@ -164,15 +165,19 @@ def wait_for_digit (DialInUse, DialCounter, contButton, led):
 		if dialWasActive:
 			timeCounter = 0
 			if dialedDigit > 9:
+				trueZero = True
 				dialedDigit = 0
 			print(dialedDigit)
 			break
-		if timeCounter > 200000:    #wird in Argument definiert
+		if timeCounter > 200000:
 			break
 		if not contButton.is_pressed:
 			break
 	led.off()
-	return dialedDigit
+	if (dialedDigit == 0 and trueZero) or dialedDigit != 0:
+		return dialedDigit
+	else:
+		return None
 
 #NeueZiffer = wait_for_Digit(ButtonLeft)
 #print(NeueZIgger)
