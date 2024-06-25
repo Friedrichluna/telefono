@@ -484,6 +484,7 @@ def main ():
 	tagesschau2000 = newWavName(2014)
 
 	maxRecordingTime = 1200     #in 0.1 sek
+	minRecordingTime = 20
 	pygame.init()
 
 	acuteMessagePlayed = True   #True: by default not acute
@@ -534,11 +535,15 @@ def main ():
 							break
 						if (not PickUp.is_pressed) or ButtonLeft.is_pressed:
 							led.off()
-							print("Aufnahme Nr.: " + str(newRecordingNumber) + " beendet.")
 							recfile2.stop_recording()
+							if recordingTime > minRecordingTime:
+								print ("Aufnahme Nr.: " + str(newRecordingNumber) + " beendet.")
+							else:
+								tts.say ("Aufnahme zu kurz")
+								delFile (myNewWavName)
 							sleep(2) #button release Time
 							break
-						if ButtonMiddle.is_pressed:      #alte Aufnahme auswählen
+						if ButtonMiddle.is_pressed:
 							led.off()
 							tts.say("Aufnahme Nr.: " + str(newRecordingNumber) + " abgebrochen")
 							recfile2.stop_recording()
@@ -546,6 +551,7 @@ def main ():
 							sleep(2) #button release Time
 							break
 
+			# open Menu
 			if ButtonMiddle.is_pressed:
 				pygame.mixer.music.stop() #Freiton wird unterbrochen
 				tts.say("Menü wird geöffnet.")
@@ -596,6 +602,8 @@ def main ():
 				noInterrupt = False
 				break
 		sleep(0.5)
+
+
 	speakerThread.join()
 	webAppProcess.terminate()
 	#GPIO.close()
