@@ -1,115 +1,153 @@
 #!/usr/bin/python3
 
+#-----------------------------recorder---------------------------------------
+import pyaudio
+import wave
+import time
+import subprocess
 
-try:
-	#-----------------------------recorder---------------------------------------
-	import pyaudio
-	import wave
-	import time
-	import subprocess
+class Recorder(object):
+	def __init__(self, channels=1, rate=44100, frames_per_buffer=512):
+		self.channels = channels
+		self.rate = rate
+		self.frames_per_buffer = frames_per_buffer
 
-	class Recorder(object):
+	def open(self, fname, mode='wb'):
+		return RecordingFile(fname, mode, self.channels, self.rate,
+		                     self.frames_per_buffer)
 
+class RecordingFile(object):
+	def __init__(self, fname, mode, channels,
+		     rate, frames_per_buffer):
+		self.fname = fname
+		self.mode = mode
+		self.channels = channels
+		self.rate = rate
+		self.frames_per_buffer = frames_per_buffer
+		self._pa = pyaudio.PyAudio()
+		self.wavefile = self._prepare_file(self.fname, self.mode)
+		self._stream = None
 
-		def __init__(self, channels=1, rate=44100, frames_per_buffer=512):
-			self.channels = channels
-			self.rate = rate
-			self.frames_per_buffer = frames_per_buffer
+	def __enter__(self):
+		return self
 
-		def open(self, fname, mode='wb'):
-			return RecordingFile(fname, mode, self.channels, self.rate,
-			                     self.frames_per_buffer)
+	def __exit__(self, exception, value, traceback):
+		self.close()
 
-	class RecordingFile(object):
-		def __init__(self, fname, mode, channels,
-		             rate, frames_per_buffer):
-			self.fname = fname
-			self.mode = mode
-			self.channels = channels
-			self.rate = rate
-			self.frames_per_buffer = frames_per_buffer
-			self._pa = pyaudio.PyAudio()
-			self.wavefile = self._prepare_file(self.fname, self.mode)
-			self._stream = None
+	def record(self, duration):
+		# Use a stream with no callback function in blocking mode
+		self._stream = self._pa.open(format=pyaudio.paInt16,
+		                             channels=self.channels,
+		                             rate=self.rate,
+		                             input=True,
+		                             frames_per_buffer=self.frames_per_buffer)
 
-		def __enter__(self):
-			return self
+		for _ in range(int(self.rate / self.frames_per_buffer * duration)):
+			audio = self._stream.read(self.frames_per_buffer)
+			self.wavefile.writeframes(audio)
 
-		def __exit__(self, exception, value, traceback):
-			self.close()
+		return None
 
-		def record(self, duration):
-			# Use a stream with no callback function in blocking mode
-			self._stream = self._pa.open(format=pyaudio.paInt16,
-			                             channels=self.channels,
-			                             rate=self.rate,
-			                             input=True,
-			                             frames_per_buffer=self.frames_per_buffer)
+	def start_recording(self):
+		# Use a stream with a callback in non-blocking mode
+		self._stream = self._pa.open(format=pyaudio.paInt16,
+		                             channels=self.channels,
+		                             rate=self.rate,
+		                             input=True,
+		                             frames_per_buffer=self.frames_per_buffer,
+		                             stream_callback=self.get_callback())
+		self._stream.start_stream()
+		return self
 
-			for _ in range(int(self.rate / self.frames_per_buffer * duration)):
-				audio = self._stream.read(self.frames_per_buffer)
-				self.wavefile.writeframes(audio)
+	def stop_recording(self):
+		self._stream.stop_stream()
+		return self
 
-			return None
-
-		def start_recording(self):
-			# Use a stream with a callback in non-blocking mode
-			self._stream = self._pa.open(format=pyaudio.paInt16,
-			                             channels=self.channels,
-			                             rate=self.rate,
-			                             input=True,
-			                             frames_per_buffer=self.frames_per_buffer,
-			                             stream_callback=self.get_callback())
-			self._stream.start_stream()
-			return self
-
-		def stop_recording(self):
-			self._stream.stop_stream()
-			return self
-
-		def get_callback(self):
-			def callback(in_data, frame_count, time_info, status):
-				self.wavefile.writeframes(in_data)
-				return in_data, pyaudio.paContinue
-			return callback
+	def get_callback(self):
+		def callback(in_data, frame_count, time_info, status):
+			self.wavefile.writeframes(in_data)
+			return in_data, pyaudio.paContinue
+		return callback
 
 
-		def close(self):
-			self._stream.close()
-			self._pa.terminate()
-			self.wavefile.close()
+	def close(self):
+		self._stream.close()
+		self._pa.terminate()
+		self.wavefile.close()
 
-		def _prepare_file(self, fname, mode='wb'):
-			wavefile = wave.open(fname, mode)
-			wavefile.setnchannels(self.channels)
-			wavefile.setsampwidth(self._pa.get_sample_size(pyaudio.paInt16))
-			wavefile.setframerate(self.rate)
-			return wavefile
+	def _prepare_file(self, fname, mode='wb'):
+		wavefile = wave.open(fname, mode)
+		wavefile.setnchannels(self.channels)
+		wavefile.setsampwidth(self._pa.get_sample_size(pyaudio.paInt16))
+		wavefile.setframerate(self.rate)
+		return wavefile
 
-	#rec = Recorder(channels=2)
-	#with rec.open('nonblocking.wav', 'wb') as recfile2:
-	#        recfile2.start_recording()
-	#        time.sleep(5.0)
-	#        recfile2.stop_recording()
-
-
-	#---------------------- Dial ---------------------------------------------------------------------
-
-	from gpiozero import Button, LED
-	from time import sleep
+#rec = Recorder(channels=2)
+#with rec.open('nonblocking.wav', 'wb') as recfile2:
+#        recfile2.start_recording()
+#        time.sleep(5.0)
+#        recfile2.stop_recording()
 
 
-	def wait_for_number(StopDialButton, contButton):
-		led.blink(on_time=0.1, off_time=0.1, n=None, background=True)
-		dialedNumber = 0
-		switch = False
-		timeCounter = 0
-		tureZero = False
-		while True:
-			sleep(0.001)
-			timeCounter = timeCounter + 1
-			dialedDigit = 0
-			dialWasActive = False
+
+#---------------------- Dial ---------------------------------------------------------------------
+
+from gpiozero import Button, LED
+from time import sleep
+
+
+def wait_for_number(StopDialButton, contButton):
+	led.blink(on_time=0.1, off_time=0.1, n=None, background=True)
+	dialedNumber = 0
+	switch = False
+	timeCounter = 0
+	tureZero = False
+	while True:
+		sleep(0.001)
+		timeCounter = timeCounter + 1
+		dialedDigit = 0
+		dialWasActive = False
+		while DialInUse.is_pressed:
+			sleep(0.01)
+			if (DialCounter.is_pressed == False) and (switch != True):
+				switch = True
+				dialedDigit = dialedDigit + 1
+				#print("+1")
+			elif DialCounter.is_pressed == True:
+				switch = False
+				#print("test")
+			dialWasActive = True
+		if dialWasActive:
+			timeCounter = 0
+			if dialedDigit > 9:
+				tureZero = True
+				dialedDigit = 0
+			if (dialedDigit == 0 and tureZero) or dialedDigit != 0:
+				dialedNumber = dialedNumber*10 + dialedDigit
+				tureZero = False
+				print(dialedDigit)
+		if StopDialButton.is_pressed or timeCounter > 200000:    #wird in Argument definiert
+			break
+		if contButton.is_pressed == False:
+			break
+	led.off()
+	return dialedNumber
+
+#NeueZahl = wait_for_number(ButtonLeft, Pickup)
+#print(NeueZahl)
+
+def wait_for_digit(contButton):
+	led.blink(on_time=0.1, off_time=0.1, n=None, background=True)
+	dialedDigit = 0
+	switch = False
+	timeCounter = 0
+	while True:
+		sleep(0.001)
+		timeCounter = timeCounter + 1
+		dialedDigit = 0
+		dialWasActive = False
+		if DialInUse.is_pressed:
+			sleep(0.2)
 			while DialInUse.is_pressed:
 				sleep(0.01)
 				if (DialCounter.is_pressed == False) and (switch != True):
@@ -120,170 +158,313 @@ try:
 					switch = False
 					#print("test")
 				dialWasActive = True
-			if dialWasActive:
-				timeCounter = 0
-				if dialedDigit > 9:
-					tureZero = True
-					dialedDigit = 0
-				if (dialedDigit == 0 and tureZero) or dialedDigit != 0:
-					dialedNumber = dialedNumber*10 + dialedDigit
-					tureZero = False
-					print(dialedDigit)
-			if StopDialButton.is_pressed or timeCounter > 200000:    #wird in Argument definiert
-				break
-			if contButton.is_pressed == False:
-				break
-		led.off()
-		return dialedNumber
+		if dialWasActive:
+			timeCounter = 0
+			if dialedDigit > 9:
+				dialedDigit = 0
+			print(dialedDigit)
+			break
+		if timeCounter > 200000:    #wird in Argument definiert
+			break
+		if contButton.is_pressed == False:
+			break
+	led.off()
+	return dialedDigit
 
-	#NeueZahl = wait_for_number(ButtonLeft, Pickup)
-	#print(NeueZahl)
-
-	def wait_for_digit(contButton):
-		led.blink(on_time=0.1, off_time=0.1, n=None, background=True)
-		dialedDigit = 0
-		switch = False
-		timeCounter = 0
-		while True:
-			sleep(0.001)
-			timeCounter = timeCounter + 1
-			dialedDigit = 0
-			dialWasActive = False
-			if DialInUse.is_pressed:
-				sleep(0.2)
-				while DialInUse.is_pressed:
-					sleep(0.01)
-					if (DialCounter.is_pressed == False) and (switch != True):
-						switch = True
-						dialedDigit = dialedDigit + 1
-						#print("+1")
-					elif DialCounter.is_pressed == True:
-						switch = False
-						#print("test")
-					dialWasActive = True
-			if dialWasActive:
-				timeCounter = 0
-				if dialedDigit > 9:
-					dialedDigit = 0
-				print(dialedDigit)
-				break
-			if timeCounter > 200000:    #wird in Argument definiert
-				break
-			if contButton.is_pressed == False:
-				break
-		led.off()
-		return dialedDigit
-
-	#NeueZiffer = wait_for_Digit(ButtonLeft)
-	#print(NeueZIgger)
+#NeueZiffer = wait_for_Digit(ButtonLeft)
+#print(NeueZIgger)
 
 
-	#-----------------------------Memory Handle-------------------------------------------------------
 
-	def returnFileText(fileName):
-		file1 = open(str(fileName),"r")
-		readText = file1.read()
-		file1.close()
-		return(readText)
+#-----------------------------Memory Handle-------------------------------------------------------
 
-	def overWriteFile(fileName, writtenText):
-		file1 = open(fileName,"w")
-		file1.write(str(writtenText))
-		file1.close()
+def returnFileText(fileName):
+	file1 = open(str(fileName),"r")
+	readText = file1.read()
+	file1.close()
+	return(readText)
 
-	#oldText = returnFileText("fileNumber.txt")
-	#overWriteFile("fileNumber.txt", str(int(oldText) + 1))
-	#NewText = returnFileText("fileNumber.txt")
-	#print(NewText)
+def overWriteFile(fileName, writtenText):
+	file1 = open(fileName,"w")
+	file1.write(str(writtenText))
+	file1.close()
+
+#oldText = returnFileText("fileNumber.txt")
+#overWriteFile("fileNumber.txt", str(int(oldText) + 1))
+#NewText = returnFileText("fileNumber.txt")
+#print(NewText)
 
 
-	#---------------------------Pygame AudioPlayer------------------------------------
-	#needs GPIOZero buttons
-	import pygame
+#---------------------------Pygame AudioPlayer------------------------------------
+#needs GPIOZero buttons
+import pygame
 
-	pygame.mixer.init()
-	def playFile(fileName, breakButton):
-		if fileExists(fileName) == True:
-			pygame.mixer.music.load(fileName)
-			pygame.mixer.music.play()
-			while pygame.mixer.music.get_busy():
-					if breakButton.is_pressed:
-						pygame.mixer.music.stop()
-		else:
-			ttsEngine("Diese Aufnahme existiert noch nicht.")
-
-	#playFile("audio.wav", ButtonLeft)
-
-	def playFile2(fileName, breakButton1, breakButton2): #zwei abbruch Bedingungen
+def playFile(fileName, breakButton):
+	if fileExists(fileName) == True:
 		pygame.mixer.music.load(fileName)
 		pygame.mixer.music.play()
 		while pygame.mixer.music.get_busy():
-				if breakButton1.is_pressed or breakButton2.is_pressed:
+				if breakButton.is_pressed:
 					pygame.mixer.music.stop()
-	def playFile0(fileName): #keine Abbruchbedingung (muss seperat gesetzt werden)
+	else:
+		ttsEngine("Diese Aufnahme existiert noch nicht.")
+
+#playFile("audio.wav", ButtonLeft)
+
+def playFile2(fileName, breakButton1, breakButton2): #zwei abbruch Bedingungen
+	pygame.mixer.music.load(fileName)
+	pygame.mixer.music.play()
+	while pygame.mixer.music.get_busy():
+			if breakButton1.is_pressed or breakButton2.is_pressed:
+				pygame.mixer.music.stop()
+def playFile0(fileName): #keine Abbruchbedingung (muss seperat gesetzt werden)
+	pygame.mixer.music.load(fileName)
+	pygame.mixer.music.play()
+
+
+def playFileNeg(fileName, contButton):
+	if fileExists(fileName) == True:
 		pygame.mixer.music.load(fileName)
 		pygame.mixer.music.play()
 
+		while pygame.mixer.music.get_busy():
+			sleep(0.01)
+			if contButton.is_pressed == False:
+				pygame.mixer.music.stop()
+	else:
+		ttsEngine("Diese Aufnahme existiert noch nicht.")
 
-	def playFileNeg(fileName, contButton):
-		if fileExists(fileName) == True:
-			pygame.mixer.music.load(fileName)
-			pygame.mixer.music.play()
+#playFileNeg("audio.wav", PickUp)
 
-			while pygame.mixer.music.get_busy():
-				sleep(0.01)
-				if contButton.is_pressed == False:
-					pygame.mixer.music.stop()
-		else:
-			ttsEngine("Diese Aufnahme existiert noch nicht.")
+#--------------------------File Name Generatot----------------------------------
 
-	#playFileNeg("audio.wav", PickUp)
+def newWavName(_nudeWavName, _newWavNumber):
+	newWavName = _nudeWavName + str(_newWavNumber) + ".wav"
+	return newWavName
 
-	#--------------------------File Name Generatot----------------------------------
+#--------------------------File management-----------------------------------------
 
-	def newWavName(_nudeWavName, _newWavNumber):
-		newWavName = _nudeWavName + str(_newWavNumber) + ".wav"
-		return newWavName
+import os
 
-	#--------------------------File management-----------------------------------------
+from os.path import exists as fileExists
 
-	import os
+def delFile(_fileName):
+	os.remove(_fileName)
 
-	from os.path import exists as fileExists
+#--------------------------FindNewFile-----------------------------------------
+def findNewFileName(nudeWavName):
+	counter = 0
+	while True:
+		counter = counter + 1
+		myNewWavName = newWavName(nudeWavName, counter)
+		if (fileExists(myNewWavName)) == False:
+			break
+	return myNewWavName
 
-	def delFile(_fileName):
-		os.remove(_fileName)
+#--------------------------Text to Speech--------------------------------------
+#import sys
+#    sys.path.append('/home/pi/.local/lib/python3.9/site-packages')
 
-	#--------------------------FindNewFile-----------------------------------------
-	def findNewFileName(nudeWavName):
-		counter = 0
-		while True:
-			counter = counter + 1
-			myNewWavName = newWavName(nudeWavName, counter)
-			if (fileExists(myNewWavName)) == False:
-				break
-		return myNewWavName
+import pyttsx3
 
-	#--------------------------Text to Speech--------------------------------------
-	#import sys
-	#    sys.path.append('/home/pi/.local/lib/python3.9/site-packages')
+def ttsEngine(textToSay):
+	print(textToSay)
+	_ttsEngine.say(textToSay)
+	#_ttsEngine.startLoop(False)
+	_ttsEngine.runAndWait()
 
-	import pyttsx3
+
+#--------------------------Relay-----------------------------------------------
+import RPi.GPIO as GPIO
+from threading import Thread
+from threading import Event
+
+
+
+#---------------------------Ringing------------------------------------
+#from time import sleep
+ringTone = "/home/pi/telefono/relevant/telephone-ring-02.wav"
+
+def ringing(callingFile_):
+	activateSpeaker()
+	playFile(ringTone, PickUp) #hört auf wenn PickUp == True
+	idleSpeaker()
+	sleep(1) #test
+	playFileNeg(callingFile_, PickUp) #hört auf wenn PickUp == False
+
+
+#--------------------------CallingRoutine----------------------------
+from datetime import datetime
+from random import seed
+from random import randint
+
+minHour = 15
+maxHour = 21
+needNewTime = None
+
+def getTimeInt():
+	now = datetime.now()
+	current_time = now.strftime("%H%M%S")
+	return(int(current_time))
+
+#seed(5) #ein Seed der 19:00Uhr als erstes ausspuckt
+
+def newRandTimeInt():
+	randHour = randint(minHour, maxHour) #es klingelt zwischen 15 und 20Uhr
+	randTimeInt_ = randHour * 10000
+	return randTimeInt_
+
+
+def callRoutine():  #returns True for 1 sek per day
+	global needNewTime
+	global randTimeInt
+	currentTimeInt = getTimeInt()
+	if needNewTime == None:
+		randTimeInt = currentTimeInt  #dann jetzige Zeit nehmen
+		needNewTime = False
+		print("ring Time: " + str(randTimeInt))  #Test
+		print("current Time: " + str(currentTimeInt))
+	if ((currentTimeInt > maxHour*10000) or (currentTimeInt < minHour*10000)) and needNewTime:  #wenn nach Anrufszeit und no k>
+		randTimeInt = newRandTimeInt()  #dann neue Zeit erstellen
+		needNewTime = False
+		print("new Random Time:") #Test
+		print(randTimeInt) #test
+	if currentTimeInt == randTimeInt:
+		needNewTime = True
+		return True
+
+def callInQue(queFileAdress, nudeWavName):
+	callingFileNumber = returnFileText(queFileAdress)
+	callingFile = newWavName(nudeWavName, callingFileNumber)
+
+	if callingFileNumber != "":
+		print("ringing Que!!")
+		ringing(callingFile)
+		overWriteFile(queFileAdress, "")
+
+
+def getWeekDayInt():
+	now = datetime.now()
+	return now.weekday()
+
+
+#---------------------------acuteMessage-----------------------------------------------
+def findHighestMessage(nudeWavName): #gibt den Namen der höchsten existierenden Datei zurück
+	counter = 0
+	while True:
+		countedWavName = newWavName(nudeWavName, counter)
+		if fileExists(countedWavName) == False: #sucht die erste Datei die nicht existiert
+			print("Höchste Nachricht: " + newWavName(nudeWavName, counter - 1))
+			return newWavName(nudeWavName, counter - 1)
+		counter = counter + 1
+
+def findHighestMessageNumber(nudeWavName): #gibt den Namen der höchsten existierenden Datei zurück
+	counter = 0
+	while True:
+		countedWavName = newWavName(nudeWavName, counter)
+		if fileExists(countedWavName) == False: #sucht die erste Datei die nicht existiert
+			return counter - 1
+		counter = counter + 1
+
+
+#---------------------------random old Message-----------------------------------------
+#from random import randint
+from os import listdir
+from os.path import isfile, join
+
+def fileNumbers():
+	fileNameList = [f for f in listdir("/home/pi/telefono") if isfile(join("/home/pi/telefono", f))]
+	#print(fileNameList)
+	return fileNameList
+
+def findRandomMessage():
+	fileNames = fileNumbers()
+	maxMessageNumber = len(fileNames) - 1
+	randomMessageNumber = randint(0, maxMessageNumber)
+	newWavName = "/home/pi/telefono/" + str(fileNames[randomMessageNumber])
+	print("Random Nachricht: " + newWavName)
+	return newWavName
+#---------------------------Shout------------------------------------------------------
+
+
+def shout(wavName):
+	activateSpeaker()
+	sleep(2)
+	playFile(wavName, PickUp) #hört auf wenn PickUp == True
+	idleSpeaker()
+
+
+#---------------------------Menu-------------------------------------------------------
+
+def uhrzeitAnsagen():
+	now = datetime.now()
+	tag = str(now.strftime("%d"))
+	monat = str(now.strftime("%m"))
+	jahr = str(now.strftime("%Y"))
+	stunde = str(now.strftime("%H"))
+	minute = str(now.strftime("%M"))
+	timeInWords = "Es ist " + stunde + "Uhr " + minute + " am " + tag + "." + monat + "." + jahr + "."
+
+	ttsEngine(timeInWords)
+
+supperPrayers = [101, 102, 103, 104, 105]
+def zufaelligesGebet(nudeWavName):
+	now = datetime.now()
+	second = now.strftime("%S")
+	seed(second)
+	maxPrayer = len(supperPrayers) - 1
+	randPrayerNumber = randint(0, maxPrayer)
+
+	print("playing: " + str(randPrayerNumber))
+	supperPrayerNumber = supperPrayers[randPrayerNumber]
+
+	supperPrayerName = newWavName(nudeWavName, supperPrayerNumber)
+	#print(supperPrayerName)
+	playFileNeg(supperPrayerName, PickUp)
+
+gebetswuerfelListe = [201, 202, 203, 204, 205, 206]
+def gebetswuerfel(nudeWavName):
+	now = datetime.now()
+	second = now.strftime("%S")
+	seed(second)
+	maxPrayer = len(gebetswuerfelListe) - 1
+	randPrayerNumber = randint(0, maxPrayer)
+
+	print("playing: " + str(randPrayerNumber))
+	supperPrayerNumber = gebetswuerfelListe[randPrayerNumber]
+
+	supperPrayerName = newWavName(nudeWavName, supperPrayerNumber)
+	#print(supperPrayerName)
+	playFileNeg(supperPrayerName, PickUp)
+
+
+paterListe = [2, 10, 11, 19, 22, 26, 30, 88]
+def randomPater(nudeWavName):
+	now = datetime.now()
+	second = now.strftime("%S")
+	seed(second)
+	maxPrayer = len(paterListe) - 1
+	randPrayerNumber = randint(0, maxPrayer)
+
+	print("playing: " + str(randPrayerNumber))
+	supperPrayerNumber = paterListe[randPrayerNumber]
+
+	supperPrayerName = newWavName(nudeWavName, supperPrayerNumber)
+	#print(supperPrayerName)
+	playFileNeg(supperPrayerName, PickUp)
+
+
+try:
+	# setup pygame
+	pygame.mixer.init()
+
+	# setup text to speech
 	_ttsEngine = pyttsx3.init()
 	_ttsEngine.setProperty('rate', 140)    # Speed percent (can go over 100)
 	_ttsEngine.setProperty('volume', 1)  # Volume 0-1
 	_ttsEngine.setProperty('voice', "german+f2") #sprache auf Deutsch ändern
 
-	def ttsEngine(textToSay):
-		print(textToSay)
-		_ttsEngine.say(textToSay)
-		#_ttsEngine.startLoop(False)
-		_ttsEngine.runAndWait()
-	#--------------------------Relay-----------------------------------------------
-	import RPi.GPIO as GPIO
-	from threading import Thread
-	from threading import Event
-
+	# setup Relay
 	GPIO.setmode(GPIO.BCM) # GPIO Numbers instead of board numbers
 	RELAIS_1_GPIO = 4
 	GPIO.setup(RELAIS_1_GPIO, GPIO.OUT) # GPIO Assign mode
@@ -311,178 +492,6 @@ try:
 	def idleSpeaker():
 		spkEvent.clear()
 
-	#---------------------------Ringing------------------------------------
-	#from time import sleep
-	ringTone = "/home/pi/telefono/relevant/telephone-ring-02.wav"
-
-	def ringing(callingFile_):
-		activateSpeaker()
-		playFile(ringTone, PickUp) #hört auf wenn PickUp == True
-		idleSpeaker()
-		sleep(1) #test
-		playFileNeg(callingFile_, PickUp) #hört auf wenn PickUp == False
-
-	#--------------------------CallingRoutine----------------------------
-	from datetime import datetime
-	from random import seed
-	from random import randint
-
-	minHour = 15
-	maxHour = 21
-	needNewTime = None
-
-	def getTimeInt():
-		now = datetime.now()
-		current_time = now.strftime("%H%M%S")
-		return(int(current_time))
-
-	#seed(5) #ein Seed der 19:00Uhr als erstes ausspuckt
-
-	def newRandTimeInt():
-		randHour = randint(minHour, maxHour) #es klingelt zwischen 15 und 20Uhr
-		randTimeInt_ = randHour * 10000
-		return randTimeInt_
-
-
-	def callRoutine():  #returns True for 1 sek per day
-		global needNewTime
-		global randTimeInt
-		currentTimeInt = getTimeInt()
-		if needNewTime == None:
-			randTimeInt = currentTimeInt  #dann jetzige Zeit nehmen
-			needNewTime = False
-			print("ring Time: " + str(randTimeInt))  #Test
-			print("current Time: " + str(currentTimeInt))
-		if ((currentTimeInt > maxHour*10000) or (currentTimeInt < minHour*10000)) and needNewTime:  #wenn nach Anrufszeit und no k>
-			randTimeInt = newRandTimeInt()  #dann neue Zeit erstellen
-			needNewTime = False
-			print("new Random Time:") #Test
-			print(randTimeInt) #test
-		if currentTimeInt == randTimeInt:
-			needNewTime = True
-			return True
-
-	def callInQue(queFileAdress, nudeWavName):
-		callingFileNumber = returnFileText(queFileAdress)
-		callingFile = newWavName(nudeWavName, callingFileNumber)
-
-		if callingFileNumber != "":
-			print("ringing Que!!")
-			ringing(callingFile)
-			overWriteFile(queFileAdress, "")
-
-
-	def getWeekDayInt():
-		now = datetime.now()
-		return now.weekday()
-
-
-	#---------------------------acuteMessage-----------------------------------------------
-	def findHighestMessage(nudeWavName): #gibt den Namen der höchsten existierenden Datei zurück
-		counter = 0
-		while True:
-			countedWavName = newWavName(nudeWavName, counter)
-			if fileExists(countedWavName) == False: #sucht die erste Datei die nicht existiert
-				print("Höchste Nachricht: " + newWavName(nudeWavName, counter - 1))
-				return newWavName(nudeWavName, counter - 1)
-			counter = counter + 1
-
-	def findHighestMessageNumber(nudeWavName): #gibt den Namen der höchsten existierenden Datei zurück
-		counter = 0
-		while True:
-			countedWavName = newWavName(nudeWavName, counter)
-			if fileExists(countedWavName) == False: #sucht die erste Datei die nicht existiert
-				return counter - 1
-			counter = counter + 1
-
-
-	#---------------------------random old Message-----------------------------------------
-	#from random import randint
-	from os import listdir
-	from os.path import isfile, join
-
-	def fileNumbers():
-		fileNameList = [f for f in listdir("/home/pi/telefono") if isfile(join("/home/pi/telefono", f))]
-		#print(fileNameList)
-		return fileNameList
-
-	def findRandomMessage():
-		fileNames = fileNumbers()
-		maxMessageNumber = len(fileNames) - 1
-		randomMessageNumber = randint(0, maxMessageNumber)
-		newWavName = "/home/pi/telefono/" + str(fileNames[randomMessageNumber])
-		print("Random Nachricht: " + newWavName)
-		return newWavName
-	#---------------------------Shout------------------------------------------------------
-
-
-	def shout(wavName):
-		activateSpeaker()
-		sleep(2)
-		playFile(wavName, PickUp) #hört auf wenn PickUp == True
-		idleSpeaker()
-
-
-	#---------------------------Menu-------------------------------------------------------
-
-
-
-	def uhrzeitAnsagen():
-		now = datetime.now()
-		tag = str(now.strftime("%d"))
-		monat = str(now.strftime("%m"))
-		jahr = str(now.strftime("%Y"))
-		stunde = str(now.strftime("%H"))
-		minute = str(now.strftime("%M"))
-		timeInWords = "Es ist " + stunde + "Uhr " + minute + " am " + tag + "." + monat + "." + jahr + "."
-
-		ttsEngine(timeInWords)
-
-	supperPrayers = [101, 102, 103, 104, 105]
-	def zufaelligesGebet(nudeWavName):
-		now = datetime.now()
-		second = now.strftime("%S")
-		seed(second)
-		maxPrayer = len(supperPrayers) - 1
-		randPrayerNumber = randint(0, maxPrayer)
-
-		print("playing: " + str(randPrayerNumber))
-		supperPrayerNumber = supperPrayers[randPrayerNumber]
-
-		supperPrayerName = newWavName(nudeWavName, supperPrayerNumber)
-		#print(supperPrayerName)
-		playFileNeg(supperPrayerName, PickUp)
-
-	gebetswuerfelListe = [201, 202, 203, 204, 205, 206]
-	def gebetswuerfel(nudeWavName):
-		now = datetime.now()
-		second = now.strftime("%S")
-		seed(second)
-		maxPrayer = len(gebetswuerfelListe) - 1
-		randPrayerNumber = randint(0, maxPrayer)
-
-		print("playing: " + str(randPrayerNumber))
-		supperPrayerNumber = gebetswuerfelListe[randPrayerNumber]
-
-		supperPrayerName = newWavName(nudeWavName, supperPrayerNumber)
-		#print(supperPrayerName)
-		playFileNeg(supperPrayerName, PickUp)
-
-
-	paterListe = [2, 10, 11, 19, 22, 26, 30, 88]
-	def randomPater(nudeWavName):
-		now = datetime.now()
-		second = now.strftime("%S")
-		seed(second)
-		maxPrayer = len(paterListe) - 1
-		randPrayerNumber = randint(0, maxPrayer)
-
-		print("playing: " + str(randPrayerNumber))
-		supperPrayerNumber = paterListe[randPrayerNumber]
-
-		supperPrayerName = newWavName(nudeWavName, supperPrayerNumber)
-		#print(supperPrayerName)
-		playFileNeg(supperPrayerName, PickUp)
 
 	#______________________________________________________________________________________
 	#---------------------------Program----------------------------------------------------
