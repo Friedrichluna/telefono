@@ -1,5 +1,8 @@
 #!/usr/bin/python3
 
+
+import sys
+
 #-----------------------------recorder---------------------------------------
 import pyaudio
 import wave
@@ -454,7 +457,7 @@ def randomPater(nudeWavName):
 	playFileNeg(supperPrayerName, PickUp)
 
 
-try:
+def main ():
 	# setup pygame
 	pygame.mixer.init()
 
@@ -633,13 +636,17 @@ try:
 	#GPIO.close()
 	#GPIOZero.close()
 
-except Exception as Argument:
+if __name__ == '__main__':
+	try:
+		main ()
 
-	# creating/opening a file
-	f = open("home/pi/telefono/relevant/telefonoCrashLog.txt", "a")
+	except Exception as Argument:
 
-	# writing in the file
-	f.write(str(Argument))
+		# creating/opening a file
+		f = open("home/pi/telefono/relevant/telefonoCrashLog.txt", "a")
 
-	# closing the file
-	f.close()
+		# writing in the file
+		f.write(str(Argument))
+
+		# closing the file
+		f.close()
