@@ -241,10 +241,12 @@ def playFileNeg(tts, fileName, contButton):
 
 #--------------------------File Name Generator----------------------------------
 
-def newWavName(_newWavNumber):
-	_nudeWavName = "/home/pi/telefono/recording"       #WavDateiname ohne nummer und .wav
-	newWavName = _nudeWavName + str(_newWavNumber) + ".wav"
-	return newWavName
+# WavDateiname ohne nummer und .wav
+WAV_BASE_PATH = "/home/pi/telefono/recording"
+WAV_EXT = ".wav"
+
+def newWavName(wav_number):
+	return WAV_BASE_PATH + str(wav_number) + WAV_EXT
 
 #--------------------------File management-----------------------------------------
 
