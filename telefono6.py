@@ -268,6 +268,7 @@ def findNewFileName(nudeWavName):
 #import sys
 #    sys.path.append('/home/pi/.local/lib/python3.9/site-packages')
 
+import datetime
 import pyttsx3
 
 class TTS():
@@ -284,6 +285,16 @@ class TTS():
 		self.__engine.say(text)
 		#self.__engine.startLoop(False)
 		self.__engine.runAndWait()
+
+	def say_time (self):
+		print("uhrzeit ansagen")
+
+		FORMAT = "Es ist %H Uhr %M am %d.%m.%Y."
+		now = datetime.datetime.now()
+		timeInWords = now.strftime (FORMAT)
+
+		self.say(timeInWords)
+
 
 
 #--------------------------Relay-----------------------------------------------
@@ -407,13 +418,6 @@ def shout(tts, wavName):
 
 
 #---------------------------Menu-------------------------------------------------------
-
-def uhrzeitAnsagen(tts):
-	FORMAT = "Es ist %H Uhr %M am %d.%m.%Y."
-	now = datetime.now()
-	timeInWords = now.strftime (FORMAT)
-
-	tts.say(timeInWords)
 
 supperPrayers = [101, 102, 103, 104, 105]
 def zufaelligesGebet(tts, nudeWavName):
@@ -586,8 +590,7 @@ def main ():
 				tts.say("Menü wird geöffnet.")
 				dialedOption = wait_for_digit(PickUp)
 				if dialedOption == 0:
-					print("uhrzeit ansagen")
-					uhrzeitAnsagen(tts)
+					tts.say_time ()
 				elif dialedOption == 1:
 					zufaelligesGebet(tts, nudeWavName)
 				elif dialedOption == 2:
