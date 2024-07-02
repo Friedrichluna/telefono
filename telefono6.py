@@ -275,6 +275,8 @@ import datetime
 import pyttsx3
 
 class TTS():
+	supperPrayers = [101, 102, 103, 104, 105]
+
 	def __init__ (self):
 		self.__engine = pyttsx3.init()
 		self.__engine.setProperty('rate', 140)    # Speed percent (can go over 100)
@@ -297,6 +299,23 @@ class TTS():
 		timeInWords = now.strftime (FORMAT)
 
 		self.say(timeInWords)
+
+	def _random (self, _list):
+		now = datetime.now()
+		second = now.strftime("%S")
+		seed(second)
+		index = randint(0, len(_list) - 1)
+
+		print("playing: " + str(index))
+		number = _list[index]
+
+		filename = newWavName(number)
+		#print(filename)
+		playFileNeg(self, filename, PickUp)
+
+	def random_prayer (self):
+		self._random (self.supperPrayers)
+
 
 
 
@@ -421,21 +440,6 @@ def shout(tts, wavName):
 
 
 #---------------------------Menu-------------------------------------------------------
-
-supperPrayers = [101, 102, 103, 104, 105]
-def zufaelligesGebet(tts):
-	now = datetime.now()
-	second = now.strftime("%S")
-	seed(second)
-	maxPrayer = len(supperPrayers) - 1
-	randPrayerNumber = randint(0, maxPrayer)
-
-	print("playing: " + str(randPrayerNumber))
-	supperPrayerNumber = supperPrayers[randPrayerNumber]
-
-	supperPrayerName = newWavName(supperPrayerNumber)
-	#print(supperPrayerName)
-	playFileNeg(tts, supperPrayerName, PickUp)
 
 gebetswuerfelListe = [201, 202, 203, 204, 205, 206]
 def gebetswuerfel(tts):
@@ -593,7 +597,7 @@ def main ():
 				if dialedOption == 0:
 					tts.say_time ()
 				elif dialedOption == 1:
-					zufaelligesGebet(tts)
+					tts.random_prayer ()
 				elif dialedOption == 2:
 					gebetswuerfel(tts)
 				elif dialedOption == 3:
