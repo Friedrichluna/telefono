@@ -258,14 +258,13 @@ def delFile(_fileName):
 	os.remove(_fileName)
 
 #--------------------------FindNewFile-----------------------------------------
-def findNewFileName():
-	counter = 0
-	while True:
-		counter = counter + 1
-		myNewWavName = newWavName(counter)
-		if (fileExists(myNewWavName)) == False:
-			break
-	return myNewWavName
+def findNewFileName ():
+	counter = 1
+	filename = newWavName (counter)
+	while os.path.exists (filename):
+		counter += 1
+		filename = newWavName (counter)
+	return filename
 
 #--------------------------Text to Speech--------------------------------------
 #import sys
@@ -394,22 +393,26 @@ def getWeekDayInt():
 
 
 #---------------------------acuteMessage-----------------------------------------------
-def findHighestMessage(): #gibt den Namen der höchsten existierenden Datei zurück
+# find the highest existing file, by looking for the first non-existing
+def findHighestMessage ():
 	counter = 0
-	while True:
-		countedWavName = newWavName(counter)
-		if fileExists(countedWavName) == False: #sucht die erste Datei die nicht existiert
-			print("Höchste Nachricht: " + newWavName(counter - 1))
-			return newWavName(counter - 1)
-		counter = counter + 1
+	filename = newWavName (counter)
+	while os.path.exists (filename):
+		counter += 1
+		filename = newWavName (counter)
 
-def findHighestMessageNumber(): #gibt den Namen der höchsten existierenden Datei zurück
+	print("Höchste Nachricht: " + newWavName (counter - 1))
+	return newWavName (counter - 1)
+
+
+# find the highest existing file, by looking for the first non-existing
+def findHighestMessageNumber ():
 	counter = 0
-	while True:
-		countedWavName = newWavName(counter)
-		if fileExists(countedWavName) == False: #sucht die erste Datei die nicht existiert
-			return counter - 1
-		counter = counter + 1
+	filename = newWavName (counter)
+	while os.path.exists (filename):
+		counter += 1
+		filename = newWavName (counter)
+	return counter - 1
 
 
 #---------------------------random old Message-----------------------------------------
