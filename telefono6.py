@@ -239,9 +239,10 @@ def playFileNeg(tts, fileName, contButton):
 
 #playFileNeg(tts, "audio.wav", PickUp)
 
-#--------------------------File Name Generatot----------------------------------
+#--------------------------File Name Generator----------------------------------
 
-def newWavName(_nudeWavName, _newWavNumber):
+def newWavName(_newWavNumber):
+	_nudeWavName = "/home/pi/telefono/recording"       #WavDateiname ohne nummer und .wav
 	newWavName = _nudeWavName + str(_newWavNumber) + ".wav"
 	return newWavName
 
@@ -255,11 +256,11 @@ def delFile(_fileName):
 	os.remove(_fileName)
 
 #--------------------------FindNewFile-----------------------------------------
-def findNewFileName(nudeWavName):
+def findNewFileName():
 	counter = 0
 	while True:
 		counter = counter + 1
-		myNewWavName = newWavName(nudeWavName, counter)
+		myNewWavName = newWavName(counter)
 		if (fileExists(myNewWavName)) == False:
 			break
 	return myNewWavName
@@ -356,9 +357,9 @@ def callRoutine():  #returns True for 1 sek per day
 		needNewTime = True
 		return True
 
-def callInQue(tts, queFileAdress, nudeWavName):
+def callInQue(tts, queFileAdress):
 	callingFileNumber = returnFileText(queFileAdress)
-	callingFile = newWavName(nudeWavName, callingFileNumber)
+	callingFile = newWavName(callingFileNumber)
 
 	if callingFileNumber != "":
 		print("ringing Que!!")
@@ -372,19 +373,19 @@ def getWeekDayInt():
 
 
 #---------------------------acuteMessage-----------------------------------------------
-def findHighestMessage(nudeWavName): #gibt den Namen der höchsten existierenden Datei zurück
+def findHighestMessage(): #gibt den Namen der höchsten existierenden Datei zurück
 	counter = 0
 	while True:
-		countedWavName = newWavName(nudeWavName, counter)
+		countedWavName = newWavName(counter)
 		if fileExists(countedWavName) == False: #sucht die erste Datei die nicht existiert
-			print("Höchste Nachricht: " + newWavName(nudeWavName, counter - 1))
-			return newWavName(nudeWavName, counter - 1)
+			print("Höchste Nachricht: " + newWavName(counter - 1))
+			return newWavName(counter - 1)
 		counter = counter + 1
 
-def findHighestMessageNumber(nudeWavName): #gibt den Namen der höchsten existierenden Datei zurück
+def findHighestMessageNumber(): #gibt den Namen der höchsten existierenden Datei zurück
 	counter = 0
 	while True:
-		countedWavName = newWavName(nudeWavName, counter)
+		countedWavName = newWavName(counter)
 		if fileExists(countedWavName) == False: #sucht die erste Datei die nicht existiert
 			return counter - 1
 		counter = counter + 1
@@ -420,7 +421,7 @@ def shout(tts, wavName):
 #---------------------------Menu-------------------------------------------------------
 
 supperPrayers = [101, 102, 103, 104, 105]
-def zufaelligesGebet(tts, nudeWavName):
+def zufaelligesGebet(tts):
 	now = datetime.now()
 	second = now.strftime("%S")
 	seed(second)
@@ -430,12 +431,12 @@ def zufaelligesGebet(tts, nudeWavName):
 	print("playing: " + str(randPrayerNumber))
 	supperPrayerNumber = supperPrayers[randPrayerNumber]
 
-	supperPrayerName = newWavName(nudeWavName, supperPrayerNumber)
+	supperPrayerName = newWavName(supperPrayerNumber)
 	#print(supperPrayerName)
 	playFileNeg(tts, supperPrayerName, PickUp)
 
 gebetswuerfelListe = [201, 202, 203, 204, 205, 206]
-def gebetswuerfel(tts, nudeWavName):
+def gebetswuerfel(tts):
 	now = datetime.now()
 	second = now.strftime("%S")
 	seed(second)
@@ -445,13 +446,13 @@ def gebetswuerfel(tts, nudeWavName):
 	print("playing: " + str(randPrayerNumber))
 	supperPrayerNumber = gebetswuerfelListe[randPrayerNumber]
 
-	supperPrayerName = newWavName(nudeWavName, supperPrayerNumber)
+	supperPrayerName = newWavName(supperPrayerNumber)
 	#print(supperPrayerName)
 	playFileNeg(tts, supperPrayerName, PickUp)
 
 
 paterListe = [2, 10, 11, 19, 22, 26, 30, 88]
-def randomPater(tts, nudeWavName):
+def randomPater(tts):
 	now = datetime.now()
 	second = now.strftime("%S")
 	seed(second)
@@ -461,7 +462,7 @@ def randomPater(tts, nudeWavName):
 	print("playing: " + str(randPrayerNumber))
 	supperPrayerNumber = paterListe[randPrayerNumber]
 
-	supperPrayerName = newWavName(nudeWavName, supperPrayerNumber)
+	supperPrayerName = newWavName(supperPrayerNumber)
 	#print(supperPrayerName)
 	playFileNeg(tts, supperPrayerName, PickUp)
 
@@ -515,13 +516,11 @@ def main ():
 	led = LED(20)
 
 
-
-	nudeWavName = "/home/pi/telefono/recording"       #WavDateiname ohne nummer und .wav
 	queFileAdress = "/home/pi/telefono/relevant/queFile.txt"
 
-	essenIstFertig1830 = newWavName(nudeWavName, 1830)
-	wucher1930 = newWavName(nudeWavName, 1930)
-	tagesschau2000 = newWavName(nudeWavName, 2014)
+	essenIstFertig1830 = newWavName(1830)
+	wucher1930 = newWavName(1930)
+	tagesschau2000 = newWavName(2014)
 
 	maxRecordingTime = 1200     #in 0.1 sek
 	pygame.init()
@@ -549,15 +548,15 @@ def main ():
 					dialedNumber = str(wait_for_number(ButtonLeft, PickUp))
 					if PickUp.is_pressed: #falls er beim Wählen aufgelegt hat
 						#tts.say("Spiele Aufnahme Nr.: " + dialedNumber)
-						oldWavName = newWavName(nudeWavName, dialedNumber)
+						oldWavName = newWavName(dialedNumber)
 						playFileNeg(tts, oldWavName, PickUp) #hört auf wenn PickUp == False
 
 			if ButtonLeft.is_pressed:          #Aufnahme Starten
 				pygame.mixer.music.stop() #Freiton wird unterbrochen
-				myNewWavName = findNewFileName(nudeWavName)
+				myNewWavName = findNewFileName()
 
 				rec = Recorder(channels=2)
-				newRecordingNumber = findHighestMessageNumber(nudeWavName) + 1
+				newRecordingNumber = findHighestMessageNumber() + 1
 				with rec.open(myNewWavName, 'wb') as recfile2:
 					tts.say("Aufnahme Nr.: " + str(newRecordingNumber) + " wird gestartet") #ansage welche Aufnahme es ist
 					recfile2.start_recording()
@@ -592,11 +591,11 @@ def main ():
 				if dialedOption == 0:
 					tts.say_time ()
 				elif dialedOption == 1:
-					zufaelligesGebet(tts, nudeWavName)
+					zufaelligesGebet(tts)
 				elif dialedOption == 2:
-					gebetswuerfel(tts, nudeWavName)
+					gebetswuerfel(tts)
 				elif dialedOption == 3:
-					randomPater(tts, nudeWavName)
+					randomPater(tts)
 				else:
 					tts.say("Das habe ich nicht verstanden. Auf wiederhören")
 
@@ -614,7 +613,7 @@ def main ():
 			callingFile = findRandomMessage() #zufällige Datei die anruft
 			ringing(tts, callingFile)
 
-		callInQue(tts, queFileAdress, nudeWavName)
+		callInQue(tts, queFileAdress)
 
 		weekDayInt = getWeekDayInt()
 		if weekDayInt > 0 and weekDayInt < 4: #von Dienstag bis Freitag Wahr
