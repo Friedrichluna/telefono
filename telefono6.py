@@ -321,6 +321,40 @@ import RPi.GPIO as GPIO
 from threading import Thread
 from threading import Event
 
+RELAIS_1_GPIO = 4
+
+class SpeakerThread (Thread):
+	def __init__ (self, switch, gpio=RELAIS_1_GPIO):
+		super ().__init__ ()
+
+		self.__switch = switch
+		self.__gpio = gpio
+
+		# GPIO Numbers instead of board numbers
+		GPIO.setmode(GPIO.BCM)
+		# GPIO Assign mode
+		GPIO.setup (self.__gpio, GPIO.OUT)
+
+		self.__event = Event ()
+		self.__stop = Event ()
+
+	def run (self):
+		while not self.__stop.is_set ():
+			if self.__event.is_set () or self.__switch.is_pressed:
+				GPIO.output (self.__gpio, GPIO.LOW) # on
+			else:
+				GPIO.output (self.__gpio, GPIO.HIGH) # off
+			sleep (0.2)
+
+	def activate (self):
+		self.__event.set ()
+
+	def deactivate (self):
+		self.__event.clear ()
+
+	def join (self, timeout=None):
+		self.__stop.set ()
+		super ().join (timeout)
 
 
 #---------------------------Ringing------------------------------------
@@ -421,47 +455,12 @@ def shout (tts, wavName, speaker, PickUp):
 	speaker.deactivate ()
 
 
-class SpeakerThread (Thread):
-	def __init__ (self, switch, gpio):
-		super ().__init__ ()
-
-		self.__switch = switch
-		self.__gpio = gpio
-		# GPIO Assign mode
-		GPIO.setup (self.__gpio, GPIO.OUT)
-
-		self.__event = Event ()
-		self.__stop = Event ()
-
-	def run (self):
-		while not self.__stop.is_set ():
-			if self.__event.is_set () or self.__switch.is_pressed:
-				GPIO.output (self.__gpio, GPIO.LOW) # on
-			else:
-				GPIO.output (self.__gpio, GPIO.HIGH) # off
-			sleep (0.2)
-
-	def activate (self):
-		self.__event.set ()
-
-	def deactivate (self):
-		self.__event.clear ()
-
-	def join (self, timeout=None):
-		self.__stop.set ()
-		super ().join (timeout)
-
-
 def main ():
 	# setup pygame
 	pygame.mixer.init()
 
 	# setup text to speech
 	tts = TTS ()
-
-	# setup Relay
-	GPIO.setmode(GPIO.BCM) # GPIO Numbers instead of board numbers
-	RELAIS_1_GPIO = 4
 
 
 	DialCounter = Button(2) #Zähler für die gewählte Zahl (rot)
@@ -485,7 +484,7 @@ def main ():
 	acuteMessagePlayed = True   #True: by default not acute
 
 	# Thread for Speaker
-	speakerThread = SpeakerThread (SpeakerSwich, RELAIS_1_GPIO)
+	speakerThread = SpeakerThread (SpeakerSwich)
 	speakerThread.start()
 
 	#os.system('python3 /home/pi/webapp/app2.py &') #webApp start
