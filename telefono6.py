@@ -327,10 +327,10 @@ from threading import Event
 #from time import sleep
 ringTone = "/home/pi/telefono/relevant/telephone-ring-02.wav"
 
-def ringing(tts, callingFile_):
-	activateSpeaker()
+def ringing (tts, callingFile_, speaker):
+	speaker.activate ()
 	playFile(tts, ringTone, PickUp) #hört auf wenn PickUp == True
-	idleSpeaker()
+	speaker.deactivate ()
 	sleep(1) #test
 	playFileNeg(tts, callingFile_, PickUp) #hört auf wenn PickUp == False
 
@@ -379,13 +379,13 @@ def callRoutine():  #returns True for 1 sek per day
 		needNewTime = True
 		return True
 
-def callInQue(tts, queFileAdress):
+def callInQue(tts, queFileAdress, speaker):
 	callingFileNumber = returnFileText(queFileAdress)
 	callingFile = newWavName(callingFileNumber)
 
 	if callingFileNumber != "":
 		print("ringing Que!!")
-		ringing(tts, callingFile)
+		ringing(tts, callingFile, speaker)
 		overWriteFile(queFileAdress, "")
 
 
@@ -414,11 +414,11 @@ def findRandomMessage():
 #---------------------------Shout------------------------------------------------------
 
 
-def shout(tts, wavName):
-	activateSpeaker()
+def shout(tts, wavName, speaker):
+	speaker.activate ()
 	sleep(2)
 	playFile(tts, wavName, PickUp) #hört auf wenn PickUp == True
-	idleSpeaker()
+	speaker.deactivate ()
 
 
 
@@ -435,27 +435,36 @@ def main ():
 	GPIO.setup(RELAIS_1_GPIO, GPIO.OUT) # GPIO Assign mode
 
 
-	spkEvent = Event()
-	spkStopEvent = Event()
 
-	class SpeakerThreadClass(Thread):
-		def run(self):
-			while True:
-				if spkEvent.is_set() or SpeakerSwich.is_pressed:
+	class SpeakerThreadClass (Thread):
+		def __init__ (self):
+			super ().__init__ ()
+
+			self.__event = Event ()
+			self.__stop = Event ()
+
+		def run (self):
+			while not self.__stop.is_set ():
+				if self.__event.is_set () or SpeakerSwich.is_pressed:
 					GPIO.output(RELAIS_1_GPIO, GPIO.LOW) # on
 				else:
 					GPIO.output(RELAIS_1_GPIO, GPIO.HIGH) # off
 				sleep(0.2)
-				if spkStopEvent.is_set():
-					break
+
+		def activate (self):
+			self.__event.set ()
+
+		def deactivate (self):
+			self.__event.clear ()
+
+		def join (self, timeout=None):
+			self.__stop.set ()
+			super ().join (timeout)
+
 
 	speakerThread = SpeakerThreadClass()
 
 
-	def activateSpeaker():
-		spkEvent.set()
-	def idleSpeaker():
-		spkEvent.clear()
 
 
 	#______________________________________________________________________________________
@@ -564,18 +573,18 @@ def main ():
 		if callRoutine():
 			print("ringing!!!!!!!")
 			callingFile = findRandomMessage() #zufällige Datei die anruft
-			ringing(tts, callingFile)
+			ringing(tts, callingFile, speakerThread)
 
-		callInQue(tts, queFileAdress)
+		callInQue(tts, queFileAdress, speakerThread)
 
 		weekDayInt = getWeekDayInt()
 		if weekDayInt > 0 and weekDayInt < 4: #von Dienstag bis Freitag Wahr
 			if getTimeInt() == 183000:
-				shout(tts, essenIstFertig1830)
+				shout(tts, essenIstFertig1830, speakerThread)
 			if getTimeInt() == 193000:
-				shout(tts, wucher1930)
+				shout(tts, wucher1930, speakerThread)
 		if getTimeInt() == 200000:
-			shout(tts, tagesschau2000)
+			shout(tts, tagesschau2000, speakerThread)
 		#-------------------------Ausschalten-----------------------------------------------
 		interruptCounter = 0
 		while ButtonMiddle.is_pressed:
@@ -587,7 +596,6 @@ def main ():
 				noInterrupt = False
 				break
 		sleep(0.5)
-	spkStopEvent.set()
 	speakerThread.join()
 	webAppProcess.terminate()
 	#GPIO.close()
