@@ -112,11 +112,11 @@ def wait_for_number(StopDialButton, contButton):
 		dialWasActive = False
 		while DialInUse.is_pressed:
 			sleep(0.01)
-			if (DialCounter.is_pressed == False) and (switch != True):
+			if (not DialCounter.is_pressed) and (not switch):
 				switch = True
 				dialedDigit = dialedDigit + 1
 				#print("+1")
-			elif DialCounter.is_pressed == True:
+			elif DialCounter.is_pressed:
 				switch = False
 				#print("test")
 			dialWasActive = True
@@ -131,7 +131,7 @@ def wait_for_number(StopDialButton, contButton):
 				print(dialedDigit)
 		if StopDialButton.is_pressed or timeCounter > 200000:    #wird in Argument definiert
 			break
-		if contButton.is_pressed == False:
+		if not contButton.is_pressed:
 			break
 	led.off()
 	return dialedNumber
@@ -153,11 +153,11 @@ def wait_for_digit(contButton):
 			sleep(0.2)
 			while DialInUse.is_pressed:
 				sleep(0.01)
-				if (DialCounter.is_pressed == False) and (switch != True):
+				if (not DialCounter.is_pressed) and (not switch):
 					switch = True
 					dialedDigit = dialedDigit + 1
 					#print("+1")
-				elif DialCounter.is_pressed == True:
+				elif DialCounter.is_pressed:
 					switch = False
 					#print("test")
 				dialWasActive = True
@@ -169,7 +169,7 @@ def wait_for_digit(contButton):
 			break
 		if timeCounter > 200000:    #wird in Argument definiert
 			break
-		if contButton.is_pressed == False:
+		if not contButton.is_pressed:
 			break
 	led.off()
 	return dialedDigit
@@ -203,7 +203,7 @@ def overWriteFile(fileName, writtenText):
 import pygame
 
 def playFile(tts, fileName, breakButton):
-	if fileExists(fileName) == True:
+	if os.path.exists (fileName):
 		pygame.mixer.music.load(fileName)
 		pygame.mixer.music.play()
 		while pygame.mixer.music.get_busy():
@@ -226,13 +226,13 @@ def playFile0(fileName): #keine Abbruchbedingung (muss seperat gesetzt werden)
 
 
 def playFileNeg(tts, fileName, contButton):
-	if fileExists(fileName) == True:
+	if os.path.exists (fileName):
 		pygame.mixer.music.load(fileName)
 		pygame.mixer.music.play()
 
 		while pygame.mixer.music.get_busy():
 			sleep(0.01)
-			if contButton.is_pressed == False:
+			if not contButton.is_pressed:
 				pygame.mixer.music.stop()
 	else:
 		tts.say("Diese Aufnahme existiert noch nicht.")
@@ -251,8 +251,6 @@ def newWavName(wav_number):
 #--------------------------File management-----------------------------------------
 
 import os
-
-from os.path import exists as fileExists
 
 def delFile(_fileName):
 	os.remove(_fileName)
@@ -368,11 +366,15 @@ def callRoutine():  #returns True for 1 sek per day
 		needNewTime = False
 		print("ring Time: " + str(randTimeInt))  #Test
 		print("current Time: " + str(currentTimeInt))
+		return False
+
 	if ((currentTimeInt > maxHour*10000) or (currentTimeInt < minHour*10000)) and needNewTime:  #wenn nach Anrufszeit und no k>
 		randTimeInt = newRandTimeInt()  #dann neue Zeit erstellen
 		needNewTime = False
 		print("new Random Time:") #Test
 		print(randTimeInt) #test
+		return False
+
 	if currentTimeInt == randTimeInt:
 		needNewTime = True
 		return True
@@ -521,7 +523,7 @@ def main ():
 							recfile2.stop_recording()
 							tts.say("Aufnahme Nr.: " + str(newRecordingNumber) + "wegen overtime beendet.")
 							break
-						if (PickUp.is_pressed == False) or ButtonLeft.is_pressed:
+						if (not PickUp.is_pressed) or ButtonLeft.is_pressed:
 							led.off()
 							print("Aufnahme Nr.: " + str(newRecordingNumber) + " beendet.")
 							recfile2.stop_recording()
@@ -551,7 +553,7 @@ def main ():
 					tts.say("Das habe ich nicht verstanden. Auf wiederhören")
 
 
-			if pygame.mixer.music.get_busy() == False: #wenn der Freiton noch nicht spielt
+			if not pygame.mixer.music.get_busy(): #wenn der Freiton noch nicht spielt
 				playFile0("/home/pi/telefono/relevant/US_dial_tone.ogg.wav")  #Freiton
 
 		pygame.mixer.music.stop() #Freiton wird unterbrochen
@@ -559,7 +561,7 @@ def main ():
 
 
 		#-------------------------Klingelroutine-------------------------------------------
-		if callRoutine() == True:
+		if callRoutine():
 			print("ringing!!!!!!!")
 			callingFile = findRandomMessage() #zufällige Datei die anruft
 			ringing(tts, callingFile)
@@ -579,7 +581,7 @@ def main ():
 		while ButtonMiddle.is_pressed:
 			sleep(0.5)
 			interruptCounter = interruptCounter + 1
-			if ButtonMiddle.is_pressed == False:
+			if not ButtonMiddle.is_pressed:
 				interruptCounter = 0
 			if interruptCounter >= 10:
 				noInterrupt = False
