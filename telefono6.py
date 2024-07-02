@@ -202,7 +202,7 @@ def overWriteFile(fileName, writtenText):
 #needs GPIOZero buttons
 import pygame
 
-def playFile(fileName, breakButton):
+def playFile(tts, fileName, breakButton):
 	if fileExists(fileName) == True:
 		pygame.mixer.music.load(fileName)
 		pygame.mixer.music.play()
@@ -210,9 +210,9 @@ def playFile(fileName, breakButton):
 				if breakButton.is_pressed:
 					pygame.mixer.music.stop()
 	else:
-		ttsEngine("Diese Aufnahme existiert noch nicht.")
+		tts.say("Diese Aufnahme existiert noch nicht.")
 
-#playFile("audio.wav", ButtonLeft)
+#playFile(tts, "audio.wav", ButtonLeft)
 
 def playFile2(fileName, breakButton1, breakButton2): #zwei abbruch Bedingungen
 	pygame.mixer.music.load(fileName)
@@ -225,7 +225,7 @@ def playFile0(fileName): #keine Abbruchbedingung (muss seperat gesetzt werden)
 	pygame.mixer.music.play()
 
 
-def playFileNeg(fileName, contButton):
+def playFileNeg(tts, fileName, contButton):
 	if fileExists(fileName) == True:
 		pygame.mixer.music.load(fileName)
 		pygame.mixer.music.play()
@@ -235,9 +235,9 @@ def playFileNeg(fileName, contButton):
 			if contButton.is_pressed == False:
 				pygame.mixer.music.stop()
 	else:
-		ttsEngine("Diese Aufnahme existiert noch nicht.")
+		tts.say("Diese Aufnahme existiert noch nicht.")
 
-#playFileNeg("audio.wav", PickUp)
+#playFileNeg(tts, "audio.wav", PickUp)
 
 #--------------------------File Name Generatot----------------------------------
 
@@ -270,11 +270,20 @@ def findNewFileName(nudeWavName):
 
 import pyttsx3
 
-def ttsEngine(textToSay):
-	print(textToSay)
-	_ttsEngine.say(textToSay)
-	#_ttsEngine.startLoop(False)
-	_ttsEngine.runAndWait()
+class TTS():
+	def __init__ (self):
+		self.__engine = pyttsx3.init()
+		self.__engine.setProperty('rate', 140)    # Speed percent (can go over 100)
+		self.__engine.setProperty('volume', 1)  # Volume 0-1
+		self.__engine.setProperty('voice', "german+f2") #sprache auf Deutsch ändern
+
+		return
+
+	def say (self, text):
+		print(text)
+		self.__engine.say(text)
+		#self.__engine.startLoop(False)
+		self.__engine.runAndWait()
 
 
 #--------------------------Relay-----------------------------------------------
@@ -288,12 +297,12 @@ from threading import Event
 #from time import sleep
 ringTone = "/home/pi/telefono/relevant/telephone-ring-02.wav"
 
-def ringing(callingFile_):
+def ringing(tts, callingFile_):
 	activateSpeaker()
-	playFile(ringTone, PickUp) #hört auf wenn PickUp == True
+	playFile(tts, ringTone, PickUp) #hört auf wenn PickUp == True
 	idleSpeaker()
 	sleep(1) #test
-	playFileNeg(callingFile_, PickUp) #hört auf wenn PickUp == False
+	playFileNeg(tts, callingFile_, PickUp) #hört auf wenn PickUp == False
 
 
 #--------------------------CallingRoutine----------------------------
@@ -336,13 +345,13 @@ def callRoutine():  #returns True for 1 sek per day
 		needNewTime = True
 		return True
 
-def callInQue(queFileAdress, nudeWavName):
+def callInQue(tts, queFileAdress, nudeWavName):
 	callingFileNumber = returnFileText(queFileAdress)
 	callingFile = newWavName(nudeWavName, callingFileNumber)
 
 	if callingFileNumber != "":
 		print("ringing Que!!")
-		ringing(callingFile)
+		ringing(tts, callingFile)
 		overWriteFile(queFileAdress, "")
 
 
@@ -390,16 +399,16 @@ def findRandomMessage():
 #---------------------------Shout------------------------------------------------------
 
 
-def shout(wavName):
+def shout(tts, wavName):
 	activateSpeaker()
 	sleep(2)
-	playFile(wavName, PickUp) #hört auf wenn PickUp == True
+	playFile(tts, wavName, PickUp) #hört auf wenn PickUp == True
 	idleSpeaker()
 
 
 #---------------------------Menu-------------------------------------------------------
 
-def uhrzeitAnsagen():
+def uhrzeitAnsagen(tts):
 	now = datetime.now()
 	tag = str(now.strftime("%d"))
 	monat = str(now.strftime("%m"))
@@ -408,10 +417,10 @@ def uhrzeitAnsagen():
 	minute = str(now.strftime("%M"))
 	timeInWords = "Es ist " + stunde + "Uhr " + minute + " am " + tag + "." + monat + "." + jahr + "."
 
-	ttsEngine(timeInWords)
+	tts.say(timeInWords)
 
 supperPrayers = [101, 102, 103, 104, 105]
-def zufaelligesGebet(nudeWavName):
+def zufaelligesGebet(tts, nudeWavName):
 	now = datetime.now()
 	second = now.strftime("%S")
 	seed(second)
@@ -423,10 +432,10 @@ def zufaelligesGebet(nudeWavName):
 
 	supperPrayerName = newWavName(nudeWavName, supperPrayerNumber)
 	#print(supperPrayerName)
-	playFileNeg(supperPrayerName, PickUp)
+	playFileNeg(tts, supperPrayerName, PickUp)
 
 gebetswuerfelListe = [201, 202, 203, 204, 205, 206]
-def gebetswuerfel(nudeWavName):
+def gebetswuerfel(tts, nudeWavName):
 	now = datetime.now()
 	second = now.strftime("%S")
 	seed(second)
@@ -438,11 +447,11 @@ def gebetswuerfel(nudeWavName):
 
 	supperPrayerName = newWavName(nudeWavName, supperPrayerNumber)
 	#print(supperPrayerName)
-	playFileNeg(supperPrayerName, PickUp)
+	playFileNeg(tts, supperPrayerName, PickUp)
 
 
 paterListe = [2, 10, 11, 19, 22, 26, 30, 88]
-def randomPater(nudeWavName):
+def randomPater(tts, nudeWavName):
 	now = datetime.now()
 	second = now.strftime("%S")
 	seed(second)
@@ -454,7 +463,7 @@ def randomPater(nudeWavName):
 
 	supperPrayerName = newWavName(nudeWavName, supperPrayerNumber)
 	#print(supperPrayerName)
-	playFileNeg(supperPrayerName, PickUp)
+	playFileNeg(tts, supperPrayerName, PickUp)
 
 
 def main ():
@@ -462,10 +471,7 @@ def main ():
 	pygame.mixer.init()
 
 	# setup text to speech
-	_ttsEngine = pyttsx3.init()
-	_ttsEngine.setProperty('rate', 140)    # Speed percent (can go over 100)
-	_ttsEngine.setProperty('volume', 1)  # Volume 0-1
-	_ttsEngine.setProperty('voice', "german+f2") #sprache auf Deutsch ändern
+	tts = TTS ()
 
 	# setup Relay
 	GPIO.setmode(GPIO.BCM) # GPIO Numbers instead of board numbers
@@ -542,9 +548,9 @@ def main ():
 					pygame.mixer.music.stop() #Freiton wird unterbrochen
 					dialedNumber = str(wait_for_number(ButtonLeft, PickUp))
 					if PickUp.is_pressed: #falls er beim Wählen aufgelegt hat
-						#ttsEngine("Spiele Aufnahme Nr.: " + dialedNumber)
+						#tts.say("Spiele Aufnahme Nr.: " + dialedNumber)
 						oldWavName = newWavName(nudeWavName, dialedNumber)
-						playFileNeg(oldWavName, PickUp) #hört auf wenn PickUp == False
+						playFileNeg(tts, oldWavName, PickUp) #hört auf wenn PickUp == False
 
 			if ButtonLeft.is_pressed:          #Aufnahme Starten
 				pygame.mixer.music.stop() #Freiton wird unterbrochen
@@ -553,7 +559,7 @@ def main ():
 				rec = Recorder(channels=2)
 				newRecordingNumber = findHighestMessageNumber(nudeWavName) + 1
 				with rec.open(myNewWavName, 'wb') as recfile2:
-					ttsEngine("Aufnahme Nr.: " + str(newRecordingNumber) + " wird gestartet") #ansage welche Aufnahme es ist
+					tts.say("Aufnahme Nr.: " + str(newRecordingNumber) + " wird gestartet") #ansage welche Aufnahme es ist
 					recfile2.start_recording()
 					recordingTime = 0
 					led.on()
@@ -563,7 +569,7 @@ def main ():
 						if recordingTime > maxRecordingTime:    # beenden wenn mehr als 2min aufgenommen wurde
 							led.off()
 							recfile2.stop_recording()
-							ttsEngine("Aufnahme Nr.: " + str(newRecordingNumber) + "wegen overtime beendet.")
+							tts.say("Aufnahme Nr.: " + str(newRecordingNumber) + "wegen overtime beendet.")
 							break
 						if (PickUp.is_pressed == False) or ButtonLeft.is_pressed:
 							led.off()
@@ -573,7 +579,7 @@ def main ():
 							break
 						if ButtonMiddle.is_pressed:      #alte Aufnahme auswählen
 							led.off()
-							ttsEngine("Aufnahme Nr.: " + str(newRecordingNumber) + " abgebrochen")
+							tts.say("Aufnahme Nr.: " + str(newRecordingNumber) + " abgebrochen")
 							recfile2.stop_recording()
 							delFile(myNewWavName)
 							sleep(2) #button release Time
@@ -581,19 +587,19 @@ def main ():
 
 			if ButtonMiddle.is_pressed:
 				pygame.mixer.music.stop() #Freiton wird unterbrochen
-				ttsEngine("Menü wird geöffnet.")
+				tts.say("Menü wird geöffnet.")
 				dialedOption = wait_for_digit(PickUp)
 				if dialedOption == 0:
 					print("uhrzeit ansagen")
-					uhrzeitAnsagen()
+					uhrzeitAnsagen(tts)
 				elif dialedOption == 1:
-					zufaelligesGebet(nudeWavName)
+					zufaelligesGebet(tts, nudeWavName)
 				elif dialedOption == 2:
-					gebetswuerfel(nudeWavName)
+					gebetswuerfel(tts, nudeWavName)
 				elif dialedOption == 3:
-					randomPater(nudeWavName)
+					randomPater(tts, nudeWavName)
 				else:
-					ttsEngine("Das habe ich nicht verstanden. Auf wiederhören")
+					tts.say("Das habe ich nicht verstanden. Auf wiederhören")
 
 
 			if pygame.mixer.music.get_busy() == False: #wenn der Freiton noch nicht spielt
@@ -607,18 +613,18 @@ def main ():
 		if callRoutine() == True:
 			print("ringing!!!!!!!")
 			callingFile = findRandomMessage() #zufällige Datei die anruft
-			ringing(callingFile)
+			ringing(tts, callingFile)
 
-		callInQue(queFileAdress, nudeWavName)
+		callInQue(tts, queFileAdress, nudeWavName)
 
 		weekDayInt = getWeekDayInt()
 		if weekDayInt > 0 and weekDayInt < 4: #von Dienstag bis Freitag Wahr
 			if getTimeInt() == 183000:
-				shout(essenIstFertig1830)
+				shout(tts, essenIstFertig1830)
 			if getTimeInt() == 193000:
-				shout(wucher1930)
+				shout(tts, wucher1930)
 		if getTimeInt() == 200000:
-			shout(tagesschau2000)
+			shout(tts, tagesschau2000)
 		#-------------------------Ausschalten-----------------------------------------------
 		interruptCounter = 0
 		while ButtonMiddle.is_pressed:
