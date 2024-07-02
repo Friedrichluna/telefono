@@ -273,6 +273,7 @@ def findNewFileName():
 
 import datetime
 import pyttsx3
+import random
 
 class TTS():
 	supperPrayers = [101, 102, 103, 104, 105]
@@ -301,16 +302,8 @@ class TTS():
 		self.say(timeInWords)
 
 	def _random (self, _list):
-		now = datetime.now()
-		second = now.strftime("%S")
-		seed(second)
-		index = randint(0, len(_list) - 1)
-
-		print("playing: " + str(index))
-		number = _list[index]
-
-		filename = newWavName(number)
-		#print(filename)
+		filename = newWavName (random.choice (_list))
+		print("playing: " + filename)
 		playFileNeg(self, filename, PickUp)
 
 	def random_prayer (self):
