@@ -99,7 +99,7 @@ from gpiozero import Button, LED
 from time import sleep
 
 
-def wait_for_number(StopDialButton, contButton):
+def wait_for_number (DialInUse, DialCounter, StopDialButton, contButton, led):
 	led.blink(on_time=0.1, off_time=0.1, n=None, background=True)
 	dialedNumber = 0
 	switch = False
@@ -139,7 +139,7 @@ def wait_for_number(StopDialButton, contButton):
 #NeueZahl = wait_for_number(ButtonLeft, Pickup)
 #print(NeueZahl)
 
-def wait_for_digit(contButton):
+def wait_for_digit (DialInUse, DialCounter, contButton, led):
 	led.blink(on_time=0.1, off_time=0.1, n=None, background=True)
 	dialedDigit = 0
 	switch = False
@@ -300,19 +300,19 @@ class TTS():
 
 		self.say(timeInWords)
 
-	def _random (self, _list):
+	def _random (self, _list, PickUp):
 		filename = newWavName (random.choice (_list))
 		print("playing: " + filename)
 		playFileNeg(self, filename, PickUp)
 
-	def random_prayer (self):
-		self._random (self.supperPrayers)
+	def random_prayer (self, PickUp):
+		self._random (self.supperPrayers, PickUp)
 
-	def random_dice_prayer (self):
-		self._random (self.dicePrayers)
+	def random_dice_prayer (self, PickUp):
+		self._random (self.dicePrayers, PickUp)
 
-	def random_pater (self):
-		self._random (self.pater)
+	def random_pater (self, PickUp):
+		self._random (self.pater, PickUp)
 
 
 
@@ -327,7 +327,7 @@ from threading import Event
 #from time import sleep
 ringTone = "/home/pi/telefono/relevant/telephone-ring-02.wav"
 
-def ringing (tts, callingFile_, speaker):
+def ringing (tts, callingFile_, speaker, PickUp):
 	speaker.activate ()
 	playFile(tts, ringTone, PickUp) #hört auf wenn PickUp == True
 	speaker.deactivate ()
@@ -379,13 +379,13 @@ def callRoutine():  #returns True for 1 sek per day
 		needNewTime = True
 		return True
 
-def callInQue(tts, queFileAdress, speaker):
+def callInQue(tts, queFileAdress, speaker, PickUp):
 	callingFileNumber = returnFileText(queFileAdress)
 	callingFile = newWavName(callingFileNumber)
 
 	if callingFileNumber != "":
 		print("ringing Que!!")
-		ringing(tts, callingFile, speaker)
+		ringing (tts, callingFile, speaker, PickUp)
 		overWriteFile(queFileAdress, "")
 
 
@@ -414,7 +414,7 @@ def findRandomMessage():
 #---------------------------Shout------------------------------------------------------
 
 
-def shout(tts, wavName, speaker):
+def shout (tts, wavName, speaker, PickUp):
 	speaker.activate ()
 	sleep(2)
 	playFile(tts, wavName, PickUp) #hört auf wenn PickUp == True
@@ -504,7 +504,7 @@ def main ():
 				sleep(0.1)
 				if DialInUse.is_pressed:
 					pygame.mixer.music.stop() #Freiton wird unterbrochen
-					dialedNumber = str(wait_for_number(ButtonLeft, PickUp))
+					dialedNumber = str(wait_for_number(DialInUse, DialCounter, ButtonLeft, PickUp, led))
 					if PickUp.is_pressed: #falls er beim Wählen aufgelegt hat
 						#tts.say("Spiele Aufnahme Nr.: " + dialedNumber)
 						oldWavName = newWavName(dialedNumber)
@@ -545,15 +545,15 @@ def main ():
 			if ButtonMiddle.is_pressed:
 				pygame.mixer.music.stop() #Freiton wird unterbrochen
 				tts.say("Menü wird geöffnet.")
-				dialedOption = wait_for_digit(PickUp)
+				dialedOption = wait_for_digit (DialInUse, DialCounter, PickUp, led)
 				if dialedOption == 0:
 					tts.say_time ()
 				elif dialedOption == 1:
-					tts.random_prayer ()
+					tts.random_prayer (PickUp)
 				elif dialedOption == 2:
-					tts.random_dice_prayer ()
+					tts.random_dice_prayer (PickUp)
 				elif dialedOption == 3:
-					tts.random_pater ()
+					tts.random_pater (PickUp)
 				else:
 					tts.say("Das habe ich nicht verstanden. Auf wiederhören")
 
@@ -569,18 +569,18 @@ def main ():
 		if callRoutine():
 			print("ringing!!!!!!!")
 			callingFile = findRandomMessage() #zufällige Datei die anruft
-			ringing(tts, callingFile, speakerThread)
+			ringing (tts, callingFile, speakerThread, PickUp)
 
-		callInQue(tts, queFileAdress, speakerThread)
+		callInQue (tts, queFileAdress, speakerThread, PickUp)
 
 		weekDayInt = getWeekDayInt()
 		if weekDayInt > 0 and weekDayInt < 4: #von Dienstag bis Freitag Wahr
 			if getTimeInt() == 183000:
-				shout(tts, essenIstFertig1830, speakerThread)
+				shout (tts, essenIstFertig1830, speakerThread, PickUp)
 			if getTimeInt() == 193000:
-				shout(tts, wucher1930, speakerThread)
+				shout (tts, wucher1930, speakerThread, PickUp)
 		if getTimeInt() == 200000:
-			shout(tts, tagesschau2000, speakerThread)
+			shout (tts, tagesschau2000, speakerThread, PickUp)
 		#-------------------------Ausschalten-----------------------------------------------
 		interruptCounter = 0
 		while ButtonMiddle.is_pressed:
