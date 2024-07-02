@@ -409,13 +409,9 @@ def shout(tts, wavName):
 #---------------------------Menu-------------------------------------------------------
 
 def uhrzeitAnsagen(tts):
+	FORMAT = "Es ist %H Uhr %M am %d.%m.%Y."
 	now = datetime.now()
-	tag = str(now.strftime("%d"))
-	monat = str(now.strftime("%m"))
-	jahr = str(now.strftime("%Y"))
-	stunde = str(now.strftime("%H"))
-	minute = str(now.strftime("%M"))
-	timeInWords = "Es ist " + stunde + "Uhr " + minute + " am " + tag + "." + monat + "." + jahr + "."
+	timeInWords = now.strftime (FORMAT)
 
 	tts.say(timeInWords)
 
