@@ -530,9 +530,8 @@ def main ():
 	#os.system('python3 /home/pi/webapp/app2.py &') #webApp start
 	webAppProcess = subprocess.Popen(['python3', '/home/pi/webapp/app2.py'])
 
-	now = datetime.now()
-	second = now.strftime("%S%M")
-	seed(second) #den seed für die Zufallsfunktionen
+	# initialize random module
+	random.seed ()
 
 	noInterrupt = True
 	while noInterrupt:
