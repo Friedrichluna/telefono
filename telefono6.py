@@ -264,7 +264,7 @@ def findNewFileName ():
 	while os.path.exists (filename):
 		counter += 1
 		filename = newWavName (counter)
-	return filename
+	return filename, counter
 
 #--------------------------Text to Speech--------------------------------------
 #import sys
@@ -392,29 +392,6 @@ def getWeekDayInt():
 	return now.weekday()
 
 
-#---------------------------acuteMessage-----------------------------------------------
-# find the highest existing file, by looking for the first non-existing
-def findHighestMessage ():
-	counter = 0
-	filename = newWavName (counter)
-	while os.path.exists (filename):
-		counter += 1
-		filename = newWavName (counter)
-
-	print("Höchste Nachricht: " + newWavName (counter - 1))
-	return newWavName (counter - 1)
-
-
-# find the highest existing file, by looking for the first non-existing
-def findHighestMessageNumber ():
-	counter = 0
-	filename = newWavName (counter)
-	while os.path.exists (filename):
-		counter += 1
-		filename = newWavName (counter)
-	return counter - 1
-
-
 #---------------------------random old Message-----------------------------------------
 #from random import randint
 from os import listdir
@@ -528,10 +505,9 @@ def main ():
 
 			if ButtonLeft.is_pressed:          #Aufnahme Starten
 				pygame.mixer.music.stop() #Freiton wird unterbrochen
-				myNewWavName = findNewFileName()
+				myNewWavName, newRecordingNumber = findNewFileName()
 
 				rec = Recorder(channels=2)
-				newRecordingNumber = findHighestMessageNumber() + 1
 				with rec.open(myNewWavName, 'wb') as recfile2:
 					tts.say("Aufnahme Nr.: " + str(newRecordingNumber) + " wird gestartet") #ansage welche Aufnahme es ist
 					recfile2.start_recording()
