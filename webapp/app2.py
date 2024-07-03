@@ -61,10 +61,30 @@ class RecordIndexFile ():
 			      "Invalid value %s, must be str not %s."
 			      % (repr(value), type (value)))
 
-		return self.__data.__setitem__ (key, value)
+		ret = self.__data.__setitem__ (key, value)
+
+		if not self.__legacy:
+			with open (self.__filename, "wt") as f:
+				self.__store (f)
+
+		else:
+			with open (self.__filename, "wb") as f:
+				self.__store_legacy (f)
+
+		return ret
 
 	def __delitem__ (self, key):
-		return self.__data.__delitem__ (key)
+		ret = self.__data.__delitem__ (key)
+
+		if not self.__legacy:
+			with open (self.__filename, "wt") as f:
+				self.__store (f)
+
+		else:
+			with open (self.__filename, "wb") as f:
+				self.__store_legacy (f)
+
+		return ret
 
 
 	def __iter__ (self):
@@ -78,7 +98,17 @@ class RecordIndexFile ():
 
 
 	def clear (self):
-		return self.__data.clear ()
+		ret = self.__data.clear ()
+
+		if not self.__legacy:
+			with open (self.__filename, "wt") as f:
+				self.__store (f)
+
+		else:
+			with open (self.__filename, "wb") as f:
+				self.__store_legacy (f)
+
+		return ret
 
 	def copy (self):
 		c = RecordIndexFile ()
@@ -95,10 +125,30 @@ class RecordIndexFile ():
 		return self.__data.keys ()
 
 	def pop (self, key, *args, **kwargs):
-		return self.__data.pop (key, *args, **kwargs)
+		ret = self.__data.pop (key, *args, **kwargs)
+
+		if not self.__legacy:
+			with open (self.__filename, "wt") as f:
+				self.__store (f)
+
+		else:
+			with open (self.__filename, "wb") as f:
+				self.__store_legacy (f)
+
+		return ret
 
 	def popitem (self):
-		return self.__data.popitem ()
+		ret = self.__data.popitem ()
+
+		if not self.__legacy:
+			with open (self.__filename, "wt") as f:
+				self.__store (f)
+
+		else:
+			with open (self.__filename, "wb") as f:
+				self.__store_legacy (f)
+
+		return ret
 
 	def setdefault (self, key, default=""):
 		if int != type (key):
@@ -111,7 +161,17 @@ class RecordIndexFile ():
 			      "Invalid default %s, must be str not %s."
 			      % (repr(default), type (default)))
 
-		return self.__data.setdefault (key, default)
+		ret = self.__data.setdefault (key, default)
+
+		if not self.__legacy:
+			with open (self.__filename, "wt") as f:
+				self.__store (f)
+
+		else:
+			with open (self.__filename, "wb") as f:
+				self.__store_legacy (f)
+
+		return ret
 
 	# TODO: implement update
 
