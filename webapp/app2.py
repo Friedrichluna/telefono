@@ -66,10 +66,10 @@ class RecordIndexFile ():
 		return None
 
 	def __contains__ (self, key):
-		return self.__data.__contains__ (key)
+		return self.__data.get (key, (..., False))[1]
 
 	def __getitem__ (self, key):
-		return self.__data.__getitem__ (key)
+		return self.__data.__getitem__ (key)[0]
 
 	def __setitem__ (self, key, value):
 		if int != type (key):
@@ -82,7 +82,7 @@ class RecordIndexFile ():
 			      "Invalid value %s, must be str not %s."
 			      % (repr(value), type (value)))
 
-		ret = self.__data.__setitem__ (key, value)
+		ret = self.__data.__setitem__ (key, (value, False))
 
 		if not self.__legacy:
 			with open (self.__filename, "wt") as f:
@@ -109,13 +109,17 @@ class RecordIndexFile ():
 
 
 	def __iter__ (self):
-		return self.__data.__iter__ ()
+		return iter(self.keys())
 
 	def __len__ (self):
-		return self.__data.__len__ ()
+		length = 0
+		for key, (value, exists) in self.__data.items ():
+			if exists:
+				length += 1
+		return length
 
 	def __reversed__ (self):
-		return self.__data.__reversed__ ()
+		raise NotImplementedError
 
 
 	def clear (self):
@@ -137,16 +141,20 @@ class RecordIndexFile ():
 		return c
 
 	def get (self, key, default=""):
-		return self.__data.get (key, default)
+		return self.__data.get (key, (default, ))[0]
 
 	def items (self):
-		return self.__data.items ()
+		for key, (value, exists) in self.__data.items ():
+			if exists:
+				yield (key, value)
 
 	def keys (self):
-		return self.__data.keys ()
+		for key, (value, exists) in self.__data.items ():
+			if exists:
+				yield key
 
 	def pop (self, key, *args, **kwargs):
-		ret = self.__data.pop (key, *args, **kwargs)
+		ret = self.__data.pop (key, *args, **kwargs)[0]
 
 		if not self.__legacy:
 			with open (self.__filename, "wt") as f:
@@ -159,7 +167,7 @@ class RecordIndexFile ():
 		return ret
 
 	def popitem (self):
-		ret = self.__data.popitem ()
+		ret = self.__data.popitem ()[0]
 
 		if not self.__legacy:
 			with open (self.__filename, "wt") as f:
@@ -182,7 +190,7 @@ class RecordIndexFile ():
 			      "Invalid default %s, must be str not %s."
 			      % (repr(default), type (default)))
 
-		ret = self.__data.setdefault (key, default)
+		ret = self.__data.setdefault (key, (default, False))
 
 		if not self.__legacy:
 			with open (self.__filename, "wt") as f:
@@ -194,10 +202,13 @@ class RecordIndexFile ():
 
 		return ret
 
-	# TODO: implement update
+	def update (self, *args, **kwargs):
+		raise NotImplementedError
 
 	def values (self):
-		return self.__data.values ()
+		for key, (value, exists) in self.__data.items ():
+			if exists:
+				yield value
 
 	def __load (self, _file):
 		for lineno, line in enumerate (_file.readlines ()):
@@ -252,7 +263,7 @@ class RecordIndexFile ():
 
 		_file.truncate ()
 
-		keys = self.keys ()
+		keys = self.__data.keys ()
 		keys = list (keys)
 		keys.sort ()
 
@@ -270,7 +281,7 @@ class RecordIndexFile ():
 
 		data = list ()
 
-		last_key = max (self.keys (), default=None)
+		last_key = max (self.__data.keys (), default=None)
 		if last_key is not None:
 			for key in range (last_key+1):
 				value = self.get (key, default=None)
