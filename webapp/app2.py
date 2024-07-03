@@ -299,7 +299,19 @@ class RecordIndexFile ():
 		_file.flush ()
 		return
 
+	def __invalidate_fs (self):
+		for key, (value, exists) in self.__data.items ():
+			self.__data[key] = (value, False)
+		return
+
+	def __validate (self, key):
+		self.setdefault (key)
+		self.__data[key] = (self.__data[key][0], True)
+		return
+
 	def sync_fs (self, directory:str=RECORD_DIR):
+		self.__invalidate_fs ()
+
 		for file in os.listdir (directory):
 			path = os.path.join (directory, file)
 
@@ -310,7 +322,7 @@ class RecordIndexFile ():
 				file = file[: -len(RECORD_SUFFIX)]
 				record = int (file)
 
-				self.setdefault (record)
+				self.__validate (record)
 		return
 
 
