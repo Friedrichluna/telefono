@@ -288,6 +288,20 @@ class RecordIndexFile ():
 		_file.flush ()
 		return
 
+	def sync_fs (self, directory:str=RECORD_DIR):
+		for file in os.listdir (directory):
+			path = os.path.join (directory, file)
+
+			if os.path.isfile (path) \
+			and file.startswith (RECORD_PREFIX) \
+			and file.endswith (RECORD_SUFFIX):
+				file = file[len(RECORD_PREFIX) :]
+				file = file[: -len(RECORD_SUFFIX)]
+				record = int (file)
+
+				self.setdefault (record)
+		return
+
 
 def overWriteFile(fileName, writtenText):
 	file1 = open(fileName,"w")
@@ -308,10 +322,7 @@ def initMessageNames():
 
 	global messageNameList
 	messageNameList = RecordIndexFile ()
-
-	# ensure that a name exists for each file
-	for number in fileNumberList:
-		messageNameList.setdefault (number)
+	messageNameList.sync_fs ()
 
 def number_already_exists(requested_number):
 	fileNumberList = fileNumbers()
