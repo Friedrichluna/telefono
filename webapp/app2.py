@@ -191,7 +191,7 @@ def home():
 	else:
 		return render_template("index.html")
 
-def list():
+def _list():
 
 	testlist = fileNumbers()
 	messageNamesList = getMessageNames()
@@ -244,7 +244,7 @@ def main ():
 
 	app = Flask(__name__)
 	app.add_url_rule ("/", "home", home, methods=["POST", "GET"])
-	app.add_url_rule ("/list", "list", list)
+	app.add_url_rule ("/list", "list", _list)
 	app.add_url_rule ("/edit/<int:index>", "edit_value", edit_value, methods=["GET", "POST"])
 	app.add_url_rule ("/get_value", "get_value", get_value, methods=["POST"])
 	app.add_url_rule ("/upload", "upload_page", upload_page)
