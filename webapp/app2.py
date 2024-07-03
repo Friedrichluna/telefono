@@ -127,6 +127,23 @@ class RecordIndexFile ():
 
 		return
 
+	def __store (self, _file):
+
+		_file.truncate ()
+
+		keys = self.keys ()
+		keys = list (keys)
+		keys.sort ()
+
+		for key in keys:
+			_file.write (str (key))
+			_file.write (": ")
+			_file.write (self[key])
+			_file.write ("\n")
+
+		_file.flush ()
+		return
+
 
 def overWriteFile(fileName, writtenText):
 	file1 = open(fileName,"w")
