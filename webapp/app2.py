@@ -15,7 +15,8 @@ RECORD_DIR = BASE_DIR
 RECORD_PREFIX = "recording"
 RECORD_SUFFIX = ".wav"
 
-RECORD_LIST_FILE = BASE_DIR + "/relevant/recording_names"
+OLD_RECORD_LIST_FILE = BASE_DIR + "/relevant/recording_names"
+RECORD_LIST_FILE = BASE_DIR + "/relevant/records.list"
 
 SERVER_QUEUE_FILE = BASE_DIR + "/relevant/queFile.txt"
 
@@ -25,10 +26,30 @@ LOG_FILE = BASE_DIR + "/relevant/telefonoCrashLog.txt"
 
 
 class RecordIndexFile ():
-	def __init__ (self, filename:str, legacy:bool=False):
+	def __init__ (self, filename:str=None, legacy:bool=False):
 		self.__data = dict ()
-		self.__filename = filename
-		self.__legacy = legacy
+
+		if None is filename:
+
+			self.__filename = RECORD_LIST_FILE
+			self.__legacy = False
+
+			if os.path.exists (OLD_RECORD_LIST_FILE):
+				print ("Converting index file format")
+
+				with open (OLD_RECORD_LIST_FILE, "rb") as f:
+					self.__load_legacy (f)
+
+				with open (RECORD_LIST_FILE, "wt") as f:
+					self.__store (f)
+
+
+				os.unlink (OLD_RECORD_LIST_FILE)
+				return None
+
+		else:
+			self.__filename = filename
+			self.__legacy = legacy
 
 		if not legacy:
 			if os.path.exists (self.__filename):
@@ -286,7 +307,7 @@ def initMessageNames():
 	fileNumberList = fileNumbers()
 
 	global messageNameList
-	messageNameList = RecordIndexFile (RECORD_LIST_FILE, legacy=True)
+	messageNameList = RecordIndexFile ()
 
 	# ensure that a name exists for each file
 	for number in fileNumberList:
