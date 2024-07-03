@@ -7,6 +7,57 @@
 	<!-- Bootstrap CSS -->
 	<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
 
+	<style>
+		._my-input {
+			display: block;
+		}
+
+		[type="button"]:not(:disabled), [type="reset"]:not(:disabled), [type="submit"]:not(:disabled), button:not(:disabled) {
+			cursor: pointer;
+		}
+
+		._my-form {
+			width: 100%;
+			padding-right: 15px;
+			padding-left: 15px;
+			margin-right: auto;
+			margin-left: auto;
+		}
+		._my-form > * {
+			margin-top: 0;
+			margin-bottom: 1rem;
+		}
+		._my-nav {
+			display: -ms-flexbox;
+			display: flex;
+			-ms-flex-wrap: wrap;
+			flex-wrap: wrap;
+			padding-left: 0;
+			margin-bottom: 0;
+			list-style: none;
+			border-bottom: 1px solid #dee2e6;
+		}
+		._my-nav > .active {
+			color: #495057;
+			background-color: #fff;
+			border-color: #dee2e6 #dee2e6 #fff;
+		}
+		._my-nav > a {
+			color: #007bff;
+			text-decoration: none;
+			background-color: transparent;
+			display: block;
+			padding: .5rem 1rem;
+			border: 1px solid transparent;
+			border-top-left-radius: .25rem;
+			border-top-right-radius: .25rem;
+			margin-bottom: -1px;
+		}
+		._my-nav > a:focus:not(.active), ._my-nav > a:hover:not(.active) {
+			border-color: #e9ecef #e9ecef #dee2e6;
+			color: #0056b3;
+		}
+	</style>
 	<title>{% block title%}{% endblock %}</title>
 </head>
 <body>
