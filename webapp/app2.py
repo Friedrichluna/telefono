@@ -109,7 +109,9 @@ class RecordIndexFile ():
 
 
 	def __iter__ (self):
-		return iter(self.keys())
+		l = list(self.keys())
+		l.sort()
+		return iter(l)
 
 	def __len__ (self):
 		length = 0
