@@ -11,6 +11,9 @@ import psutil
 
 BASE_DIR = "/home/pi/telefono"
 
+FLASK_DEBUG = True
+FLASK_IP = "0.0.0.0"
+
 RECORD_DIR = BASE_DIR
 RECORD_PREFIX = "recording"
 RECORD_SUFFIX = ".wav"
@@ -338,77 +341,83 @@ def getFreeDiskSpace():
 	return round(hdd.free / (2**30), 2)
 
 
-def home():
-	if request.method == "POST":
-		requested_number = request.form["nm"]
-		print(requested_number)
+class TelefonoWebApp (Flask):
+	def __init__ (self):
+		super ().__init__ (__name__)
+
+		self.add_url_rule ("/", "home", self.home, methods=["POST", "GET"])
+		self.add_url_rule ("/list", "list", self.list, defaults={"messageNameList":messageNameList})
+		self.add_url_rule ("/edit/<int:index>", "edit_value", self.edit_value, methods=["GET", "POST"], defaults={"messageNameList":messageNameList})
+		self.add_url_rule ("/get_value", "get_value", self.get_value, methods=["POST"])
+		self.add_url_rule ("/upload", "upload_page", self.upload_page)
+		self.add_url_rule ("/upload", "upload_file", self.upload_file, methods=["POST"], defaults={"messageNameList":messageNameList})
+		return
+
+	def home(self):
+		if request.method == "POST":
+			requested_number = request.form["nm"]
+			print(requested_number)
+			overWriteFile(SERVER_QUEUE_FILE, requested_number)
+			return render_template("index.html", content = requested_number)
+		else:
+			return render_template("index.html")
+
+	def list(self, messageNameList):
+		return render_template("list.html", messageNamesList = messageNameList)
+
+	def edit_value(self, messageNameList, index):
+		if request.method == "POST":
+			new_value = request.form["new_value"]
+			messageNameList[index] = new_value
+
+			return redirect("/list")
+		return render_template("edit.html", index=index, value=messageNameList[index])
+
+	def get_value(self):
+		# Get the selected button value from the frontend
+		requested_number = request.form["selected_value"]
+		# Process the selected value as needed
 		overWriteFile(SERVER_QUEUE_FILE, requested_number)
-		return render_template("index.html", content = requested_number)
-	else:
-		return render_template("index.html")
-
-def _list(messageNameList):
-	return render_template("list.html", messageNamesList = messageNameList)
-
-def edit_value(messageNameList, index):
-	if request.method == "POST":
-		new_value = request.form["new_value"]
-		messageNameList[index] = new_value
-
-		return redirect("/list")
-	return render_template("edit.html", index=index, value=messageNameList[index])
-
-def get_value():
-	# Get the selected button value from the frontend
-	requested_number = request.form["selected_value"]
-	# Process the selected value as needed
-	overWriteFile(SERVER_QUEUE_FILE, requested_number)
-	return redirect("/list") #jsonify({"message": "Value received successfully"})
+		return redirect("/list") #jsonify({"message": "Value received successfully"})
 
 
 
-def upload_page():
-	diskSpace = getFreeDiskSpace()
-	return render_template("upload.html", diskSpace = diskSpace)
+	def upload_page(self):
+		diskSpace = getFreeDiskSpace()
+		return render_template("upload.html", diskSpace = diskSpace)
 
 
-def upload_file(messageNameList):
-	uploaded_file = request.files["file"]
-	requested_number = request.form["requestedNumber"]
+	def upload_file(self, messageNameList):
+		uploaded_file = request.files["file"]
+		requested_number = request.form["requestedNumber"]
 
-	if (not uploaded_file.filename) or (not requested_number):
-		return redirect ("/upload")
+		if (not uploaded_file.filename) or (not requested_number):
+			return redirect ("/upload")
 
-	if not requested_number.isdecimal ():
-		return render_template("upload.html", content ="Keine Nummer angegeben!".format(requested_number))
+		if not requested_number.isdecimal ():
+			return render_template("upload.html", content ="Keine Nummer angegeben!".format(requested_number))
 
-	requested_number = int(requested_number)
+		requested_number = int(requested_number)
 
-	if requested_number in messageNameList:
-		return render_template("upload.html", content ="Nummer {} existiert bereits!".format(requested_number))
-	if not uploaded_file.filename.endswith(".wav"):
-		return render_template("upload.html", content = "Bitte nur .wav hochladen!")
+		if requested_number in messageNameList:
+			return render_template("upload.html", content ="Nummer {} existiert bereits!".format(requested_number))
+		if not uploaded_file.filename.endswith(".wav"):
+			return render_template("upload.html", content = "Bitte nur .wav hochladen!")
 
-	file_path = UPLOAD_DIR + "/" + RECORD_PREFIX + str(requested_number) + RECORD_SUFFIX
-	uploaded_file.save(file_path)
+		file_path = UPLOAD_DIR + "/" + RECORD_PREFIX + str(requested_number) + RECORD_SUFFIX
+		uploaded_file.save(file_path)
 
-	messageNameList.sync_fs ()
-	print("test")
-	return render_template("upload.html", content ="erfolgreich unter {} gespeichert!".format(file_path))
+		messageNameList.sync_fs ()
+		print("test")
+		return render_template("upload.html", content ="erfolgreich unter {} gespeichert!".format(file_path))
 
 def main ():
+	global messageNameList
 	messageNameList = RecordIndexFile ()
 	messageNameList.sync_fs ()
 
-	app = Flask(__name__)
-	app.add_url_rule ("/", "home", home, methods=["POST", "GET"])
-	app.add_url_rule ("/list", "list", _list, defaults={"messageNameList":messageNameList})
-	app.add_url_rule ("/edit/<int:index>", "edit_value", edit_value, methods=["GET", "POST"], defaults={"messageNameList":messageNameList})
-	app.add_url_rule ("/get_value", "get_value", get_value, methods=["POST"])
-	app.add_url_rule ("/upload", "upload_page", upload_page)
-	app.add_url_rule ("/upload", "upload_file", upload_file, methods=["POST"], defaults={"messageNameList":messageNameList})
-
-	app.run(debug=True, host="0.0.0.0")
+	app = TelefonoWebApp ()
+	app.run(debug=FLASK_DEBUG, host=FLASK_IP)
 
 if __name__ == "__main__":
 	try:
