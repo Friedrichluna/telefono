@@ -44,6 +44,16 @@ class RecordIndexFile ():
 		return self.__data.__getitem__ (key)
 
 	def __setitem__ (self, key, value):
+		if int != type (key):
+			raise TypeError (
+			      "Invalid key %s, must be int not %s."
+			      % (repr(key), type (key)))
+
+		if str != type (value):
+			raise TypeError (
+			      "Invalid value %s, must be str not %s."
+			      % (repr(value), type (value)))
+
 		return self.__data.__setitem__ (key, value)
 
 	def __delitem__ (self, key):
@@ -68,7 +78,7 @@ class RecordIndexFile ():
 		c.__data = self.__data.copy ()
 		return c
 
-	def get (self, key, default=None):
+	def get (self, key, default=""):
 		return self.__data.get (key, default)
 
 	def items (self):
@@ -83,11 +93,20 @@ class RecordIndexFile ():
 	def popitem (self):
 		return self.__data.popitem ()
 
-	def setdefault (self, key, default=None):
+	def setdefault (self, key, default=""):
+		if int != type (key):
+			raise TypeError (
+			      "Invalid key %s, must be int not %s."
+			      % (repr(key), type (key)))
+
+		if str != type (default):
+			raise TypeError (
+			      "Invalid default %s, must be str not %s."
+			      % (repr(default), type (default)))
+
 		return self.__data.setdefault (key, default)
 
-	def update (self, *args, **kwargs):
-		return self.__data.update (*args, **kwargs)
+	# TODO: implement update
 
 	def values (self):
 		return self.__data.values ()
