@@ -65,12 +65,9 @@ try:
 		return round(hdd.free / (2**30), 2)
 
 
-	initMessageNames()
-
 
 	queFileAdress = "/home/pi/telefono/relevant/queFile.txt"
 
-	app = Flask(__name__)
 
 	def home():
 		if request.method == "POST":
@@ -80,7 +77,6 @@ try:
 			return render_template("index.html", content = requested_number)
 		else:
 			return render_template("index.html")
-	app.add_url_rule ("/", "home", home, methods=["POST", "GET"])
 
 	def list():
 
@@ -88,7 +84,6 @@ try:
 		messageNamesList = getMessageNames()
 
 		return render_template("list.html", testlist = testlist, messageNamesList = messageNamesList, str = str)
-	app.add_url_rule ("/list", "list", list)
 
 	def edit_value(index):
 		if request.method == 'POST':
@@ -99,7 +94,6 @@ try:
 
 			return redirect('/list')
 		return render_template('edit.html', index=index, value=messageNameList[index])
-	app.add_url_rule ("/edit/<int:index>", "edit_value", edit_value, methods=["GET", "POST"])
 
 	def get_value():
 		# Get the selected button value from the frontend
@@ -107,14 +101,12 @@ try:
 		# Process the selected value as needed
 		overWriteFile(queFileAdress, requested_number)
 		return redirect('/list') #jsonify({'message': 'Value received successfully'})
-	app.add_url_rule ("/get_value", "get_value", get_value, methods=['POST'])
 
 
 
 	def upload_page():
 		diskSpace = getFreeDiskSpace()
 		return render_template('upload.html', diskSpace = diskSpace)
-	app.add_url_rule ("/upload", "upload_page", upload_page)
 
 	UPLOAD_FOLDER = "/home/pi/telefono"
 
@@ -134,10 +126,22 @@ try:
 			print("test")
 			return render_template("upload.html", content ='erfolgreich unter {} gespeichert!'.format(file_path))
 		return redirect("/upload")
-	app.add_url_rule ("/upload", "upload_file", upload_file, methods=["POST"])
+
+	def main ():
+		initMessageNames()
+
+		app = Flask(__name__)
+		app.add_url_rule ("/", "home", home, methods=["POST", "GET"])
+		app.add_url_rule ("/list", "list", list)
+		app.add_url_rule ("/edit/<int:index>", "edit_value", edit_value, methods=["GET", "POST"])
+		app.add_url_rule ("/get_value", "get_value", get_value, methods=['POST'])
+		app.add_url_rule ("/upload", "upload_page", upload_page)
+		app.add_url_rule ("/upload", "upload_file", upload_file, methods=["POST"])
+
+		app.run(debug=True, host='0.0.0.0')
 
 	if __name__ == "__main__":
-		app.run(debug=True, host='0.0.0.0')
+		main ()
 
 except Exception as Argument:
 
