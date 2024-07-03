@@ -396,6 +396,8 @@ def upload_file():
 
 	file_path = UPLOAD_DIR + "/" + RECORD_PREFIX + str(requested_number) + RECORD_SUFFIX
 	uploaded_file.save(file_path)
+
+	messageNameList.sync_fs ()
 	print("test")
 	return render_template("upload.html", content ="erfolgreich unter {} gespeichert!".format(file_path))
 
