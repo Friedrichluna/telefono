@@ -338,12 +338,6 @@ def initMessageNames():
 	messageNameList = RecordIndexFile ()
 	messageNameList.sync_fs ()
 
-def number_already_exists(requested_number):
-	for i in messageNameList:
-		if str(i) == str(requested_number):
-			return True
-	return False
-
 def getFreeDiskSpace():
 	hdd = psutil.disk_usage (UPLOAD_DIR)
 	return round(hdd.free / (2**30), 2)
@@ -387,18 +381,23 @@ def upload_file():
 	uploaded_file = request.files["file"]
 	requested_number = request.form["requestedNumber"]
 
+	if (not uploaded_file.filename) or (not requested_number):
+		return redirect ("/upload")
 
-	if number_already_exists(requested_number):
+	if not requested_number.isdecimal ():
+		return render_template("upload.html", content ="Keine Nummer angegeben!".format(requested_number))
+
+	requested_number = int(requested_number)
+
+	if requested_number in messageNameList:
 		return render_template("upload.html", content ="Nummer {} existiert bereits!".format(requested_number))
-	if uploaded_file.filename.endswith(".wav") == False:
+	if not uploaded_file.filename.endswith(".wav"):
 		return render_template("upload.html", content = "Bitte nur .wav hochladen!")
 
-	if (uploaded_file.filename != "") and (requested_number != ""):
-		file_path = UPLOAD_DIR + "/" + RECORD_PREFIX + str(requested_number) + RECORD_SUFFIX
-		uploaded_file.save(file_path)
-		print("test")
-		return render_template("upload.html", content ="erfolgreich unter {} gespeichert!".format(file_path))
-	return redirect("/upload")
+	file_path = UPLOAD_DIR + "/" + RECORD_PREFIX + str(requested_number) + RECORD_SUFFIX
+	uploaded_file.save(file_path)
+	print("test")
+	return render_template("upload.html", content ="erfolgreich unter {} gespeichert!".format(file_path))
 
 def main ():
 	initMessageNames()
