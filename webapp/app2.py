@@ -9,17 +9,19 @@ import numpy
 import psutil
 
 
-RECORD_DIRECTORY = "/home/pi/telefono"
+BASE_DIR = "/home/pi/telefono"
+
+RECORD_DIR = BASE_DIR
 RECORD_PREFIX = "recording"
 RECORD_SUFFIX = ".wav"
 
-RECORD_LIST_FILE = "/home/pi/telefono/relevant/recording_names"
+RECORD_LIST_FILE = BASE_DIR + "/relevant/recording_names"
 
-SERVER_QUEUE_FILE = "/home/pi/telefono/relevant/queFile.txt"
+SERVER_QUEUE_FILE = BASE_DIR + "/relevant/queFile.txt"
 
-UPLOAD_FOLDER = "/home/pi/telefono"
+UPLOAD_DIR = BASE_DIR
 
-LOG_FILE = "/home/pi/telefono/relevant/telefonoCrashLog.txt"
+LOG_FILE = BASE_DIR + "/relevant/telefonoCrashLog.txt"
 
 
 def overWriteFile(fileName, writtenText):
@@ -28,7 +30,7 @@ def overWriteFile(fileName, writtenText):
 	file1.close()
 
 def fileNumbers():
-	fileNameList = [f for f in listdir(RECORD_DIRECTORY) if isfile(join(RECORD_DIRECTORY, f))]
+	fileNameList = [f for f in listdir(RECORD_DIR) if isfile(join(RECORD_DIR, f))]
 	fileNameList = [i.replace(RECORD_PREFIX, "") for i in fileNameList]
 	fileNameList = [i.replace(RECORD_SUFFIX, "") for i in fileNameList]
 	fileNumberList = [eval(i) for i in fileNameList]
@@ -126,7 +128,7 @@ def upload_file():
 		return render_template("upload.html", content = "Bitte nur .wav hochladen!")
 
 	if (uploaded_file.filename != "") and (requested_number != ""):
-		file_path = UPLOAD_FOLDER + "/" + RECORD_PREFIX + str(requested_number) + RECORD_SUFFIX
+		file_path = UPLOAD_DIR + "/" + RECORD_PREFIX + str(requested_number) + RECORD_SUFFIX
 		uploaded_file.save(file_path)
 		print("test")
 		return render_template("upload.html", content ="erfolgreich unter {} gespeichert!".format(file_path))
