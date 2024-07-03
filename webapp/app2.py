@@ -24,6 +24,67 @@ UPLOAD_DIR = BASE_DIR
 LOG_FILE = BASE_DIR + "/relevant/telefonoCrashLog.txt"
 
 
+class RecordIndexFile ():
+	def __init__ (self):
+		self.__data = dict ()
+		return None
+
+	def __contains__ (self, key):
+		return self.__data.__contains__ (key)
+
+	def __getitem__ (self, key):
+		return self.__data.__getitem__ (key)
+
+	def __setitem__ (self, key, value):
+		return self.__data.__setitem__ (key, value)
+
+	def __delitem__ (self, key):
+		return self.__data.__delitem__ (key)
+
+
+	def __iter__ (self):
+		return self.__data.__iter__ ()
+
+	def __len__ (self):
+		return self.__data.__len__ ()
+
+	def __reversed__ (self):
+		return self.__data.__reversed__ ()
+
+
+	def clear (self):
+		return self.__data.clear ()
+
+	def copy (self):
+		c = RecordIndexFile ()
+		c.__data = self.__data.copy ()
+		return c
+
+	def get (self, key, default=None):
+		return self.__data.get (key, default)
+
+	def items (self):
+		return self.__data.items ()
+
+	def keys (self):
+		return self.__data.keys ()
+
+	def pop (self, key, *args, **kwargs):
+		return self.__data.pop (key, *args, **kwargs)
+
+	def popitem (self):
+		return self.__data.popitem ()
+
+	def setdefault (self, key, default=None):
+		return self.__data.setdefault (key, default)
+
+	def update (self, *args, **kwargs):
+		return self.__data.update (*args, **kwargs)
+
+	def values (self):
+		return self.__data.values ()
+
+
 def overWriteFile(fileName, writtenText):
 	file1 = open(fileName,"w")
 	file1.write(str(writtenText))
