@@ -25,8 +25,16 @@ LOG_FILE = BASE_DIR + "/relevant/telefonoCrashLog.txt"
 
 
 class RecordIndexFile ():
-	def __init__ (self):
+	def __init__ (self, filename:str):
 		self.__data = dict ()
+		self.__filename = filename
+
+		if os.path.exists (self.__filename):
+			with open (self.__filename, "rt") as f:
+				self.__load (f)
+		else:
+			os.mknod (self.__filename)
+
 		return None
 
 	def __contains__ (self, key):
@@ -83,6 +91,41 @@ class RecordIndexFile ():
 
 	def values (self):
 		return self.__data.values ()
+
+	def __load (self, _file):
+		for lineno, line in enumerate (_file.readlines ()):
+
+			# ignore commented lines
+			index = line.find ("#")
+			if (-1 != index):
+				line = line[:index]
+
+			# ignore empty lines
+			if not line:
+				continue
+
+			index = line.find (":")
+			if (-1 == index):
+				print ("ignoring malformed line %d"
+				       % (lineno+1))
+				continue
+
+			number = line[:index]
+			name = line[index+1:]
+
+			number = number.strip ()
+			name = name.strip ()
+
+			try:
+				number = int (number)
+			except ValueError:
+				print ("Key is not a number!",
+				       "Ignoring line")
+				continue
+
+			self[number] = name
+
+		return
 
 
 def overWriteFile(fileName, writtenText):
