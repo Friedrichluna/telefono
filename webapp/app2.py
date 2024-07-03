@@ -33,7 +33,7 @@ def fileNumbers():
 	fileNameList = [f for f in listdir(RECORD_DIR) if isfile(join(RECORD_DIR, f))]
 	fileNameList = [i.replace(RECORD_PREFIX, "") for i in fileNameList]
 	fileNameList = [i.replace(RECORD_SUFFIX, "") for i in fileNameList]
-	fileNumberList = [eval(i) for i in fileNameList]
+	fileNumberList = [int(i) for i in fileNameList]
 	fileNumberList.sort()
 
 	return fileNumberList
