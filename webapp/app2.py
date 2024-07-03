@@ -333,11 +333,6 @@ def overWriteFile(fileName, writtenText):
 	file1.write(str(writtenText))
 	file1.close()
 
-def initMessageNames():
-	global messageNameList
-	messageNameList = RecordIndexFile ()
-	messageNameList.sync_fs ()
-
 def getFreeDiskSpace():
 	hdd = psutil.disk_usage (UPLOAD_DIR)
 	return round(hdd.free / (2**30), 2)
@@ -352,10 +347,10 @@ def home():
 	else:
 		return render_template("index.html")
 
-def _list():
+def _list(messageNameList):
 	return render_template("list.html", messageNamesList = messageNameList)
 
-def edit_value(index):
+def edit_value(messageNameList, index):
 	if request.method == "POST":
 		new_value = request.form["new_value"]
 		messageNameList[index] = new_value
@@ -377,7 +372,7 @@ def upload_page():
 	return render_template("upload.html", diskSpace = diskSpace)
 
 
-def upload_file():
+def upload_file(messageNameList):
 	uploaded_file = request.files["file"]
 	requested_number = request.form["requestedNumber"]
 
@@ -402,15 +397,16 @@ def upload_file():
 	return render_template("upload.html", content ="erfolgreich unter {} gespeichert!".format(file_path))
 
 def main ():
-	initMessageNames()
+	messageNameList = RecordIndexFile ()
+	messageNameList.sync_fs ()
 
 	app = Flask(__name__)
 	app.add_url_rule ("/", "home", home, methods=["POST", "GET"])
-	app.add_url_rule ("/list", "list", _list)
-	app.add_url_rule ("/edit/<int:index>", "edit_value", edit_value, methods=["GET", "POST"])
+	app.add_url_rule ("/list", "list", _list, defaults={"messageNameList":messageNameList})
+	app.add_url_rule ("/edit/<int:index>", "edit_value", edit_value, methods=["GET", "POST"], defaults={"messageNameList":messageNameList})
 	app.add_url_rule ("/get_value", "get_value", get_value, methods=["POST"])
 	app.add_url_rule ("/upload", "upload_page", upload_page)
-	app.add_url_rule ("/upload", "upload_file", upload_file, methods=["POST"])
+	app.add_url_rule ("/upload", "upload_file", upload_file, methods=["POST"], defaults={"messageNameList":messageNameList})
 
 	app.run(debug=True, host="0.0.0.0")
 
