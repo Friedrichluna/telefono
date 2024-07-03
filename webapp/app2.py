@@ -333,25 +333,13 @@ def overWriteFile(fileName, writtenText):
 	file1.write(str(writtenText))
 	file1.close()
 
-def fileNumbers():
-	fileNameList = [f for f in listdir(RECORD_DIR) if isfile(join(RECORD_DIR, f))]
-	fileNameList = [i.replace(RECORD_PREFIX, "") for i in fileNameList]
-	fileNameList = [i.replace(RECORD_SUFFIX, "") for i in fileNameList]
-	fileNumberList = [int(i) for i in fileNameList]
-	fileNumberList.sort()
-
-	return fileNumberList
-
 def initMessageNames():
-	fileNumberList = fileNumbers()
-
 	global messageNameList
 	messageNameList = RecordIndexFile ()
 	messageNameList.sync_fs ()
 
 def number_already_exists(requested_number):
-	fileNumberList = fileNumbers()
-	for i in fileNumbers():
+	for i in messageNameList:
 		if str(i) == str(requested_number):
 			return True
 	return False
@@ -371,9 +359,7 @@ def home():
 		return render_template("index.html")
 
 def _list():
-	testlist = fileNumbers()
-
-	return render_template("list.html", testlist = testlist, messageNamesList = messageNameList, str = str)
+	return render_template("list.html", messageNamesList = messageNameList)
 
 def edit_value(index):
 	if request.method == "POST":

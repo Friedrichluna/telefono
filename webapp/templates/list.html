@@ -13,22 +13,22 @@
 		</li>
 	</ul>
 	<ul class="list-group">
-		{% for item in testlist %} 
+		{% for key in messageNamesList %}
 			<li class="list-group-item d-flex justify-content-between align-items-center">
 				<div class="text-left">
 					<form action="/get_value" method="post" class="d-inline">
-						<button type="submit" name="selected_value" value="{{ item }}" class="btn btn-sm btn-secondary">{{ item }}</button>
+						<button type="submit" name="selected_value" value="{{ key }}" class="btn btn-sm btn-secondary">{{ key }}</button>
 					</form>
-					
-					{{messageNamesList[item]}}
+
+					{{messageNamesList[key]}}
 				</div>
-				
+
 				<div class="text-right btn-group">
-					<a href="/edit/{{ item }}" class="btn btn-sm btn-primary">✎</a>
+					<a href="/edit/{{ key }}" class="btn btn-sm btn-primary">✎</a>
 				</div>
-			</li> 
-			
-			
+			</li>
+
+
 		{% endfor %}
 	</ul>
 {% endblock %}
