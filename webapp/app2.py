@@ -44,7 +44,8 @@ def initMessageNames():
 	global messageNameList
 	messageNameList = dePickleData()
 
-	if len(messageNameList) < max(fileNumberList):
+	if len(fileNumberList) \
+	and (len(messageNameList) < max(fileNumberList)):
 		for i in range(max(fileNumberList)):
 			messageNameList.append("")
 
