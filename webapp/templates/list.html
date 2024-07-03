@@ -13,18 +13,18 @@
 		</li>
 	</ul>
 	<ul class="list-group">
-		{% for key in messageNamesList %}
+		{% for number in records %}
 			<li class="list-group-item d-flex justify-content-between align-items-center">
 				<div class="text-left">
 					<form action="/get_value" method="post" class="d-inline">
-						<button type="submit" name="selected_value" value="{{ key }}" class="btn btn-sm btn-secondary">{{ key }}</button>
+						<button type="submit" name="selected_value" value="{{ number }}" class="btn btn-sm btn-secondary">{{ number }}</button>
 					</form>
 
-					{{messageNamesList[key]}}
+					{{records[number]}}
 				</div>
 
 				<div class="text-right btn-group">
-					<a href="/edit/{{ key }}" class="btn btn-sm btn-primary">✎</a>
+					<a href="/edit/{{ number }}" class="btn btn-sm btn-primary">✎</a>
 				</div>
 			</li>
 

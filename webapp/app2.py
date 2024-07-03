@@ -342,15 +342,17 @@ def getFreeDiskSpace():
 
 
 class TelefonoWebApp (Flask):
-	def __init__ (self):
+	def __init__ (self, records):
 		super ().__init__ (__name__)
 
+		self.records = records
+
 		self.add_url_rule ("/", "home", self.home, methods=["POST", "GET"])
-		self.add_url_rule ("/list", "list", self.list, defaults={"messageNameList":messageNameList})
-		self.add_url_rule ("/edit/<int:index>", "edit_value", self.edit_value, methods=["GET", "POST"], defaults={"messageNameList":messageNameList})
+		self.add_url_rule ("/list", "list", self.list)
+		self.add_url_rule ("/edit/<int:index>", "edit_value", self.edit_value, methods=["GET", "POST"])
 		self.add_url_rule ("/get_value", "get_value", self.get_value, methods=["POST"])
 		self.add_url_rule ("/upload", "upload_page", self.upload_page)
-		self.add_url_rule ("/upload", "upload_file", self.upload_file, methods=["POST"], defaults={"messageNameList":messageNameList})
+		self.add_url_rule ("/upload", "upload_file", self.upload_file, methods=["POST"])
 		return
 
 	def home(self):
@@ -362,16 +364,16 @@ class TelefonoWebApp (Flask):
 		else:
 			return render_template("index.html")
 
-	def list(self, messageNameList):
-		return render_template("list.html", messageNamesList = messageNameList)
+	def list(self):
+		return render_template("list.html", records=self.records)
 
-	def edit_value(self, messageNameList, index):
+	def edit_value(self, index):
 		if request.method == "POST":
 			new_value = request.form["new_value"]
-			messageNameList[index] = new_value
+			self.records[index] = new_value
 
 			return redirect("/list")
-		return render_template("edit.html", index=index, value=messageNameList[index])
+		return render_template("edit.html", index=index, value=self.records[index])
 
 	def get_value(self):
 		# Get the selected button value from the frontend
@@ -387,7 +389,7 @@ class TelefonoWebApp (Flask):
 		return render_template("upload.html", diskSpace = diskSpace)
 
 
-	def upload_file(self, messageNameList):
+	def upload_file(self):
 		uploaded_file = request.files["file"]
 		requested_number = request.form["requestedNumber"]
 
@@ -399,7 +401,7 @@ class TelefonoWebApp (Flask):
 
 		requested_number = int(requested_number)
 
-		if requested_number in messageNameList:
+		if requested_number in self.records:
 			return render_template("upload.html", content ="Nummer {} existiert bereits!".format(requested_number))
 		if not uploaded_file.filename.endswith(".wav"):
 			return render_template("upload.html", content = "Bitte nur .wav hochladen!")
@@ -407,16 +409,15 @@ class TelefonoWebApp (Flask):
 		file_path = UPLOAD_DIR + "/" + RECORD_PREFIX + str(requested_number) + RECORD_SUFFIX
 		uploaded_file.save(file_path)
 
-		messageNameList.sync_fs ()
+		self.records.sync_fs ()
 		print("test")
 		return render_template("upload.html", content ="erfolgreich unter {} gespeichert!".format(file_path))
 
 def main ():
-	global messageNameList
-	messageNameList = RecordIndexFile ()
-	messageNameList.sync_fs ()
+	records = RecordIndexFile ()
+	records.sync_fs ()
 
-	app = TelefonoWebApp ()
+	app = TelefonoWebApp (records)
 	app.run(debug=FLASK_DEBUG, host=FLASK_IP)
 
 if __name__ == "__main__":
