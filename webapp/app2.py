@@ -74,7 +74,7 @@ def number_already_exists(requested_number):
 	return False
 
 def getFreeDiskSpace():
-	hdd = psutil.disk_usage("/")
+	hdd = psutil.disk_usage (UPLOAD_DIR)
 	return round(hdd.free / (2**30), 2)
 
 
