@@ -25,15 +25,22 @@ LOG_FILE = BASE_DIR + "/relevant/telefonoCrashLog.txt"
 
 
 class RecordIndexFile ():
-	def __init__ (self, filename:str):
+	def __init__ (self, filename:str, legacy:bool=False):
 		self.__data = dict ()
 		self.__filename = filename
+		self.__legacy = legacy
 
-		if os.path.exists (self.__filename):
-			with open (self.__filename, "rt") as f:
-				self.__load (f)
+		if not legacy:
+			if os.path.exists (self.__filename):
+				with open (self.__filename, "rt") as f:
+					self.__load (f)
+			else:
+				os.mknod (self.__filename)
+
 		else:
-			os.mknod (self.__filename)
+			if os.path.exists (self.__filename):
+				with open (self.__filename, "rb") as f:
+					self.__load_legacy (f)
 
 		return None
 
@@ -146,6 +153,20 @@ class RecordIndexFile ():
 
 		return
 
+	def __load_legacy (self, _file):
+		data = pickle.load (_file)
+
+		for index, name in enumerate (data):
+
+			# don't store empty values
+			if name:
+				# There are valid names with
+				# a single space, so strip
+				# can't be called earlier.
+				self[index] = name.strip ()
+
+		return
+
 	def __store (self, _file):
 
 		_file.truncate ()
@@ -160,6 +181,29 @@ class RecordIndexFile ():
 			_file.write (self[key])
 			_file.write ("\n")
 
+		_file.flush ()
+		return
+
+	def __store_legacy (self, _file):
+		_file.truncate ()
+
+		data = list ()
+
+		last_key = max (self.keys (), default=None)
+		if last_key is not None:
+			for key in range (last_key+1):
+				value = self.get (key, default=None)
+
+				# existing empty key
+				if "" == value:
+					value = " "
+				# nonexisting key
+				elif None is value:
+					value = ""
+
+				data.append (value)
+
+		pickle.dump (data, _file)
 		_file.flush ()
 		return
 
