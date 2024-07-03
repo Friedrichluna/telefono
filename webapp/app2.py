@@ -1,11 +1,10 @@
 #!/usr/bin/python3
 
-from flask import Flask, redirect, url_for, render_template, request
-from os import listdir
 import os
-from os.path import isfile, join
 import pickle
-import numpy
+
+from flask import Flask, redirect, render_template, request
+
 import psutil
 
 
