@@ -9,6 +9,17 @@ import numpy
 import psutil
 
 
+RECORD_DIRECTORY = "/home/pi/telefono"
+RECORD_PREFIX = "recording"
+RECORD_SUFFIX = ".wav"
+
+RECORD_LIST_FILE = "/home/pi/telefono/relevant/recording_names"
+
+SERVER_QUEUE_FILE = "/home/pi/telefono/relevant/queFile.txt"
+
+UPLOAD_FOLDER = "/home/pi/telefono"
+
+LOG_FILE = "home/pi/telefono/relevant/telefonoCrashLog.txt"
 
 
 def overWriteFile(fileName, writtenText):
@@ -17,9 +28,9 @@ def overWriteFile(fileName, writtenText):
 	file1.close()
 
 def fileNumbers():
-	fileNameList = [f for f in listdir("/home/pi/telefono") if isfile(join("/home/pi/telefono", f))]
-	fileNameList = [i.replace("recording", "") for i in fileNameList]
-	fileNameList = [i.replace(".wav", "") for i in fileNameList]
+	fileNameList = [f for f in listdir(RECORD_DIRECTORY) if isfile(join(RECORD_DIRECTORY, f))]
+	fileNameList = [i.replace(RECORD_PREFIX, "") for i in fileNameList]
+	fileNameList = [i.replace(RECORD_SUFFIX, "") for i in fileNameList]
 	fileNumberList = [eval(i) for i in fileNameList]
 	fileNumberList.sort()
 
@@ -42,12 +53,12 @@ def getMessageNames():
 	return messageNameList
 
 def pickleData(data):
-	file = open("/home/pi/telefono/relevant/recording_names", "wb")
+	file = open(RECORD_LIST_FILE, "wb")
 	pickle.dump(data, file)
 	file.close()
 
 def dePickleData():
-	file = open("/home/pi/telefono/relevant/recording_names", "rb")
+	file = open(RECORD_LIST_FILE, "rb")
 	data = pickle.load(file)
 	file.close()
 	return data
@@ -64,15 +75,11 @@ def getFreeDiskSpace():
 	return round(hdd.free / (2**30), 2)
 
 
-
-queFileAdress = "/home/pi/telefono/relevant/queFile.txt"
-
-
 def home():
 	if request.method == "POST":
 		requested_number = request.form["nm"]
 		print(requested_number)
-		overWriteFile(queFileAdress, requested_number)
+		overWriteFile(SERVER_QUEUE_FILE, requested_number)
 		return render_template("index.html", content = requested_number)
 	else:
 		return render_template("index.html")
@@ -98,7 +105,7 @@ def get_value():
 	# Get the selected button value from the frontend
 	requested_number = request.form["selected_value"]
 	# Process the selected value as needed
-	overWriteFile(queFileAdress, requested_number)
+	overWriteFile(SERVER_QUEUE_FILE, requested_number)
 	return redirect("/list") #jsonify({"message": "Value received successfully"})
 
 
@@ -107,7 +114,6 @@ def upload_page():
 	diskSpace = getFreeDiskSpace()
 	return render_template("upload.html", diskSpace = diskSpace)
 
-UPLOAD_FOLDER = "/home/pi/telefono"
 
 def upload_file():
 	uploaded_file = request.files["file"]
@@ -120,7 +126,7 @@ def upload_file():
 		return render_template("upload.html", content = "Bitte nur .wav hochladen!")
 
 	if (uploaded_file.filename != "") and (requested_number != ""):
-		file_path = UPLOAD_FOLDER + "/recording" + str(requested_number) + ".wav"
+		file_path = UPLOAD_FOLDER + "/" + RECORD_PREFIX + str(requested_number) + RECORD_SUFFIX
 		uploaded_file.save(file_path)
 		print("test")
 		return render_template("upload.html", content ="erfolgreich unter {} gespeichert!".format(file_path))
@@ -145,7 +151,7 @@ if __name__ == "__main__":
 
 	except Exception as Argument:
 		# creating/opening a file
-		f = open("home/pi/telefono/relevant/telefonoCrashLog.txt", "a")
+		f = open(LOG_FILE, "a")
 
 		# writing in the file
 		f.write(str(Argument))
