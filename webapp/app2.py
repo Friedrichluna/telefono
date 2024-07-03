@@ -19,7 +19,7 @@ SERVER_QUEUE_FILE = "/home/pi/telefono/relevant/queFile.txt"
 
 UPLOAD_FOLDER = "/home/pi/telefono"
 
-LOG_FILE = "home/pi/telefono/relevant/telefonoCrashLog.txt"
+LOG_FILE = "/home/pi/telefono/relevant/telefonoCrashLog.txt"
 
 
 def overWriteFile(fileName, writtenText):
