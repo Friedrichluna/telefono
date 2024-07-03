@@ -57,6 +57,76 @@
 			border-color: #e9ecef #e9ecef #dee2e6;
 			color: #0056b3;
 		}
+
+
+		._my-button {
+			padding: .25rem .5rem;
+			font-size: .875rem;
+			line-height: 1.5;
+			border-radius: .2rem;
+
+			display: inline-block;
+			font-weight: 400;
+			text-align: center;
+			vertical-align: middle;
+			-webkit-user-select: none;
+			-moz-user-select: none;
+			-ms-user-select: none;
+			user-select: none;
+			border: 1px solid transparent;
+			transition: color .15s ease-in-out,background-color .15s ease-in-out,border-color .15s ease-in-out,box-shadow .15s ease-in-out;
+		}
+		._my-button:hover {
+			color: #212529;
+			text-decoration: none;
+		}
+		._my-number {
+			color: #fff;
+			background-color: #6c757d;
+			border-color: #6c757d;
+		}
+		._my-number:hover {
+			color: #fff;
+			background-color: #5a6268;
+			border-color: #545b62;
+		}
+		._my-number:active {
+			color: #fff;
+			background-color: #545b62;
+			border-color: #4e555b;
+		}
+		._my-number:focus, ._my-number:active:focus {
+			box-shadow: 0 0 0 .2rem rgba(130,138,145,.5);
+		}
+		._my-edit {
+			color: #fff;
+			background-color: #007bff;
+			border-color: #007bff;
+			float: right;
+		}
+		._my-edit:hover {
+			color: #fff;
+			background-color: #0069d9;
+			border-color: #0062cc;
+		}
+		._my-edit:focus {
+			outline: 0;
+			box-shadow: 0 0 0 .2rem rgba(0,123,255,.25);
+		}
+		._my-edit:active {
+			color: #fff;
+			background-color: #0062cc;
+			border-color: #005cbf;
+		}
+		._my-item {
+			padding: .75rem 1.25rem;
+			margin-bottom: -1px;
+			background-color: #fff;
+			border: 1px solid rgba(0,0,0,.125);
+		}
+		._my-item > form {
+			display: contents;
+		}
 	</style>
 	<title>{% block title%}{% endblock %}</title>
 </head>
