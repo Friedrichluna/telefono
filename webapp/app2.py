@@ -282,33 +282,15 @@ def fileNumbers():
 
 	return fileNumberList
 
-messageNameList = []
 def initMessageNames():
 	fileNumberList = fileNumbers()
+
 	global messageNameList
-	messageNameList = dePickleData()
+	messageNameList = RecordIndexFile (RECORD_LIST_FILE, legacy=True)
 
-	if len(fileNumberList) \
-	and (len(messageNameList) < max(fileNumberList)):
-		for i in range(max(fileNumberList)):
-			messageNameList.append("")
-
-
-
-def getMessageNames():
-	global messageNameList
-	return messageNameList
-
-def pickleData(data):
-	file = open(RECORD_LIST_FILE, "wb")
-	pickle.dump(data, file)
-	file.close()
-
-def dePickleData():
-	file = open(RECORD_LIST_FILE, "rb")
-	data = pickle.load(file)
-	file.close()
-	return data
+	# ensure that a name exists for each file
+	for number in fileNumberList:
+		messageNameList.setdefault (number)
 
 def number_already_exists(requested_number):
 	fileNumberList = fileNumbers()
@@ -332,18 +314,14 @@ def home():
 		return render_template("index.html")
 
 def _list():
-
 	testlist = fileNumbers()
-	messageNamesList = getMessageNames()
 
-	return render_template("list.html", testlist = testlist, messageNamesList = messageNamesList, str = str)
+	return render_template("list.html", testlist = testlist, messageNamesList = messageNameList, str = str)
 
 def edit_value(index):
 	if request.method == "POST":
 		new_value = request.form["new_value"]
 		messageNameList[index] = new_value
-
-		pickleData(messageNameList)
 
 		return redirect("/list")
 	return render_template("edit.html", index=index, value=messageNameList[index])
