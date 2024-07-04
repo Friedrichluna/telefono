@@ -1,5 +1,19 @@
 {% extends "base.html" %}
+
+{% block style %}
+		form {
+			padding-left: 15px;
+		}
+
+		form > * {
+			display: block;
+			margin-top: 0;
+			margin-bottom: 1rem;
+		}
+{% endblock %}
+
 {% block title %} Telefono Home Page {% endblock %}
+
 {% block content%}
 	<nav>
 		<a class="active" href="/">Nummernfeld </a>

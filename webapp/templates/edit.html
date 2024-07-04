@@ -1,140 +1,12 @@
-<!DOCTYPE html>
-<html>
-<head>
-	<title>Edit Value</title>
-	<style>
-		:root {
-			--blue: #007bff;
-			--indigo: #6610f2;
-			--purple: #6f42c1;
-			--pink: #e83e8c;
-			--red: #dc3545;
-			--orange: #fd7e14;
-			--yellow: #ffc107;
-			--green: #28a745;
-			--teal: #20c997;
-			--cyan: #17a2b8;
-			--white: #fff;
-			--gray: #6c757d;
-			--gray-dark: #343a40;
-			--primary: #007bff;
-			--secondary: #6c757d;
-			--success: #28a745;
-			--info: #17a2b8;
-			--warning: #ffc107;
-			--danger: #dc3545;
-			--light: #f8f9fa;
-			--dark: #343a40;
-			--breakpoint-xs: 0;
-			--breakpoint-sm: 576px;
-			--breakpoint-md: 768px;
-			--breakpoint-lg: 992px;
-			--breakpoint-xl: 1200px;
-			--font-family-sans-serif: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol";
-			--font-family-monospace: SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;
-		}
-		html {
-			font-family: sans-serif;
-			line-height: 1.15;
-			-webkit-text-size-adjust: 100%;
-			-ms-text-size-adjust: 100%;
-			-ms-overflow-style: scrollbar;
-			-webkit-tap-highlight-color: transparent;
-		}
+{% extends "base.html" %}
+
+{% block style %}
 		body {
-			margin: 0;
-			font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol";
-			font-size: 1rem;
-			font-weight: 400;
-			line-height: 1.5;
-			color: #212529;
-			text-align: left;
-			background-color: #fff;
-		}
-		*, ::after, ::before {
+			width: 100%;
 			box-sizing: border-box;
-		}
-
-		h2 {
-			font-size: 2rem;
-		}
-		h1, h2, h3, h4, h5, h6 {
-			margin-top: 0;
-			margin-bottom: .5rem;
-			font-family: inherit;
-			font-weight: 500;
-			line-height: 1.2;
-			color: inherit;
-		}
-		label {
-			display: inline-block;
-			margin-bottom: .5rem;
-		}
-		.form-control::placeholder {
-			color: #6c757d;
-			opacity: 1;
-		}
-		[type="button"]::-moz-focus-inner, [type="reset"]::-moz-focus-inner, [type="submit"]::-moz-focus-inner, button::-moz-focus-inner {
-			padding: 0;
-			border-style: none;
-		}
-		.btn:not(:disabled):not(.disabled) {
-			cursor: pointer;
-		}
-		.btn-primary {
-			color: #fff;
-			background-color: #007bff;
-			border-color: #007bff;
-		}
-		.btn {
-			display: inline-block;
-			font-weight: 400;
-			text-align: center;
-			white-space: nowrap;
-			vertical-align: middle;
-			-webkit-user-select: none;
-			-moz-user-select: none;
-			-ms-user-select: none;
-			user-select: none;
-			border: 1px solid transparent;
-			padding: .375rem .75rem;
-			font-size: 1rem;
-			line-height: 1.5;
-			border-radius: .25rem;
-			transition: color .15s ease-in-out,background-color .15s ease-in-out,border-color .15s ease-in-out,box-shadow .15s ease-in-out;
-		}
-		[type="reset"], [type="submit"], button, html [type="button"] {
-			-webkit-appearance: button;
-		}
-		button, input {
-			overflow: visible;
-		}
-		button, input, optgroup, select, textarea {
-			margin: 0;
-			font-family: inherit;
-			font-size: inherit;
-			line-height: inherit;
-		}
-		.form-control {
-			display: block;
-			width: 100%;
-			padding: .375rem .75rem;
-			font-size: 1rem;
-			line-height: 1.5;
-			color: #495057;
-			background-color: #fff;
-			background-clip: padding-box;
-			border: 1px solid #ced4da;
-			border-radius: .25rem;
-			transition: border-color .15s ease-in-out,box-shadow .15s ease-in-out;
-		}
-
-
-		body {
-			margin-top: 3rem !important;
-			width: 100%;
 			padding-right: 15px;
 			padding-left: 15px;
+			margin-top: 3rem !important;
 			margin-right: auto;
 			margin-left: auto;
 		}
@@ -160,17 +32,63 @@
 			}
 		}
 
+		h1 {
+			display: none;
+		}
+
+		h2 {
+			font-size: 2rem;
+
+			margin-top: 0;
+			margin-bottom: .5rem;
+			font-weight: 500;
+			line-height: 1.2;
+		}
+
+		label {
+			display: inline-block;
+			margin-bottom: .5rem;
+		}
+
 		input {
 			margin-bottom: 1rem;
 		}
-	</style>
-</head>
-<body>
+
+		[type="text"] {
+			display: block;
+
+			width: 100%;
+			box-sizing: border-box;
+			padding: .375rem .75rem;
+
+			font-size: 1rem;
+			line-height: 1.5;
+
+			color: #495057;
+
+			border: 1px solid #ced4da;
+			border-radius: .25rem;
+			transition: border-color .15s ease-in-out,box-shadow .15s ease-in-out;
+		}
+
+		.button {
+			padding: .375rem .75rem;
+			font-size: 1rem;
+			line-height: 1.5;
+			border-radius: .25rem;
+		}
+
+
+
+{% endblock %}
+
+{% block title %} Edit Value {% endblock %}
+
+{% block content%}
 	<h2>Namen Bearbeiten</h2>
 	<form method="post">
 		<label for="new_value">Neuer Name:</label>
-		<input type="text" class="form-control" id="new_value" name="new_value" value="{{ value }}" required>
-		<input type="submit" class="btn btn-primary" value="Speichern">
+		<input type="text" id="new_value" name="new_value" value="{{ value }}" required>
+		<input type="submit" class="button blue" value="Speichern">
 	</form>
-</body>
-</html>
+{% endblock %}
