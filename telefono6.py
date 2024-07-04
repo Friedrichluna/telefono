@@ -375,7 +375,7 @@ def ringing (tts, callingFile_, speaker, PickUp):
 
 
 #--------------------------CallingRoutine----------------------------
-from datetime import datetime
+import datetime
 from random import seed
 from random import randint
 
@@ -384,7 +384,7 @@ maxHour = 21
 needNewTime = None
 
 def getTimeInt():
-	now = datetime.now()
+	now = datetime.datetime.now()
 	current_time = now.strftime("%H%M%S")
 	return(int(current_time))
 
@@ -429,7 +429,7 @@ def callInQue(tts, queFileAdress, speaker, PickUp):
 
 
 def getWeekDayInt():
-	now = datetime.now()
+	now = datetime.datetime.now()
 	return now.weekday()
 
 
