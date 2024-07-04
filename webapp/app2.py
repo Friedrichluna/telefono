@@ -12,6 +12,7 @@ BASE_DIR = "/home/pi/telefono"
 
 FLASK_DEBUG = True
 FLASK_IP = "0.0.0.0"
+FLASK_PORT = 5000
 
 RECORD_DIR = BASE_DIR
 RECORD_PREFIX = "recording"
@@ -417,7 +418,7 @@ def main ():
 	records.sync_fs ()
 
 	app = TelefonoWebApp (records)
-	app.run(debug=FLASK_DEBUG, host=FLASK_IP)
+	app.run(host=FLASK_IP, port=FLASK_PORT, debug=FLASK_DEBUG)
 
 if __name__ == "__main__":
 	try:
