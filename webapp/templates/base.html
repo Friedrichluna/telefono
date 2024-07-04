@@ -24,6 +24,7 @@
 			margin-left: auto;
 		}
 		._my-form > * {
+			display: block;
 			margin-top: 0;
 			margin-bottom: 1rem;
 		}
@@ -99,21 +100,23 @@
 			box-shadow: 0 0 0 .2rem rgba(130,138,145,.5);
 		}
 		._my-edit {
+			float: right;
+		}
+		._my-blue {
 			color: #fff;
 			background-color: #007bff;
 			border-color: #007bff;
-			float: right;
 		}
-		._my-edit:hover {
+		._my-blue:hover {
 			color: #fff;
 			background-color: #0069d9;
 			border-color: #0062cc;
 		}
-		._my-edit:focus {
+		._my-blue:focus {
 			outline: 0;
 			box-shadow: 0 0 0 .2rem rgba(0,123,255,.25);
 		}
-		._my-edit:active {
+		._my-blue:active {
 			color: #fff;
 			background-color: #0062cc;
 			border-color: #005cbf;
@@ -126,6 +129,19 @@
 		}
 		._my-item > form {
 			display: contents;
+		}
+
+
+		._my-label {
+			display: block;
+			margin-bottom: .5rem;
+			font-weight: bolder;
+		}
+		._my-form > ._my-button {
+			padding: .375rem .75rem;
+			font-size: 1rem;
+			line-height: 1.5;
+			border-radius: .25rem;
 		}
 	</style>
 	<title>{% block title%}{% endblock %}</title>
