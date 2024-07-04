@@ -146,69 +146,8 @@
 			background-color: #0062cc;
 			border-color: #005cbf;
 		}
-
-		/* list */
-		section {
-			padding: .75rem 1.25rem;
-
-			border-width: 1px;
-			border-color: rgba(0,0,0,.125);
-			border-style: solid;
-		}
-		section:not(:first-of-type) {
-			border-top-width: 0;
-		}
-		section > form {
-			display: contents;
-		}
-
-
-		section .button {
-			padding: .25rem .5rem;
-			font-size: .875rem;
-			line-height: 1.5;
-			border-radius: .2rem;
-		}
-
-		.button.gray {
-			background-color: var(--secondary);
-			border-color: var(--secondary);
-		}
-		.button.gray:hover {
-			background-color: #5a6268;
-			border-color: #545b62;
-		}
-		.button.gray:active {
-			background-color: #545b62;
-			border-color: #4e555b;
-		}
-		.button.gray:focus {
-			box-shadow: 0 0 0 .2rem rgba(130,138,145,.5);
-		}
-
-		a.button {
-			float: right;
-		}
-
-
-
-		/* upload */
-		p.instruction {
-			font-weight: bolder;
-		}
-
-		label {
-			display: block;
-			margin-bottom: .5rem !important;
-			font-weight: bolder;
-		}
-
-		.button.upload {
-			padding: .375rem .75rem;
-			font-size: 1rem;
-			line-height: 1.5;
-			border-radius: .25rem;
-		}
+{% block style %}
+{% endblock %}
 	</style>
 	<title>{% block title%}{% endblock %}</title>
 </head>

@@ -1,5 +1,26 @@
 {% extends "base.html" %}
+
+{% block style %}
+		p.instruction {
+			font-weight: bolder;
+		}
+
+		label {
+			display: block;
+			margin-bottom: .5rem !important;
+			font-weight: bolder;
+		}
+
+		.button.upload {
+			padding: .375rem .75rem;
+			font-size: 1rem;
+			line-height: 1.5;
+			border-radius: .25rem;
+		}
+{% endblock %}
+
 {% block title %} Telefono Home Page {% endblock %}
+
 {% block content%}
 	<nav>
 		<a href="/">Nummernfeld </a>
