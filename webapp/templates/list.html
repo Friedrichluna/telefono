@@ -1,18 +1,18 @@
 {% extends "base.html" %}
 {% block title %} Telefono Home Page {% endblock %}
 {% block content%}
-	<nav class="_my-nav">
+	<nav>
 		<a href="/">Nummernfeld </a>
 		<a class="active" href="/list">Liste</a>
 		<a href="/upload">Upload</a>
 	</nav>
 {% for number in records %}
-	<section class="_my-item">
+	<section>
 		<form action="/get_value" method="post">
-			<input type="submit" name="selected_value" value="{{ number }}" class="_my-button _my-number">
+			<input type="submit" name="selected_value" value="{{ number }}" class="button gray">
 		</form>
 		{{ records[number] }}
-		<a href="/edit/{{ number }}" class="_my-button _my-blue _my-edit">✎</a>
+		<a href="/edit/{{ number }}" class="button blue">✎</a>
 	</section>
 {% endfor %}
 

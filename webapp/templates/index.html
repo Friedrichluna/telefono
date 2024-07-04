@@ -1,15 +1,15 @@
 {% extends "base.html" %}
 {% block title %} Telefono Home Page {% endblock %}
 {% block content%}
-	<nav class="_my-nav">
+	<nav>
 		<a class="active" href="/">Nummernfeld </a>
 		<a href="/list">Liste</a>
 		<a href="/upload">Upload</a>
 	</nav>
-	<form class="_my-form" action="#" method="post">
+	<form action="#" method="post">
 		<p>Nummer die anrufen soll:</p>
-		<input class="_my-input" type="number" name="nm" />
-		<input class="_my-input" type="submit" value="let it call"/>
+		<input type="number" name="nm" />
+		<input type="submit" value="let it call"/>
 	</form>
-	<p>{{content}}</p>
+	<p class="response">{{content}}</p>
 {% endblock %}

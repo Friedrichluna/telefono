@@ -1,18 +1,18 @@
 {% extends "base.html" %}
 {% block title %} Telefono Home Page {% endblock %}
 {% block content%}
-	<nav class="_my-nav">
+	<nav>
 		<a href="/">Nummernfeld </a>
 		<a href="/list">Liste</a>
 		<a class="active" href="/upload">Upload</a>
 	</nav>
 
-		<form class="_my-form" method="post" enctype="multipart/form-data">
-			<b style="display: block;">Hier kann eine .wav Datei hochgeladen werden</b>
+		<form method="post" enctype="multipart/form-data">
+			<p class="instruction">Hier kann eine .wav Datei hochgeladen werden</p>
 			<input type=file name=file>
-			<label class="_my-label" for="requestedNumber">gewünschte Nummer:</label>
+			<label for="requestedNumber">gewünschte Nummer:</label>
 			<input type="number" name="requestedNumber" min=0 >
-			<input type="submit" class="_my-button _my-blue" value="Hochladen">
+			<input type="submit" class="upload button blue" value="Hochladen">
 		{% if content %}
 			<p>{{content}}</p>
 		{% endif %}
