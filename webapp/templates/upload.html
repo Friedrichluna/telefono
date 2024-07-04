@@ -31,8 +31,8 @@
 	<form method="post" enctype="multipart/form-data">
 		<p class="instruction">Hier kann eine .wav Datei hochgeladen werden</p>
 		<input type=file name=file>
-		<label for="requestedNumber">gewünschte Nummer:</label>
-		<input type="number" name="requestedNumber" min=0 >
+		<label for="number">gewünschte Nummer:</label>
+		<input type="number" id="number" name="requestedNumber" min=0 >
 		<input type="submit" class="upload button blue" value="Hochladen">
 	{% if content %}
 		<p>{{content}}</p>
