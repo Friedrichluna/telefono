@@ -25,24 +25,16 @@ import wave
 import time
 import subprocess
 
-class Recorder(object):
-	def __init__(self, channels=1, rate=44100, frames_per_buffer=512):
+class Recorder ():
+	def __init__(self, fname, mode='wb',
+	             channels=1, rate=44100, frames_per_buffer=512):
+
 		self.channels = channels
 		self.rate = rate
 		self.frames_per_buffer = frames_per_buffer
 
-	def open(self, fname, mode='wb'):
-		return RecordingFile(fname, mode, self.channels, self.rate,
-		                     self.frames_per_buffer)
-
-class RecordingFile(object):
-	def __init__(self, fname, mode, channels,
-		     rate, frames_per_buffer):
 		self.fname = fname
 		self.mode = mode
-		self.channels = channels
-		self.rate = rate
-		self.frames_per_buffer = frames_per_buffer
 		self._pa = pyaudio.PyAudio()
 		self.wavefile = self._prepare_file(self.fname, self.mode)
 		self._stream = None
@@ -534,8 +526,7 @@ def main ():
 				pygame.mixer.music.stop() #Freiton wird unterbrochen
 				myNewWavName, newRecordingNumber = findNewFileName()
 
-				rec = Recorder(channels=2)
-				with rec.open(myNewWavName, 'wb') as recfile2:
+				with Recorder(myNewWavName, 'wb', channels=2) as recfile2:
 					tts.say("Aufnahme Nr.: " + str(newRecordingNumber) + " wird gestartet") #ansage welche Aufnahme es ist
 					recfile2.start_recording()
 					recordingTime = 0
