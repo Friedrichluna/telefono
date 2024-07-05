@@ -382,6 +382,7 @@ class TelefonoWebApp (Flask):
 			return render_template("index.html")
 
 	def list(self):
+		self.records.sync_fs ()
 		return render_template("list.html", records=self.records)
 
 	def edit_value(self, index):
