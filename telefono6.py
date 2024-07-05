@@ -445,7 +445,6 @@ def getWeekDayInt():
 
 
 #---------------------------random old Message-----------------------------------------
-#from random import randint
 from os import listdir
 from os.path import isfile, join
 
@@ -456,9 +455,7 @@ def fileNumbers():
 
 def findRandomMessage():
 	fileNames = fileNumbers()
-	maxMessageNumber = len(fileNames) - 1
-	randomMessageNumber = randint(0, maxMessageNumber)
-	newWavName = RECORD_DIR + "/" + str(fileNames[randomMessageNumber])
+	newWavName = RECORD_DIR + "/" + random.choice (fileNames)
 	print("Random Nachricht: " + newWavName)
 	return newWavName
 #---------------------------Shout------------------------------------------------------
