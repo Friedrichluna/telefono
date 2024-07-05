@@ -194,43 +194,54 @@ class Dailer ():
 
 	def get_digit (self, contButton, led):
 		led.blink(on_time=0.1, off_time=0.1, n=None, background=True)
-		dialedDigit = 0
-		switch = False
+
+		# timeout while idle
 		timeCounter = 0
-		trueZero = False
-		while True:
-			time.sleep (0.001)
-			timeCounter = timeCounter + 1
-			dialedDigit = 0
-			dialWasActive = False
+		while timeCounter <= DIAL_TIMEOUT \
+		and contButton.is_pressed:
 			if self.dialing:
-				time.sleep (0.2)
-				while self.dialing:
-					time.sleep (0.01)
-					if (not self.digit_moved) and (not switch):
-						switch = True
-						dialedDigit = dialedDigit + 1
-						#print("+1")
-					elif self.digit_moved:
-						switch = False
-						#print("test")
-					dialWasActive = True
-			if dialWasActive:
-				timeCounter = 0
-				if dialedDigit > 9:
-					trueZero = True
-					dialedDigit = 0
-				print(dialedDigit)
 				break
-			if timeCounter > 200000:
-				break
-			if not contButton.is_pressed:
-				break
-		led.off()
-		if (dialedDigit == 0 and trueZero) or dialedDigit != 0:
-			return dialedDigit
+
+			time.sleep (0.001)
+			timeCounter += 1
 		else:
+			led.off()
 			return None
+
+
+		dialedDigit = 0
+		while self.dialing:
+
+			# wait for LOW
+			while self.dialing:
+				if not self.digit_moved:
+					break
+
+				time.sleep (0.01)
+			else:
+				break
+
+			dialedDigit += 1
+
+			# wait for HIGH
+			while not self.digit_moved \
+			and self.dialing:
+				time.sleep (0.01)
+
+		# not dialed
+		if dialedDigit == 0:
+			dialedDigit = None
+
+		# 0 dialed
+		elif dialedDigit > 9:
+			dialedDigit = 0
+			print(dialedDigit)
+
+		else:
+			print(dialedDigit)
+
+		led.off()
+		return dialedDigit
 
 
 #-----------------------------Memory Handle-------------------------------------------------------
