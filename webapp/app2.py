@@ -34,6 +34,7 @@ LOG_FILE = BASE_DIR + "/relevant/telefonoCrashLog.txt"
 class RecordIndexFile ():
 	def __init__ (self, filename:str=None, legacy:bool=False):
 		self.__data = dict ()
+		self.__prevent_sync = False
 
 		if None is filename:
 
@@ -185,6 +186,8 @@ class RecordIndexFile ():
 				yield value
 
 	def __load (self, _file):
+		self.__prevent_sync = True
+
 		for lineno, line in enumerate (_file.readlines ()):
 
 			# ignore commented lines
@@ -221,9 +224,12 @@ class RecordIndexFile ():
 
 			self[number] = name
 
+		self.__prevent_sync = False
 		return
 
 	def __load_legacy (self, _file):
+		self.__prevent_sync = True
+
 		data = pickle.load (_file)
 
 		for index, name in enumerate (data):
@@ -235,6 +241,7 @@ class RecordIndexFile ():
 				# can't be called earlier.
 				self[index] = name.strip ()
 
+		self.__prevent_sync = False
 		return
 
 	def __store (self, _file):
@@ -294,6 +301,9 @@ class RecordIndexFile ():
 		return
 
 	def sync_data (self):
+		if self.__prevent_sync:
+			return
+
 		# create temporary file
 		fd = os.open (os.path.dirname (self.__filename),
 		              os.O_TMPFILE | os.O_WRONLY,
