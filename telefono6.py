@@ -615,6 +615,9 @@ def main ():
 				pygame.mixer.music.stop() #Freiton wird unterbrochen
 				tts.say("Menü wird geöffnet.")
 				dialedOption = dialer.get_digit (dial_digit_abort, led)
+				# aborted
+				if dialedOption is None:
+					pass
 				if dialedOption == 0:
 					tts.say_time ()
 				elif dialedOption == 1:
