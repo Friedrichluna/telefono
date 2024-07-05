@@ -6,6 +6,7 @@ import time
 
 from flask import Flask, redirect, render_template, request
 
+import linkat
 import psutil
 
 
@@ -21,6 +22,7 @@ RECORD_SUFFIX = ".wav"
 
 OLD_RECORD_LIST_FILE = BASE_DIR + "/relevant/recording_names"
 RECORD_LIST_FILE = BASE_DIR + "/relevant/records.list"
+BACKUP_EXT = ".bak"
 
 SERVER_QUEUE_FILE = BASE_DIR + "/relevant/queFile.txt"
 
@@ -54,6 +56,14 @@ class RecordIndexFile ():
 		else:
 			self.__filename = filename
 			self.__legacy = legacy
+
+		# previously crashed while writing
+		# restore backup
+		if not os.path.exists (self.__filename) \
+		and os.path.exists (self.__filename + BACKUP_EXT):
+			print ("restoring backup file")
+			os.rename (self.__filename + BACKUP_EXT,
+			           self.__filename)
 
 		if not legacy:
 			if os.path.exists (self.__filename):
@@ -274,13 +284,30 @@ class RecordIndexFile ():
 		return
 
 	def sync_data (self):
+		# create temporary file
+		fd = os.open (os.path.dirname (self.__filename),
+		              os.O_TMPFILE | os.O_WRONLY,
+		              mode=0o600)
+
+		# create backup file
+		if os.path.exists (self.__filename):
+			os.rename (self.__filename,
+			           self.__filename + BACKUP_EXT)
+
 		if not self.__legacy:
-			with open (self.__filename, "wt") as f:
-				self.__store (f)
+			f = os.fdopen (fd, "wt")
+			self.__store (f)
 
 		else:
-			with open (self.__filename, "wb") as f:
-				self.__store_legacy (f)
+			f = os.fdopen (fd, "wb")
+			self.__store_legacy (f)
+
+		# atomically link file
+		linkat.link_at (linkat.AT_FDCWD, b"/proc/self/fd/%d" % fd,
+		                linkat.AT_FDCWD, self.__filename.encode(),
+		                linkat.AT_SYMLINK_FOLLOW)
+
+		f.close ()
 
 		return
 
