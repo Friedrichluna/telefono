@@ -88,27 +88,13 @@ class RecordIndexFile ():
 
 		ret = self.__data.__setitem__ (key, (value, False))
 
-		if not self.__legacy:
-			with open (self.__filename, "wt") as f:
-				self.__store (f)
-
-		else:
-			with open (self.__filename, "wb") as f:
-				self.__store_legacy (f)
-
+		self.sync_data ()
 		return ret
 
 	def __delitem__ (self, key):
 		ret = self.__data.__delitem__ (key)
 
-		if not self.__legacy:
-			with open (self.__filename, "wt") as f:
-				self.__store (f)
-
-		else:
-			with open (self.__filename, "wb") as f:
-				self.__store_legacy (f)
-
+		self.sync_data ()
 		return ret
 
 
@@ -131,14 +117,7 @@ class RecordIndexFile ():
 	def clear (self):
 		ret = self.__data.clear ()
 
-		if not self.__legacy:
-			with open (self.__filename, "wt") as f:
-				self.__store (f)
-
-		else:
-			with open (self.__filename, "wb") as f:
-				self.__store_legacy (f)
-
+		self.sync_data ()
 		return ret
 
 	def copy (self):
@@ -162,27 +141,13 @@ class RecordIndexFile ():
 	def pop (self, key, *args, **kwargs):
 		ret = self.__data.pop (key, *args, **kwargs)[0]
 
-		if not self.__legacy:
-			with open (self.__filename, "wt") as f:
-				self.__store (f)
-
-		else:
-			with open (self.__filename, "wb") as f:
-				self.__store_legacy (f)
-
+		self.sync_data ()
 		return ret
 
 	def popitem (self):
 		ret = self.__data.popitem ()[0]
 
-		if not self.__legacy:
-			with open (self.__filename, "wt") as f:
-				self.__store (f)
-
-		else:
-			with open (self.__filename, "wb") as f:
-				self.__store_legacy (f)
-
+		self.sync_data ()
 		return ret
 
 	def setdefault (self, key, default=""):
@@ -198,14 +163,7 @@ class RecordIndexFile ():
 
 		ret = self.__data.setdefault (key, (default, False))
 
-		if not self.__legacy:
-			with open (self.__filename, "wt") as f:
-				self.__store (f)
-
-		else:
-			with open (self.__filename, "wb") as f:
-				self.__store_legacy (f)
-
+		self.sync_data ()
 		return ret
 
 	def update (self, *args, **kwargs):
@@ -313,6 +271,17 @@ class RecordIndexFile ():
 	def __validate (self, key):
 		self.setdefault (key)
 		self.__data[key] = (self.__data[key][0], True)
+		return
+
+	def sync_data (self):
+		if not self.__legacy:
+			with open (self.__filename, "wt") as f:
+				self.__store (f)
+
+		else:
+			with open (self.__filename, "wb") as f:
+				self.__store_legacy (f)
+
 		return
 
 	def sync_fs (self, directory:str=RECORD_DIR):
