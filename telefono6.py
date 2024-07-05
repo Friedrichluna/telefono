@@ -388,45 +388,56 @@ def ringing (tts, callingFile_, speaker, PickUp):
 #--------------------------CallingRoutine----------------------------
 import datetime
 import random
+import time
 
-minHour = 15
-maxHour = 21
-needNewTime = None
+MIN_HOUR = 15
+MAX_HOUR = 21
+SECONDS_PER_DAY = 86400
+call_minute = None
 
 def getTimeInt():
 	now = datetime.datetime.now()
 	current_time = now.strftime("%H%M%S")
 	return(int(current_time))
 
-#random.seed(5) #ein Seed der 19:00Uhr als erstes ausspuckt
+# minutes since midnight
+def current_day_minute ():
+	# this is only approximately,
+	# because the number of seconds per day isn't constant.
+	return (time.time () % SECONDS_PER_DAY) // 60
 
-def newRandTimeInt():
-	randHour = random.randint(minHour, maxHour) #es klingelt zwischen 15 und 20Uhr
-	randTimeInt_ = randHour * 10000
-	return randTimeInt_
+def get_random_call_minute ():
+	return random.randint (MIN_HOUR * 60, MAX_HOUR * 60)
 
 
-def callRoutine():  #returns True for 1 sek per day
-	global needNewTime
-	global randTimeInt
-	currentTimeInt = getTimeInt()
-	if needNewTime == None:
-		randTimeInt = currentTimeInt  #dann jetzige Zeit nehmen
-		needNewTime = False
-		print("ring Time: " + str(randTimeInt))  #Test
-		print("current Time: " + str(currentTimeInt))
-		return False
+def is_call_time ():
+	global call_minute
+	global schedule_call
 
-	if ((currentTimeInt > maxHour*10000) or (currentTimeInt < minHour*10000)) and needNewTime:  #wenn nach Anrufszeit und no k>
-		randTimeInt = newRandTimeInt()  #dann neue Zeit erstellen
-		needNewTime = False
-		print("new Random Time:") #Test
-		print(randTimeInt) #test
-		return False
-
-	if currentTimeInt == randTimeInt:
-		needNewTime = True
+	# ring at startup
+	if (call_minute is None):
+		schedule_call = False
+		call_minute = get_random_call_minute ()
+		print ("call scheduled for: %02d:%02d Uhr"
+		       % (call_minute // 60, call_minute % 60))
 		return True
+
+	current_time = current_day_minute ()
+	# ring at scheduled time
+	if current_time == call_minute:
+		# schedule next call
+		schedule_call = True
+		return True
+
+	# schedule outside allowed call time -> call only once per day
+	current_time /= 60
+	if schedule_call and current_time not in range (MIN_HOUR, MAX_HOUR):
+		schedule_call = False
+		call_minute = get_random_call_minute ()
+		print ("call scheduled for: %02d:%02d Uhr"
+		       % (call_minute // 60, call_minute % 60))
+
+	return False
 
 def callInQue(tts, queFileAdress, speaker, PickUp):
 	callingFileNumber = returnFileText(queFileAdress)
@@ -580,7 +591,7 @@ def main ():
 
 
 		#-------------------------Klingelroutine-------------------------------------------
-		if callRoutine():
+		if is_call_time ():
 			print("ringing!!!!!!!")
 			callingFile = findRandomMessage() #zufällige Datei die anruft
 			ringing (tts, callingFile, speakerThread, PickUp)
