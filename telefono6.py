@@ -124,42 +124,58 @@ from gpiozero import Button, LED
 import time
 
 
+DIAL_TIMEOUT = 200000
 def wait_for_number (DialInUse, DialCounter, StopDialButton, contButton, led):
 	led.blink(on_time=0.1, off_time=0.1, n=None, background=True)
-	dialedNumber = 0
-	switch = False
-	timeCounter = 0
-	tureZero = False
-	while True:
-		time.sleep (0.001)
-		timeCounter = timeCounter + 1
-		dialedDigit = 0
-		dialWasActive = False
+	number = 0
+
+	while not StopDialButton.is_pressed and contButton.is_pressed:
+
+		# timeout while idle
+		timeCounter = 0
+		while timeCounter <= DIAL_TIMEOUT \
+		and (not StopDialButton.is_pressed \
+		     and contButton.is_pressed):
+
+			if DialInUse.is_pressed:
+				break
+			time.sleep (0.001)
+			timeCounter += 1
+		else:
+			break
+
+		digit = 0
 		while DialInUse.is_pressed:
-			time.sleep (0.01)
-			if (not DialCounter.is_pressed) and (not switch):
-				switch = True
-				dialedDigit = dialedDigit + 1
-				#print("+1")
-			elif DialCounter.is_pressed:
-				switch = False
-				#print("test")
-			dialWasActive = True
-		if dialWasActive:
-			timeCounter = 0
-			if dialedDigit > 9:
-				tureZero = True
-				dialedDigit = 0
-			if (dialedDigit == 0 and tureZero) or dialedDigit != 0:
-				dialedNumber = dialedNumber*10 + dialedDigit
-				tureZero = False
-				print(dialedDigit)
-		if StopDialButton.is_pressed or timeCounter > 200000:    #wird in Argument definiert
-			break
-		if not contButton.is_pressed:
-			break
+
+			# wait for HIGH
+			while DialInUse.is_pressed:
+				time.sleep (0.01)
+				if not DialCounter.is_pressed:
+					break
+			else:
+				break
+
+			digit += 1
+
+			# wait for LOW
+			while not DialCounter.is_pressed \
+			and DialInUse.is_pressed:
+				time.sleep (0.01)
+
+		# not dialed
+		if digit == 0:
+			continue
+
+		# 0 dialed
+		if digit > 9:
+			digit = 0
+
+		number *= 10
+		number += digit
+		print(digit)
+
 	led.off()
-	return dialedNumber
+	return number
 
 #NeueZahl = wait_for_number(ButtonLeft, Pickup)
 #print(NeueZahl)
