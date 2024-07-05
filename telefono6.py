@@ -20,10 +20,12 @@ LOG_FILE = BASE_DIR + "/relevant/telefono.log"
 
 
 #-----------------------------recorder---------------------------------------
-import pyaudio
-import wave
-import time
 import subprocess
+import time
+import wave
+
+import linkat
+import pyaudio
 
 class Recorder ():
 	def __init__(self, fname,
@@ -35,7 +37,9 @@ class Recorder ():
 
 		self.fname = fname
 		self._pa = pyaudio.PyAudio()
-		self.wavefile = self._prepare_file ()
+
+		self._prepare_file ()
+
 		self._stream = None
 
 	def __enter__(self):
@@ -86,11 +90,25 @@ class Recorder ():
 		self.wavefile.close()
 
 	def _prepare_file (self):
-		wavefile = wave.open (self.fname, "wb")
-		wavefile.setnchannels(self.channels)
-		wavefile.setsampwidth(self._pa.get_sample_size(pyaudio.paInt16))
-		wavefile.setframerate(self.rate)
-		return wavefile
+
+		# create temporary file
+		self.fd = os.open (os.path.dirname (self.fname),
+		                   os.O_TMPFILE | os.O_WRONLY,
+		                   mode=0o600)
+
+		self.wavefile = wave.open (os.fdopen (self.fd, "wb"), "w")
+		self.wavefile.setnchannels (self.channels)
+		self.wavefile.setsampwidth (self._pa.get_sample_size (pyaudio.paInt16))
+		self.wavefile.setframerate (self.rate)
+		return
+
+	def save (self):
+		# atomically link file
+		linkat.link_at (linkat.AT_FDCWD, b"/proc/self/fd/%d" % self.fd,
+		                linkat.AT_FDCWD, self.fname.encode(),
+		                linkat.AT_SYMLINK_FOLLOW)
+
+		self.wavefile.close ()
 
 #rec = Recorder(channels=2)
 #with rec.open('nonblocking.wav', 'wb') as recfile2:
@@ -256,14 +274,10 @@ def playFileNeg(tts, fileName, contButton):
 def newWavName(wav_number):
 	return RECORD_DIR + "/" + RECORD_PREFIX + str(wav_number) + RECORD_SUFFIX
 
-#--------------------------File management-----------------------------------------
-
-import os
-
-def delFile(_fileName):
-	os.remove(_fileName)
 
 #--------------------------FindNewFile-----------------------------------------
+import os
+
 def findNewFileName ():
 	counter = 0
 	filename = newWavName (counter)
@@ -537,22 +551,22 @@ def main ():
 							led.off()
 							recfile2.stop_recording()
 							tts.say("Aufnahme Nr.: " + str(newRecordingNumber) + "wegen overtime beendet.")
+							recfile2.save ()
 							break
 						if (not PickUp.is_pressed) or ButtonLeft.is_pressed:
 							led.off()
 							recfile2.stop_recording()
 							if recordingTime > minRecordingTime:
 								print ("Aufnahme Nr.: " + str(newRecordingNumber) + " beendet.")
+								recfile2.save ()
 							else:
 								tts.say ("Aufnahme zu kurz")
-								delFile (myNewWavName)
 							time.sleep (2) #button release Time
 							break
 						if ButtonMiddle.is_pressed:
 							led.off()
 							tts.say("Aufnahme Nr.: " + str(newRecordingNumber) + " abgebrochen")
 							recfile2.stop_recording()
-							delFile(myNewWavName)
 							time.sleep (2) #button release Time
 							break
 
