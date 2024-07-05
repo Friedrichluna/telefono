@@ -125,104 +125,112 @@ import time
 
 
 DIAL_TIMEOUT = 200000
-def wait_for_number (DialInUse, DialCounter, StopDialButton, contButton, led):
-	led.blink(on_time=0.1, off_time=0.1, n=None, background=True)
-	number = 0
 
-	while not StopDialButton.is_pressed and contButton.is_pressed:
+class Dailer ():
+	def __init__ (self, DialInUse, DialCounter):
+		self.__flag = DialInUse
+		self.__counter = DialCounter
+		return
 
-		# timeout while idle
-		timeCounter = 0
-		while timeCounter <= DIAL_TIMEOUT \
-		and (not StopDialButton.is_pressed \
-		     and contButton.is_pressed):
+	@property
+	def dialing (self):
+		return self.__flag.is_pressed
 
-			if DialInUse.is_pressed:
-				break
-			time.sleep (0.001)
-			timeCounter += 1
-		else:
-			break
+	@property
+	def digit_moved (self):
+		return self.__counter.is_pressed
 
-		digit = 0
-		while DialInUse.is_pressed:
+	def get_number (self, StopDialButton, contButton, led):
+		led.blink(on_time=0.1, off_time=0.1, n=None, background=True)
+		number = 0
 
-			# wait for HIGH
-			while DialInUse.is_pressed:
-				time.sleep (0.01)
-				if not DialCounter.is_pressed:
+		while not StopDialButton.is_pressed and contButton.is_pressed:
+
+			# timeout while idle
+			timeCounter = 0
+			while timeCounter <= DIAL_TIMEOUT \
+			and (not StopDialButton.is_pressed \
+			     and contButton.is_pressed):
+
+				if self.dialing:
 					break
+				time.sleep (0.001)
+				timeCounter += 1
 			else:
 				break
 
-			digit += 1
-
-			# wait for LOW
-			while not DialCounter.is_pressed \
-			and DialInUse.is_pressed:
-				time.sleep (0.01)
-
-		# not dialed
-		if digit == 0:
-			continue
-
-		# 0 dialed
-		if digit > 9:
 			digit = 0
+			while self.dialing:
 
-		number *= 10
-		number += digit
-		print(digit)
+				# wait for HIGH
+				while self.dialing:
+					time.sleep (0.01)
+					if not self.digit_moved:
+						break
+				else:
+					break
 
-	led.off()
-	return number
+				digit += 1
 
-#NeueZahl = wait_for_number(ButtonLeft, Pickup)
-#print(NeueZahl)
+				# wait for LOW
+				while not self.digit_moved \
+				and self.dialing:
+					time.sleep (0.01)
 
-def wait_for_digit (DialInUse, DialCounter, contButton, led):
-	led.blink(on_time=0.1, off_time=0.1, n=None, background=True)
-	dialedDigit = 0
-	switch = False
-	timeCounter = 0
-	trueZero = False
-	while True:
-		time.sleep (0.001)
-		timeCounter = timeCounter + 1
+			# not dialed
+			if digit == 0:
+				continue
+
+			# 0 dialed
+			if digit > 9:
+				digit = 0
+
+			number *= 10
+			number += digit
+			print(digit)
+
+		led.off()
+		return number
+
+	def get_digit (self, contButton, led):
+		led.blink(on_time=0.1, off_time=0.1, n=None, background=True)
 		dialedDigit = 0
-		dialWasActive = False
-		if DialInUse.is_pressed:
-			time.sleep (0.2)
-			while DialInUse.is_pressed:
-				time.sleep (0.01)
-				if (not DialCounter.is_pressed) and (not switch):
-					switch = True
-					dialedDigit = dialedDigit + 1
-					#print("+1")
-				elif DialCounter.is_pressed:
-					switch = False
-					#print("test")
-				dialWasActive = True
-		if dialWasActive:
-			timeCounter = 0
-			if dialedDigit > 9:
-				trueZero = True
-				dialedDigit = 0
-			print(dialedDigit)
-			break
-		if timeCounter > 200000:
-			break
-		if not contButton.is_pressed:
-			break
-	led.off()
-	if (dialedDigit == 0 and trueZero) or dialedDigit != 0:
-		return dialedDigit
-	else:
-		return None
-
-#NeueZiffer = wait_for_Digit(ButtonLeft)
-#print(NeueZIgger)
-
+		switch = False
+		timeCounter = 0
+		trueZero = False
+		while True:
+			time.sleep (0.001)
+			timeCounter = timeCounter + 1
+			dialedDigit = 0
+			dialWasActive = False
+			if self.dialing:
+				time.sleep (0.2)
+				while self.dialing:
+					time.sleep (0.01)
+					if (not self.digit_moved) and (not switch):
+						switch = True
+						dialedDigit = dialedDigit + 1
+						#print("+1")
+					elif self.digit_moved:
+						switch = False
+						#print("test")
+					dialWasActive = True
+			if dialWasActive:
+				timeCounter = 0
+				if dialedDigit > 9:
+					trueZero = True
+					dialedDigit = 0
+				print(dialedDigit)
+				break
+			if timeCounter > 200000:
+				break
+			if not contButton.is_pressed:
+				break
+		led.off()
+		if (dialedDigit == 0 and trueZero) or dialedDigit != 0:
+			return dialedDigit
+		else:
+			return None
 
 
 #-----------------------------Memory Handle-------------------------------------------------------
@@ -514,6 +522,7 @@ def main ():
 	SpeakerSwich = Button(17) #Rechter Kippschalter (grüner Anschluss)
 	led = LED(20)
 
+	dialer = Dailer (DialInUse, DialCounter)
 
 	essenIstFertig1830 = newWavName(1830)
 	wucher1930 = newWavName(1930)
@@ -542,7 +551,7 @@ def main ():
 				time.sleep (0.1)
 				if DialInUse.is_pressed:
 					pygame.mixer.music.stop() #Freiton wird unterbrochen
-					dialedNumber = str(wait_for_number(DialInUse, DialCounter, ButtonLeft, PickUp, led))
+					dialedNumber = str(dialer.get_number (ButtonLeft, PickUp, led))
 					if PickUp.is_pressed: #falls er beim Wählen aufgelegt hat
 						#tts.say("Spiele Aufnahme Nr.: " + dialedNumber)
 						oldWavName = newWavName(dialedNumber)
@@ -587,7 +596,7 @@ def main ():
 			if ButtonMiddle.is_pressed:
 				pygame.mixer.music.stop() #Freiton wird unterbrochen
 				tts.say("Menü wird geöffnet.")
-				dialedOption = wait_for_digit (DialInUse, DialCounter, PickUp, led)
+				dialedOption = dialer.get_digit (PickUp, led)
 				if dialedOption == 0:
 					tts.say_time ()
 				elif dialedOption == 1:
