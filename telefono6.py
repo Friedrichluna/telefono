@@ -274,7 +274,7 @@ def delFile(_fileName):
 
 #--------------------------FindNewFile-----------------------------------------
 def findNewFileName ():
-	counter = 1
+	counter = 0
 	filename = newWavName (counter)
 	while os.path.exists (filename):
 		counter += 1
