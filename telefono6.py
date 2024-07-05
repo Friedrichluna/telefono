@@ -3,19 +3,20 @@
 
 import sys
 
-WAV_BASE_PATH = "/home/pi/telefono/recording"
-WAV_EXT = ".wav"
+BASE_DIR = "/home/pi/telefono"
 
-RING_FILE = "/home/pi/telefono/relevant/telephone-ring-02.wav"
-DIAL_FILE = "/home/pi/telefono/relevant/US_dial_tone.ogg.wav"
+RECORD_DIR = BASE_DIR
+RECORD_PREFIX = "recording"
+RECORD_SUFFIX = ".wav"
 
-RECORD_DIR = "/home/pi/telefono"
+RING_FILE = BASE_DIR + "/relevant/telephone-ring-02.wav"
+DIAL_FILE = BASE_DIR + "/relevant/US_dial_tone.ogg.wav"
 
-SERVER_QUEUE_FILE = "/home/pi/telefono/relevant/queFile.txt"
+SERVER_QUEUE_FILE = BASE_DIR + "/relevant/queFile.txt"
 
-WEBAPP_EXEC = '/home/pi/webapp/app2.py'
+WEBAPP_EXEC = BASE_DIR + '/../webapp/app2.py'
 
-LOG_FILE = "/home/pi/telefono/relevant/telefonoCrashLog.txt"
+LOG_FILE = BASE_DIR + "/relevant/telefonoCrashLog.txt"
 
 
 #-----------------------------recorder---------------------------------------
@@ -262,7 +263,7 @@ def playFileNeg(tts, fileName, contButton):
 #--------------------------File Name Generator----------------------------------
 
 def newWavName(wav_number):
-	return WAV_BASE_PATH + str(wav_number) + WAV_EXT
+	return RECORD_DIR + "/" + RECORD_PREFIX + str(wav_number) + RECORD_SUFFIX
 
 #--------------------------File management-----------------------------------------
 
