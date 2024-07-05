@@ -1,2 +1,5 @@
 # ignore logfiles
 *.log
+
+# ignore temporary files
+queFile.txt
