@@ -1,7 +1,6 @@
 #!/usr/bin/python3
 
 import os
-import pickle
 import time
 
 from flask import Flask, redirect, render_template, request
@@ -20,7 +19,6 @@ RECORD_DIR = BASE_DIR
 RECORD_PREFIX = "recording"
 RECORD_SUFFIX = ".wav"
 
-OLD_RECORD_LIST_FILE = BASE_DIR + "/relevant/recording_names"
 RECORD_LIST_FILE = BASE_DIR + "/relevant/records.list"
 BACKUP_EXT = ".bak"
 
@@ -32,31 +30,11 @@ LOG_FILE = BASE_DIR + "/relevant/webapp.log"
 
 
 class RecordIndexFile ():
-	def __init__ (self, filename:str=None, legacy:bool=False):
+	def __init__ (self, filename:str):
 		self.__data = dict ()
 		self.__prevent_sync = False
 
-		if None is filename:
-
-			self.__filename = RECORD_LIST_FILE
-			self.__legacy = False
-
-			if os.path.exists (OLD_RECORD_LIST_FILE):
-				print ("Converting index file format")
-
-				with open (OLD_RECORD_LIST_FILE, "rb") as f:
-					self.__load_legacy (f)
-
-				with open (RECORD_LIST_FILE, "wt") as f:
-					self.__store (f)
-
-
-				os.unlink (OLD_RECORD_LIST_FILE)
-				return None
-
-		else:
-			self.__filename = filename
-			self.__legacy = legacy
+		self.__filename = filename
 
 		# previously crashed while writing
 		# restore backup
@@ -66,17 +44,12 @@ class RecordIndexFile ():
 			os.rename (self.__filename + BACKUP_EXT,
 			           self.__filename)
 
-		if not legacy:
-			if os.path.exists (self.__filename):
-				with open (self.__filename, "rt") as f:
-					self.__load (f)
-			else:
-				os.mknod (self.__filename)
-
+		# load file
+		if os.path.exists (self.__filename):
+			with open (self.__filename, "rt") as f:
+				self.__load (f)
 		else:
-			if os.path.exists (self.__filename):
-				with open (self.__filename, "rb") as f:
-					self.__load_legacy (f)
+			os.mknod (self.__filename)
 
 		return None
 
@@ -227,23 +200,6 @@ class RecordIndexFile ():
 		self.__prevent_sync = False
 		return
 
-	def __load_legacy (self, _file):
-		self.__prevent_sync = True
-
-		data = pickle.load (_file)
-
-		for index, name in enumerate (data):
-
-			# don't store empty values
-			if name:
-				# There are valid names with
-				# a single space, so strip
-				# can't be called earlier.
-				self[index] = name.strip ()
-
-		self.__prevent_sync = False
-		return
-
 	def __store (self, _file):
 
 		_file.truncate ()
@@ -264,29 +220,6 @@ class RecordIndexFile ():
 			_file.write (name)
 			_file.write ("\n")
 
-		_file.flush ()
-		return
-
-	def __store_legacy (self, _file):
-		_file.truncate ()
-
-		data = list ()
-
-		last_key = max (self.__data.keys (), default=None)
-		if last_key is not None:
-			for key in range (last_key+1):
-				value = self.get (key, default=None)
-
-				# existing empty key
-				if "" == value:
-					value = " "
-				# nonexisting key
-				elif None is value:
-					value = ""
-
-				data.append (value)
-
-		pickle.dump (data, _file)
 		_file.flush ()
 		return
 
@@ -314,13 +247,9 @@ class RecordIndexFile ():
 			os.rename (self.__filename,
 			           self.__filename + BACKUP_EXT)
 
-		if not self.__legacy:
-			f = os.fdopen (fd, "wt")
-			self.__store (f)
-
-		else:
-			f = os.fdopen (fd, "wb")
-			self.__store_legacy (f)
+		# store into temporary file
+		f = os.fdopen (fd, "wt")
+		self.__store (f)
 
 		# atomically link file
 		linkat.link_at (linkat.AT_FDCWD, b"/proc/self/fd/%d" % fd,
@@ -432,7 +361,7 @@ class TelefonoWebApp (Flask):
 		return render_template("upload.html", content ="erfolgreich unter {} gespeichert!".format(file_path))
 
 def main ():
-	records = RecordIndexFile ()
+	records = RecordIndexFile (RECORD_LIST_FILE)
 	records.sync_fs ()
 
 	app = TelefonoWebApp (records)

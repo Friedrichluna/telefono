@@ -1,4 +1,2 @@
 should filenames start with 0 or 1 ?
 What's with GPIO.close() ?
-WebApp:
-	- get rid of legacy encoding for RecordIndexFile
