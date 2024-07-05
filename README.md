@@ -1,5 +1,6 @@
 # telefono
 Ein wählscheibentelefon zu einer interaktiven Maschine umgebaut.
+!!!wurde im Juli 2024 zu https://gitlab.mn.tu-dresden.de/josc941e/telefono geschoben und dort verbessert!!!
 
 ## Funktionsweise
 Wenn der Hörer abgenommen wird ist ein Freiton hörbar. Hier hat man mehrere Optionen:
