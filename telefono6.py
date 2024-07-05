@@ -16,7 +16,7 @@ SERVER_QUEUE_FILE = BASE_DIR + "/relevant/queFile.txt"
 
 WEBAPP_EXEC = BASE_DIR + '/../webapp/app2.py'
 
-LOG_FILE = BASE_DIR + "/relevant/telefonoCrashLog.txt"
+LOG_FILE = BASE_DIR + "/relevant/telefono.log"
 
 
 #-----------------------------recorder---------------------------------------

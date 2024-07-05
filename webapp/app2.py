@@ -28,7 +28,7 @@ SERVER_QUEUE_FILE = BASE_DIR + "/relevant/queFile.txt"
 
 UPLOAD_DIR = BASE_DIR
 
-LOG_FILE = BASE_DIR + "/relevant/telefonoCrashLog.txt"
+LOG_FILE = BASE_DIR + "/relevant/webapp.log"
 
 
 class RecordIndexFile ():
