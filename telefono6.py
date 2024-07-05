@@ -424,13 +424,13 @@ def is_call_time ():
 
 	current_time = current_day_minute ()
 	# ring at scheduled time
-	if current_time == call_minute:
+	if current_time == call_minute and not schedule_call:
 		# schedule next call
 		schedule_call = True
 		return True
 
 	# schedule outside allowed call time -> call only once per day
-	current_time /= 60
+	current_time //= 60
 	if schedule_call and current_time not in range (MIN_HOUR, MAX_HOUR):
 		schedule_call = False
 		call_minute = get_random_call_minute ()
@@ -628,13 +628,16 @@ if __name__ == '__main__':
 	try:
 		main ()
 
-	except Exception as Argument:
+	except Exception as error:
 
 		# creating/opening a file
 		f = open(LOG_FILE, "a")
 
 		# writing in the file
-		f.write(str(Argument))
+		f.write (time.asctime ())
+		f.write (": ")
+		f.write (str (error))
+		f.write ("\n")
 
 		# closing the file
 		f.close()
