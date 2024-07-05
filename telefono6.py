@@ -3,6 +3,21 @@
 
 import sys
 
+WAV_BASE_PATH = "/home/pi/telefono/recording"
+WAV_EXT = ".wav"
+
+RING_FILE = "/home/pi/telefono/relevant/telephone-ring-02.wav"
+DIAL_FILE = "/home/pi/telefono/relevant/US_dial_tone.ogg.wav"
+
+RECORD_DIR = "/home/pi/telefono"
+
+SERVER_QUEUE_FILE = "/home/pi/telefono/relevant/queFile.txt"
+
+WEBAPP_EXEC = '/home/pi/webapp/app2.py'
+
+LOG_FILE = "home/pi/telefono/relevant/telefonoCrashLog.txt"
+
+
 #-----------------------------recorder---------------------------------------
 import pyaudio
 import wave
@@ -246,10 +261,6 @@ def playFileNeg(tts, fileName, contButton):
 
 #--------------------------File Name Generator----------------------------------
 
-# WavDateiname ohne nummer und .wav
-WAV_BASE_PATH = "/home/pi/telefono/recording"
-WAV_EXT = ".wav"
-
 def newWavName(wav_number):
 	return WAV_BASE_PATH + str(wav_number) + WAV_EXT
 
@@ -364,11 +375,10 @@ class SpeakerThread (Thread):
 
 #---------------------------Ringing------------------------------------
 #from time import sleep
-ringTone = "/home/pi/telefono/relevant/telephone-ring-02.wav"
 
 def ringing (tts, callingFile_, speaker, PickUp):
 	speaker.activate ()
-	playFile(tts, ringTone, PickUp) #hört auf wenn PickUp == True
+	playFile(tts, RING_FILE, PickUp) #hört auf wenn PickUp == True
 	speaker.deactivate ()
 	sleep(1) #test
 	playFileNeg(tts, callingFile_, PickUp) #hört auf wenn PickUp == False
@@ -439,7 +449,7 @@ from os import listdir
 from os.path import isfile, join
 
 def fileNumbers():
-	fileNameList = [f for f in listdir("/home/pi/telefono") if isfile(join("/home/pi/telefono", f))]
+	fileNameList = [f for f in listdir(RECORD_DIR) if isfile(join(RECORD_DIR, f))]
 	#print(fileNameList)
 	return fileNameList
 
@@ -447,7 +457,7 @@ def findRandomMessage():
 	fileNames = fileNumbers()
 	maxMessageNumber = len(fileNames) - 1
 	randomMessageNumber = randint(0, maxMessageNumber)
-	newWavName = "/home/pi/telefono/" + str(fileNames[randomMessageNumber])
+	newWavName = RECORD_DIR + "/" + str(fileNames[randomMessageNumber])
 	print("Random Nachricht: " + newWavName)
 	return newWavName
 #---------------------------Shout------------------------------------------------------
@@ -477,8 +487,6 @@ def main ():
 	led = LED(20)
 
 
-	queFileAdress = "/home/pi/telefono/relevant/queFile.txt"
-
 	essenIstFertig1830 = newWavName(1830)
 	wucher1930 = newWavName(1930)
 	tagesschau2000 = newWavName(2014)
@@ -494,7 +502,7 @@ def main ():
 	speakerThread.start()
 
 	#os.system('python3 /home/pi/webapp/app2.py &') #webApp start
-	webAppProcess = subprocess.Popen(['python3', '/home/pi/webapp/app2.py'])
+	webAppProcess = subprocess.Popen(['python3', WEBAPP_EXEC])
 
 	# initialize random module
 	random.seed ()
@@ -569,7 +577,7 @@ def main ():
 
 
 			if not pygame.mixer.music.get_busy(): #wenn der Freiton noch nicht spielt
-				playFile0("/home/pi/telefono/relevant/US_dial_tone.ogg.wav")  #Freiton
+				playFile0(DIAL_FILE)  #Freiton
 
 		pygame.mixer.music.stop() #Freiton wird unterbrochen
 
@@ -581,7 +589,7 @@ def main ():
 			callingFile = findRandomMessage() #zufällige Datei die anruft
 			ringing (tts, callingFile, speakerThread, PickUp)
 
-		callInQue (tts, queFileAdress, speakerThread, PickUp)
+		callInQue (tts, SERVER_QUEUE_FILE, speakerThread, PickUp)
 
 		weekDayInt = getWeekDayInt()
 		if weekDayInt > 0 and weekDayInt < 4: #von Dienstag bis Freitag Wahr
@@ -616,7 +624,7 @@ if __name__ == '__main__':
 	except Exception as Argument:
 
 		# creating/opening a file
-		f = open("home/pi/telefono/relevant/telefonoCrashLog.txt", "a")
+		f = open(LOG_FILE, "a")
 
 		# writing in the file
 		f.write(str(Argument))
