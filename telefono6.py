@@ -15,7 +15,7 @@ SERVER_QUEUE_FILE = "/home/pi/telefono/relevant/queFile.txt"
 
 WEBAPP_EXEC = '/home/pi/webapp/app2.py'
 
-LOG_FILE = "home/pi/telefono/relevant/telefonoCrashLog.txt"
+LOG_FILE = "/home/pi/telefono/relevant/telefonoCrashLog.txt"
 
 
 #-----------------------------recorder---------------------------------------
