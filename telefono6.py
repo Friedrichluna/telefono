@@ -142,17 +142,16 @@ class Dailer ():
 	def digit_moved (self):
 		return self.__counter.is_pressed
 
-	def get_number (self, StopDialButton, contButton, led):
+	def get_number (self, abort, led):
 		led.blink(on_time=0.1, off_time=0.1, n=None, background=True)
 		number = 0
 
-		while not StopDialButton.is_pressed and contButton.is_pressed:
+		while not abort():
 
 			# timeout while idle
 			timeCounter = 0
 			while timeCounter <= DIAL_TIMEOUT \
-			and (not StopDialButton.is_pressed \
-			     and contButton.is_pressed):
+			and not abort ():
 
 				if self.dialing:
 					break
@@ -194,13 +193,13 @@ class Dailer ():
 		led.off()
 		return number
 
-	def get_digit (self, contButton, led):
+	def get_digit (self, abort, led):
 		led.blink(on_time=0.1, off_time=0.1, n=None, background=True)
 
 		# timeout while idle
 		timeCounter = 0
 		while timeCounter <= DIAL_TIMEOUT \
-		and contButton.is_pressed:
+		and not abort():
 			if self.dialing:
 				break
 
@@ -555,6 +554,12 @@ def main ():
 	# initialize random module
 	random.seed ()
 
+	def dial_number_abort ():
+		return ButtonLeft.is_pressed or not PickUp.is_pressed
+
+	def dial_digit_abort ():
+		return not PickUp.is_pressed
+
 	noInterrupt = True
 	while noInterrupt:
 
@@ -564,7 +569,7 @@ def main ():
 				time.sleep (0.1)
 				if DialInUse.is_pressed:
 					pygame.mixer.music.stop() #Freiton wird unterbrochen
-					dialedNumber = str(dialer.get_number (ButtonLeft, PickUp, led))
+					dialedNumber = str(dialer.get_number (dial_number_abort, led))
 					if PickUp.is_pressed: #falls er beim Wählen aufgelegt hat
 						#tts.say("Spiele Aufnahme Nr.: " + dialedNumber)
 						oldWavName = newWavName(dialedNumber)
@@ -609,7 +614,7 @@ def main ():
 			if ButtonMiddle.is_pressed:
 				pygame.mixer.music.stop() #Freiton wird unterbrochen
 				tts.say("Menü wird geöffnet.")
-				dialedOption = dialer.get_digit (PickUp, led)
+				dialedOption = dialer.get_digit (dial_digit_abort, led)
 				if dialedOption == 0:
 					tts.say_time ()
 				elif dialedOption == 1:
