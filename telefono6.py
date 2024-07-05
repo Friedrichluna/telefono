@@ -507,13 +507,11 @@ def main ():
 	minRecordingTime = 20
 	pygame.init()
 
-	acuteMessagePlayed = True   #True: by default not acute
 
 	# Thread for Speaker
 	speakerThread = SpeakerThread (SpeakerSwich)
 	speakerThread.start()
 
-	#os.system('python3 /home/pi/webapp/app2.py &') #webApp start
 	webAppProcess = subprocess.Popen(['python3', WEBAPP_EXEC])
 
 	# initialize random module
@@ -522,7 +520,6 @@ def main ():
 	noInterrupt = True
 	while noInterrupt:
 
-		phoneWasHungUp = True #wird für acute Message gebraucht
 		#-------------------------Hörer Abgenommen--------------------------------------------
 		while PickUp.is_pressed: #während der Hörer abgenommen ist
 			if DialInUse.is_pressed:           #wählt Nummer
