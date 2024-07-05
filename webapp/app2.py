@@ -10,7 +10,7 @@ import linkat
 import psutil
 
 
-BASE_DIR = "/home/pi/telefono"
+BASE_DIR = "/home/pi/telefono/telefono"
 
 FLASK_DEBUG = True
 FLASK_IP = "0.0.0.0"

@@ -3,7 +3,7 @@
 
 import sys
 
-BASE_DIR = "/home/pi/telefono"
+BASE_DIR = "/home/pi/telefono/telefono"
 
 RECORD_DIR = BASE_DIR
 RECORD_PREFIX = "recording"
