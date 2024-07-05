@@ -112,7 +112,7 @@ class RecordingFile(object):
 #---------------------- Dial ---------------------------------------------------------------------
 
 from gpiozero import Button, LED
-from time import sleep
+import time
 
 
 def wait_for_number (DialInUse, DialCounter, StopDialButton, contButton, led):
@@ -122,12 +122,12 @@ def wait_for_number (DialInUse, DialCounter, StopDialButton, contButton, led):
 	timeCounter = 0
 	tureZero = False
 	while True:
-		sleep(0.001)
+		time.sleep (0.001)
 		timeCounter = timeCounter + 1
 		dialedDigit = 0
 		dialWasActive = False
 		while DialInUse.is_pressed:
-			sleep(0.01)
+			time.sleep (0.01)
 			if (not DialCounter.is_pressed) and (not switch):
 				switch = True
 				dialedDigit = dialedDigit + 1
@@ -162,14 +162,14 @@ def wait_for_digit (DialInUse, DialCounter, contButton, led):
 	timeCounter = 0
 	trueZero = False
 	while True:
-		sleep(0.001)
+		time.sleep (0.001)
 		timeCounter = timeCounter + 1
 		dialedDigit = 0
 		dialWasActive = False
 		if DialInUse.is_pressed:
-			sleep(0.2)
+			time.sleep (0.2)
 			while DialInUse.is_pressed:
-				sleep(0.01)
+				time.sleep (0.01)
 				if (not DialCounter.is_pressed) and (not switch):
 					switch = True
 					dialedDigit = dialedDigit + 1
@@ -252,7 +252,7 @@ def playFileNeg(tts, fileName, contButton):
 		pygame.mixer.music.play()
 
 		while pygame.mixer.music.get_busy():
-			sleep(0.01)
+			time.sleep (0.01)
 			if not contButton.is_pressed:
 				pygame.mixer.music.stop()
 	else:
@@ -361,7 +361,7 @@ class SpeakerThread (Thread):
 				GPIO.output (self.__gpio, GPIO.LOW) # on
 			else:
 				GPIO.output (self.__gpio, GPIO.HIGH) # off
-			sleep (0.2)
+			time.sleep (0.2)
 
 	def activate (self):
 		self.__event.set ()
@@ -375,20 +375,19 @@ class SpeakerThread (Thread):
 
 
 #---------------------------Ringing------------------------------------
-#from time import sleep
+import time
 
 def ringing (tts, callingFile_, speaker, PickUp):
 	speaker.activate ()
 	playFile(tts, RING_FILE, PickUp) #hört auf wenn PickUp == True
 	speaker.deactivate ()
-	sleep(1) #test
+	time.sleep (1) #test
 	playFileNeg(tts, callingFile_, PickUp) #hört auf wenn PickUp == False
 
 
 #--------------------------CallingRoutine----------------------------
 import datetime
-from random import seed
-from random import randint
+import random
 
 minHour = 15
 maxHour = 21
@@ -399,10 +398,10 @@ def getTimeInt():
 	current_time = now.strftime("%H%M%S")
 	return(int(current_time))
 
-#seed(5) #ein Seed der 19:00Uhr als erstes ausspuckt
+#random.seed(5) #ein Seed der 19:00Uhr als erstes ausspuckt
 
 def newRandTimeInt():
-	randHour = randint(minHour, maxHour) #es klingelt zwischen 15 und 20Uhr
+	randHour = random.randint(minHour, maxHour) #es klingelt zwischen 15 und 20Uhr
 	randTimeInt_ = randHour * 10000
 	return randTimeInt_
 
@@ -445,11 +444,10 @@ def getWeekDayInt():
 
 
 #---------------------------random old Message-----------------------------------------
-from os import listdir
-from os.path import isfile, join
+import os
 
 def fileNumbers():
-	fileNameList = [f for f in listdir(RECORD_DIR) if isfile(join(RECORD_DIR, f))]
+	fileNameList = [f for f in os.listdir(RECORD_DIR) if os.path.isfile(os.path.join(RECORD_DIR, f))]
 	#print(fileNameList)
 	return fileNameList
 
@@ -463,7 +461,7 @@ def findRandomMessage():
 
 def shout (tts, wavName, speaker, PickUp):
 	speaker.activate ()
-	sleep(2)
+	time.sleep (2)
 	playFile(tts, wavName, PickUp) #hört auf wenn PickUp == True
 	speaker.deactivate ()
 
@@ -512,7 +510,7 @@ def main ():
 		#-------------------------Hörer Abgenommen--------------------------------------------
 		while PickUp.is_pressed: #während der Hörer abgenommen ist
 			if DialInUse.is_pressed:           #wählt Nummer
-				sleep(0.1)
+				time.sleep (0.1)
 				if DialInUse.is_pressed:
 					pygame.mixer.music.stop() #Freiton wird unterbrochen
 					dialedNumber = str(wait_for_number(DialInUse, DialCounter, ButtonLeft, PickUp, led))
@@ -532,7 +530,7 @@ def main ():
 					recordingTime = 0
 					led.on()
 					while True:
-						time.sleep(0.1)
+						time.sleep (0.1)
 						recordingTime = recordingTime + 1
 						if recordingTime > maxRecordingTime:    # beenden wenn mehr als 2min aufgenommen wurde
 							led.off()
@@ -547,14 +545,14 @@ def main ():
 							else:
 								tts.say ("Aufnahme zu kurz")
 								delFile (myNewWavName)
-							sleep(2) #button release Time
+							time.sleep (2) #button release Time
 							break
 						if ButtonMiddle.is_pressed:
 							led.off()
 							tts.say("Aufnahme Nr.: " + str(newRecordingNumber) + " abgebrochen")
 							recfile2.stop_recording()
 							delFile(myNewWavName)
-							sleep(2) #button release Time
+							time.sleep (2) #button release Time
 							break
 
 			# open Menu
@@ -600,14 +598,14 @@ def main ():
 		#-------------------------Ausschalten-----------------------------------------------
 		interruptCounter = 0
 		while ButtonMiddle.is_pressed:
-			sleep(0.5)
+			time.sleep (0.5)
 			interruptCounter = interruptCounter + 1
 			if not ButtonMiddle.is_pressed:
 				interruptCounter = 0
 			if interruptCounter >= 10:
 				noInterrupt = False
 				break
-		sleep(0.5)
+		time.sleep (0.5)
 
 
 	speakerThread.join()
