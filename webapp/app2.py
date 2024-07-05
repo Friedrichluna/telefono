@@ -2,6 +2,7 @@
 
 import os
 import pickle
+import time
 
 from flask import Flask, redirect, render_template, request
 
@@ -424,12 +425,15 @@ if __name__ == "__main__":
 	try:
 		main ()
 
-	except Exception as Argument:
+	except Exception as error:
 		# creating/opening a file
 		f = open(LOG_FILE, "a")
 
 		# writing in the file
-		f.write(str(Argument))
+		f.write (time.asctime ())
+		f.write (": ")
+		f.write (str (error))
+		f.write ("\n")
 
 		# closing the file
 		f.close()
