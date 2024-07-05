@@ -125,6 +125,8 @@ import time
 
 
 DIAL_TIMEOUT = 200000
+DIAL_TIMEOUT_SLEEP = 0.001
+DIAL_SLEEP = 0.01
 
 class Dailer ():
 	def __init__ (self, DialInUse, DialCounter):
@@ -154,7 +156,7 @@ class Dailer ():
 
 				if self.dialing:
 					break
-				time.sleep (0.001)
+				time.sleep (DIAL_TIMEOUT_SLEEP)
 				timeCounter += 1
 			else:
 				break
@@ -164,7 +166,7 @@ class Dailer ():
 
 				# wait for HIGH
 				while self.dialing:
-					time.sleep (0.01)
+					time.sleep (DIAL_SLEEP)
 					if not self.digit_moved:
 						break
 				else:
@@ -175,7 +177,7 @@ class Dailer ():
 				# wait for LOW
 				while not self.digit_moved \
 				and self.dialing:
-					time.sleep (0.01)
+					time.sleep (DIAL_SLEEP)
 
 			# not dialed
 			if digit == 0:
@@ -202,7 +204,7 @@ class Dailer ():
 			if self.dialing:
 				break
 
-			time.sleep (0.001)
+			time.sleep (DIAL_TIMEOUT_SLEEP)
 			timeCounter += 1
 		else:
 			led.off()
@@ -217,7 +219,7 @@ class Dailer ():
 				if not self.digit_moved:
 					break
 
-				time.sleep (0.01)
+				time.sleep (DIAL_SLEEP)
 			else:
 				break
 
@@ -226,7 +228,7 @@ class Dailer ():
 			# wait for HIGH
 			while not self.digit_moved \
 			and self.dialing:
-				time.sleep (0.01)
+				time.sleep (DIAL_SLEEP)
 
 		# not dialed
 		if dialedDigit == 0:
