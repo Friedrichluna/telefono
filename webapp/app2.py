@@ -215,6 +215,10 @@ class RecordIndexFile ():
 				       "Ignoring line")
 				continue
 
+			# ignore empty names
+			if not name:
+				continue
+
 			self[number] = name
 
 		return
@@ -242,9 +246,15 @@ class RecordIndexFile ():
 		keys.sort ()
 
 		for key in keys:
+			name = self[key].strip ()
+
+			# ignore empty names
+			if not name:
+				continue
+
 			_file.write (str (key))
 			_file.write (": ")
-			_file.write (self[key])
+			_file.write (name)
 			_file.write ("\n")
 
 		_file.flush ()
