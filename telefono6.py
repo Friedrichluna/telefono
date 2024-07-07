@@ -31,59 +31,17 @@ class Recorder ():
 	def __init__ (self, fname, indicator,
 	              channels=1, rate=44100, frames_per_buffer=512):
 
-		self.channels = channels
-		self.rate = rate
-		self.frames_per_buffer = frames_per_buffer
-
 		self.fname = fname
 		self.indicator = indicator
-		self._pa = pyaudio.PyAudio()
-
-		self._prepare_file ()
-
+		self._pa = pyaudio.PyAudio ()
 
 		# Use a stream with a callback in non-blocking mode
-		self._stream = self._pa.open(format=pyaudio.paInt16,
-		                             channels=self.channels,
-		                             rate=self.rate,
-		                             input=True,
-		                             frames_per_buffer=self.frames_per_buffer,
-		                             stream_callback=self.get_callback())
-
-		return
-
-
-	def __enter__(self):
-		self.start_recording ()
-		return self
-
-	def __exit__(self, exception, value, traceback):
-		self.stop_recording ()
-		self.close()
-
-	def start_recording(self):
-		self.indicator.on ()
-		self._stream.start_stream()
-		return self
-
-	def stop_recording(self):
-		self._stream.stop_stream()
-		self.indicator.off ()
-		return self
-
-	def get_callback(self):
-		def callback(in_data, frame_count, time_info, status):
-			self.wavefile.writeframes(in_data)
-			return None, pyaudio.paContinue
-		return callback
-
-
-	def close(self):
-		self._stream.close()
-		self._pa.terminate()
-		self.wavefile.close()
-
-	def _prepare_file (self):
+		self._stream = self._pa.open (format=pyaudio.paInt16,
+		                              channels=channels,
+		                              rate=rate,
+		                              input=True,
+		                              frames_per_buffer=frames_per_buffer,
+		                              stream_callback=self.__on_data)
 
 		# create temporary file
 		self.fd = os.open (os.path.dirname (self.fname),
@@ -91,25 +49,36 @@ class Recorder ():
 		                   mode=0o600)
 
 		self.wavefile = wave.open (os.fdopen (self.fd, "wb"), "w")
-		self.wavefile.setnchannels (self.channels)
+		self.wavefile.setnchannels (channels)
 		self.wavefile.setsampwidth (self._pa.get_sample_size (pyaudio.paInt16))
-		self.wavefile.setframerate (self.rate)
+		self.wavefile.setframerate (rate)
 		return
+
+	def __on_data (self, in_data, frame_count, time_info, status):
+		self.wavefile.writeframes (in_data)
+		return None, pyaudio.paContinue
 
 	def save (self):
 		# atomically link file
 		linkat.link_at (linkat.AT_FDCWD, b"/proc/self/fd/%d" % self.fd,
 		                linkat.AT_FDCWD, self.fname.encode(),
 		                linkat.AT_SYMLINK_FOLLOW)
+		return
 
+	def __enter__ (self):
+		self.indicator.on ()
+		self._stream.start_stream ()
+
+		return self
+
+	def __exit__ (self, exception, value, traceback):
+		self._stream.stop_stream ()
+		self.indicator.off ()
+
+		self._stream.close ()
+		self._pa.terminate ()
 		self.wavefile.close ()
-
-#rec = Recorder(channels=2)
-#with rec.open('nonblocking.wav', 'wb') as recfile2:
-#        recfile2.start_recording()
-#        time.sleep(5.0)
-#        recfile2.stop_recording()
-
+		return
 
 
 #---------------------- Dial ---------------------------------------------------------------------
