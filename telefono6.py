@@ -518,6 +518,92 @@ def turn_off (button):
 
 	return False
 
+def off_hook_loop (PickUp, dialer, DialInUse, ButtonLeft, ButtonMiddle, tts, led):
+
+	maxRecordingTime = 1200     #in 0.1 sek
+	minRecordingTime = 20
+
+	def dial_number_abort ():
+		return ButtonLeft.is_pressed or not PickUp.is_pressed
+
+	def dial_digit_abort ():
+		return not PickUp.is_pressed
+
+
+	start_dial_tone ()
+
+	while PickUp.is_pressed:
+		# dialing
+		if DialInUse.is_pressed and (time.sleep (0.1), DialInUse.is_pressed)[1]:
+			stop_dial_tone ()
+
+			dialedNumber = dialer.get_number (dial_number_abort, led)
+			oldWavName = newWavName(dialedNumber)
+			playFileNeg(tts, oldWavName, PickUp) #hört auf wenn PickUp == False
+
+			start_dial_tone ()
+
+		# recording
+		if ButtonLeft.is_pressed:
+			stop_dial_tone ()
+
+			myNewWavName, newRecordingNumber = findNewFileName()
+			tts.say("Aufnahme Nr.: " + str(newRecordingNumber) + " wird gestartet") #ansage welche Aufnahme es ist
+
+			aborted = False
+			recordingTime = 0
+			with Recorder (myNewWavName, led) as recorder:
+
+				while recordingTime <= maxRecordingTime \
+				and PickUp.is_pressed \
+				and not ButtonLeft.is_released \
+				and not aborted:
+					time.sleep (0.1)
+					recordingTime += 1
+
+					if ButtonMiddle.is_released:
+						aborted = True
+
+				if recordingTime > minRecordingTime and not aborted:
+					recorder.save ()
+
+			if recordingTime > maxRecordingTime:
+				tts.say("Aufnahme Nr.: " + str(newRecordingNumber) + "wegen overtime beendet.")
+			elif aborted:
+				tts.say("Aufnahme Nr.: " + str(newRecordingNumber) + " abgebrochen")
+			elif recordingTime <= minRecordingTime:
+				tts.say ("Aufnahme zu kurz")
+			else:
+				print ("Aufnahme Nr.: " + str(newRecordingNumber) + " beendet.")
+
+			start_dial_tone ()
+
+
+		# open Menu
+		if ButtonMiddle.is_pressed:
+			stop_dial_tone ()
+
+			tts.say("Menü wird geöffnet.")
+			dialedOption = dialer.get_digit (dial_digit_abort, led)
+			# aborted
+			if dialedOption is None:
+				pass
+			if dialedOption == 0:
+				tts.say_time ()
+			elif dialedOption == 1:
+				tts.random_prayer (PickUp)
+			elif dialedOption == 2:
+				tts.random_dice_prayer (PickUp)
+			elif dialedOption == 3:
+				tts.random_pater (PickUp)
+			else:
+				tts.say("Das habe ich nicht verstanden. Auf wiederhören")
+
+			start_dial_tone ()
+
+	stop_dial_tone ()
+	return
+
 def main ():
 	# setup pygame
 	pygame.mixer.init()
@@ -540,8 +626,6 @@ def main ():
 	wucher1930 = newWavName(1930)
 	tagesschau2000 = newWavName(2014)
 
-	maxRecordingTime = 1200     #in 0.1 sek
-	minRecordingTime = 20
 	pygame.init()
 
 
@@ -554,91 +638,12 @@ def main ():
 	# initialize random module
 	random.seed ()
 
-	def dial_number_abort ():
-		return ButtonLeft.is_pressed or not PickUp.is_pressed
-
-	def dial_digit_abort ():
-		return not PickUp.is_pressed
-
 	while not turn_off (ButtonMiddle):
 
-		#-------------------------Hörer Abgenommen--------------------------------------------
-		while PickUp.is_pressed: #während der Hörer abgenommen ist
-			# dialing
-			if DialInUse.is_pressed and (time.sleep (0.1), DialInUse.is_pressed)[1]:
-				stop_dial_tone ()
-
-				dialedNumber = dialer.get_number (dial_number_abort, led)
-				oldWavName = newWavName(dialedNumber)
-				playFileNeg(tts, oldWavName, PickUp) #hört auf wenn PickUp == False
-
-				start_dial_tone ()
-
-			# recording
-			if ButtonLeft.is_pressed:
-				stop_dial_tone ()
-
-				myNewWavName, newRecordingNumber = findNewFileName()
-				tts.say("Aufnahme Nr.: " + str(newRecordingNumber) + " wird gestartet") #ansage welche Aufnahme es ist
-
-				aborted = False
-				recordingTime = 0
-				with Recorder (myNewWavName, led) as recorder:
-
-					while recordingTime <= maxRecordingTime \
-					and PickUp.is_pressed \
-					and not ButtonLeft.is_released \
-					and not aborted:
-						time.sleep (0.1)
-						recordingTime += 1
-
-						if ButtonMiddle.is_released:
-							aborted = True
-
-					if recordingTime > minRecordingTime and not aborted:
-						recorder.save ()
-
-				if recordingTime > maxRecordingTime:
-					tts.say("Aufnahme Nr.: " + str(newRecordingNumber) + "wegen overtime beendet.")
-				elif aborted:
-					tts.say("Aufnahme Nr.: " + str(newRecordingNumber) + " abgebrochen")
-				elif recordingTime <= minRecordingTime:
-					tts.say ("Aufnahme zu kurz")
-				else:
-					print ("Aufnahme Nr.: " + str(newRecordingNumber) + " beendet.")
-
-				start_dial_tone ()
-
-
-			# open Menu
-			if ButtonMiddle.is_pressed:
-				stop_dial_tone ()
-
-				tts.say("Menü wird geöffnet.")
-				dialedOption = dialer.get_digit (dial_digit_abort, led)
-				# aborted
-				if dialedOption is None:
-					pass
-				if dialedOption == 0:
-					tts.say_time ()
-				elif dialedOption == 1:
-					tts.random_prayer (PickUp)
-				elif dialedOption == 2:
-					tts.random_dice_prayer (PickUp)
-				elif dialedOption == 3:
-					tts.random_pater (PickUp)
-				else:
-					tts.say("Das habe ich nicht verstanden. Auf wiederhören")
-
-				start_dial_tone ()
-
-
-			if not pygame.mixer.music.get_busy():
-				start_dial_tone ()
-
-		stop_dial_tone ()
-
-
+		if PickUp.is_pressed:
+			off_hook_loop (PickUp, dialer, DialInUse,
+			               ButtonLeft, ButtonMiddle,
+			               tts, led)
 
 		#-------------------------Klingelroutine-------------------------------------------
 		if is_call_time ():
