@@ -292,6 +292,9 @@ def playFile0(fileName): #keine Abbruchbedingung (muss seperat gesetzt werden)
 
 
 def playFileNeg(tts, fileName, contButton):
+	if not contButton.is_pressed:
+		return
+
 	if os.path.exists (fileName):
 		pygame.mixer.music.load(fileName)
 		pygame.mixer.music.play()
@@ -565,15 +568,11 @@ def main ():
 
 		#-------------------------Hörer Abgenommen--------------------------------------------
 		while PickUp.is_pressed: #während der Hörer abgenommen ist
-			if DialInUse.is_pressed:           #wählt Nummer
-				time.sleep (0.1)
-				if DialInUse.is_pressed:
-					pygame.mixer.music.stop() #Freiton wird unterbrochen
-					dialedNumber = str(dialer.get_number (dial_number_abort, led))
-					if PickUp.is_pressed: #falls er beim Wählen aufgelegt hat
-						#tts.say("Spiele Aufnahme Nr.: " + dialedNumber)
-						oldWavName = newWavName(dialedNumber)
-						playFileNeg(tts, oldWavName, PickUp) #hört auf wenn PickUp == False
+			if DialInUse.is_pressed and (time.sleep (0.1), DialInUse.is_pressed)[1]:           #wählt Nummer
+				pygame.mixer.music.stop() #Freiton wird unterbrochen
+				dialedNumber = dialer.get_number (dial_number_abort, led)
+				oldWavName = newWavName(dialedNumber)
+				playFileNeg(tts, oldWavName, PickUp) #hört auf wenn PickUp == False
 
 			if ButtonLeft.is_pressed:          #Aufnahme Starten
 				pygame.mixer.music.stop() #Freiton wird unterbrochen
