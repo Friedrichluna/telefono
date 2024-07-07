@@ -44,9 +44,11 @@ class Recorder ():
 		self._stream = None
 
 	def __enter__(self):
+		self.start_recording ()
 		return self
 
 	def __exit__(self, exception, value, traceback):
+		self.stop_recording ()
 		self.close()
 
 	def record(self, duration):
@@ -599,8 +601,7 @@ def main ():
 
 				aborted = False
 				recordingTime = 0
-				with Recorder (myNewWavName, led, channels=2) as recfile2:
-					recfile2.start_recording()
+				with Recorder (myNewWavName, led, channels=2) as recorder:
 
 					while recordingTime <= maxRecordingTime \
 					and PickUp.is_pressed \
@@ -613,9 +614,7 @@ def main ():
 							aborted = True
 
 					if recordingTime > minRecordingTime and not aborted:
-						recfile2.save ()
-
-					recfile2.stop_recording()
+						recorder.save ()
 
 				if recordingTime > maxRecordingTime:
 					tts.say("Aufnahme Nr.: " + str(newRecordingNumber) + "wegen overtime beendet.")
