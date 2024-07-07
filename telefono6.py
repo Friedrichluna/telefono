@@ -275,7 +275,7 @@ def start_dial_tone ():
 	pygame.mixer.music.play (loops=-1)
 
 def stop_dial_tone ():
-	player.mixer.music.stop ()
+	pygame.mixer.music.stop ()
 
 def playFileNeg(tts, fileName, contButton):
 	if not contButton.is_pressed:
@@ -507,6 +507,17 @@ def shout (tts, wavName, speaker, PickUp):
 	speaker.deactivate ()
 
 
+def turn_off (button):
+	time_pressed = 0
+	while button.is_pressed and time_pressed < 10:
+		time.sleep (0.5)
+		time_pressed += 1
+
+	if time_pressed >= 10:
+		return True
+
+	return False
+
 def main ():
 	# setup pygame
 	pygame.mixer.init()
@@ -549,8 +560,7 @@ def main ():
 	def dial_digit_abort ():
 		return not PickUp.is_pressed
 
-	noInterrupt = True
-	while noInterrupt:
+	while not turn_off (ButtonMiddle):
 
 		#-------------------------Hörer Abgenommen--------------------------------------------
 		while PickUp.is_pressed: #während der Hörer abgenommen ist
@@ -646,16 +656,7 @@ def main ():
 				shout (tts, wucher1930, speakerThread, PickUp)
 		if getTimeInt() == 200000:
 			shout (tts, tagesschau2000, speakerThread, PickUp)
-		#-------------------------Ausschalten-----------------------------------------------
-		interruptCounter = 0
-		while ButtonMiddle.is_pressed:
-			time.sleep (0.5)
-			interruptCounter = interruptCounter + 1
-			if not ButtonMiddle.is_pressed:
-				interruptCounter = 0
-			if interruptCounter >= 10:
-				noInterrupt = False
-				break
+
 		time.sleep (0.5)
 
 
