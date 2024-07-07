@@ -10,7 +10,7 @@ RECORD_PREFIX = "recording"
 RECORD_SUFFIX = ".wav"
 
 RING_FILE = BASE_DIR + "/relevant/telephone-ring-02.wav"
-DIAL_FILE = BASE_DIR + "/relevant/US_dial_tone.ogg.wav"
+DIAL_TONE_FILE = BASE_DIR + "/relevant/US_dial_tone.ogg.wav"
 
 SERVER_QUEUE_FILE = BASE_DIR + "/relevant/queFile.txt"
 
@@ -269,10 +269,13 @@ def playFile2(fileName, breakButton1, breakButton2): #zwei abbruch Bedingungen
 	while pygame.mixer.music.get_busy():
 			if breakButton1.is_pressed or breakButton2.is_pressed:
 				pygame.mixer.music.stop()
-def playFile0(fileName): #keine Abbruchbedingung (muss seperat gesetzt werden)
-	pygame.mixer.music.load(fileName)
-	pygame.mixer.music.play()
 
+def start_dial_tone ():
+	pygame.mixer.music.load (DIAL_TONE_FILE)
+	pygame.mixer.music.play (loops=-1)
+
+def stop_dial_tone ():
+	player.mixer.music.stop ()
 
 def playFileNeg(tts, fileName, contButton):
 	if not contButton.is_pressed:
@@ -551,14 +554,20 @@ def main ():
 
 		#-------------------------Hörer Abgenommen--------------------------------------------
 		while PickUp.is_pressed: #während der Hörer abgenommen ist
-			if DialInUse.is_pressed and (time.sleep (0.1), DialInUse.is_pressed)[1]:           #wählt Nummer
-				pygame.mixer.music.stop() #Freiton wird unterbrochen
+			# dialing
+			if DialInUse.is_pressed and (time.sleep (0.1), DialInUse.is_pressed)[1]:
+				stop_dial_tone ()
+
 				dialedNumber = dialer.get_number (dial_number_abort, led)
 				oldWavName = newWavName(dialedNumber)
 				playFileNeg(tts, oldWavName, PickUp) #hört auf wenn PickUp == False
 
-			if ButtonLeft.is_pressed:          #Aufnahme Starten
-				pygame.mixer.music.stop() #Freiton wird unterbrochen
+				start_dial_tone ()
+
+			# recording
+			if ButtonLeft.is_pressed:
+				stop_dial_tone ()
+
 				myNewWavName, newRecordingNumber = findNewFileName()
 				tts.say("Aufnahme Nr.: " + str(newRecordingNumber) + " wird gestartet") #ansage welche Aufnahme es ist
 
@@ -588,10 +597,13 @@ def main ():
 				else:
 					print ("Aufnahme Nr.: " + str(newRecordingNumber) + " beendet.")
 
+				start_dial_tone ()
+
 
 			# open Menu
 			if ButtonMiddle.is_pressed:
-				pygame.mixer.music.stop() #Freiton wird unterbrochen
+				stop_dial_tone ()
+
 				tts.say("Menü wird geöffnet.")
 				dialedOption = dialer.get_digit (dial_digit_abort, led)
 				# aborted
@@ -608,11 +620,13 @@ def main ():
 				else:
 					tts.say("Das habe ich nicht verstanden. Auf wiederhören")
 
+				start_dial_tone ()
 
-			if not pygame.mixer.music.get_busy(): #wenn der Freiton noch nicht spielt
-				playFile0(DIAL_FILE)  #Freiton
 
-		pygame.mixer.music.stop() #Freiton wird unterbrochen
+			if not pygame.mixer.music.get_busy():
+				start_dial_tone ()
+
+		stop_dial_tone ()
 
 
 
