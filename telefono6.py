@@ -131,6 +131,16 @@ class Button (gpiozero.Button):
 	def __init__ (self, *args, **kwargs):
 		super ().__init__ (*args, **kwargs)
 
+	@property
+	def is_released (self) -> bool:
+		if not self.is_pressed:
+			return False
+
+		while self.is_pressed:
+			pass
+
+		return True
+
 
 DIAL_TIMEOUT = 200000
 DIAL_TIMEOUT_SLEEP = 0.001
@@ -598,19 +608,17 @@ def main ():
 							tts.say("Aufnahme Nr.: " + str(newRecordingNumber) + "wegen overtime beendet.")
 							recfile2.save ()
 							break
-						if (not PickUp.is_pressed) or ButtonLeft.is_pressed:
+						if (not PickUp.is_pressed) or ButtonLeft.is_released:
 							recfile2.stop_recording()
 							if recordingTime > minRecordingTime:
 								print ("Aufnahme Nr.: " + str(newRecordingNumber) + " beendet.")
 								recfile2.save ()
 							else:
 								tts.say ("Aufnahme zu kurz")
-							time.sleep (2) #button release Time
 							break
-						if ButtonMiddle.is_pressed:
+						if ButtonMiddle.is_released:
 							tts.say("Aufnahme Nr.: " + str(newRecordingNumber) + " abgebrochen")
 							recfile2.stop_recording()
-							time.sleep (2) #button release Time
 							break
 
 			# open Menu
