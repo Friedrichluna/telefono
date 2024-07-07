@@ -28,14 +28,15 @@ import linkat
 import pyaudio
 
 class Recorder ():
-	def __init__(self, fname,
-	             channels=1, rate=44100, frames_per_buffer=512):
+	def __init__ (self, fname, indicator,
+	              channels=1, rate=44100, frames_per_buffer=512):
 
 		self.channels = channels
 		self.rate = rate
 		self.frames_per_buffer = frames_per_buffer
 
 		self.fname = fname
+		self.indicator = indicator
 		self._pa = pyaudio.PyAudio()
 
 		self._prepare_file ()
@@ -63,6 +64,8 @@ class Recorder ():
 		return None
 
 	def start_recording(self):
+		self.indicator.on ()
+
 		# Use a stream with a callback in non-blocking mode
 		self._stream = self._pa.open(format=pyaudio.paInt16,
 		                             channels=self.channels,
@@ -75,6 +78,7 @@ class Recorder ():
 
 	def stop_recording(self):
 		self._stream.stop_stream()
+		self.indicator.off ()
 		return self
 
 	def get_callback(self):
@@ -578,22 +582,19 @@ def main ():
 				pygame.mixer.music.stop() #Freiton wird unterbrochen
 				myNewWavName, newRecordingNumber = findNewFileName()
 
-				with Recorder(myNewWavName, channels=2) as recfile2:
+				with Recorder (myNewWavName, led, channels=2) as recfile2:
 					tts.say("Aufnahme Nr.: " + str(newRecordingNumber) + " wird gestartet") #ansage welche Aufnahme es ist
 					recfile2.start_recording()
 					recordingTime = 0
-					led.on()
 					while True:
 						time.sleep (0.1)
 						recordingTime = recordingTime + 1
 						if recordingTime > maxRecordingTime:    # beenden wenn mehr als 2min aufgenommen wurde
-							led.off()
 							recfile2.stop_recording()
 							tts.say("Aufnahme Nr.: " + str(newRecordingNumber) + "wegen overtime beendet.")
 							recfile2.save ()
 							break
 						if (not PickUp.is_pressed) or ButtonLeft.is_pressed:
-							led.off()
 							recfile2.stop_recording()
 							if recordingTime > minRecordingTime:
 								print ("Aufnahme Nr.: " + str(newRecordingNumber) + " beendet.")
@@ -603,7 +604,6 @@ def main ():
 							time.sleep (2) #button release Time
 							break
 						if ButtonMiddle.is_pressed:
-							led.off()
 							tts.say("Aufnahme Nr.: " + str(newRecordingNumber) + " abgebrochen")
 							recfile2.stop_recording()
 							time.sleep (2) #button release Time
