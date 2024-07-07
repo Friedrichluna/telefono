@@ -27,9 +27,15 @@ import wave
 import linkat
 import pyaudio
 
+
+CHANNELS = 2
+RATE = 44100
+FRAME_PER_BUFFER = 512
+
 class Recorder ():
 	def __init__ (self, fname, indicator,
-	              channels=1, rate=44100, frames_per_buffer=512):
+	              channels=CHANNELS, rate=RATE,
+	              frames_per_buffer=FRAME_PER_BUFFER):
 
 		self.fname = fname
 		self.indicator = indicator
@@ -558,7 +564,7 @@ def main ():
 
 				aborted = False
 				recordingTime = 0
-				with Recorder (myNewWavName, led, channels=2) as recorder:
+				with Recorder (myNewWavName, led) as recorder:
 
 					while recordingTime <= maxRecordingTime \
 					and PickUp.is_pressed \
