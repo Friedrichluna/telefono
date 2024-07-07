@@ -117,6 +117,14 @@ class Dailer ():
 		self.__counter = DialCounter
 		return
 
+	def is_used (self):
+		if not self.dialing:
+			return False
+
+		time.sleep (0.1)
+
+		return self.dialing
+
 	@property
 	def dialing (self):
 		return self.__flag.is_pressed
@@ -518,7 +526,7 @@ def turn_off (button):
 
 	return False
 
-def off_hook_loop (PickUp, dialer, DialInUse, ButtonLeft, ButtonMiddle, tts, led):
+def off_hook_loop (PickUp, dialer, ButtonLeft, ButtonMiddle, tts, led):
 
 	maxRecordingTime = 1200     #in 0.1 sek
 	minRecordingTime = 20
@@ -534,7 +542,7 @@ def off_hook_loop (PickUp, dialer, DialInUse, ButtonLeft, ButtonMiddle, tts, led
 
 	while PickUp.is_pressed:
 		# dialing
-		if DialInUse.is_pressed and (time.sleep (0.1), DialInUse.is_pressed)[1]:
+		if dialer.is_used ():
 			stop_dial_tone ()
 
 			dialedNumber = dialer.get_number (dial_number_abort, led)
@@ -641,7 +649,7 @@ def main ():
 	while not turn_off (ButtonMiddle):
 
 		if PickUp.is_pressed:
-			off_hook_loop (PickUp, dialer, DialInUse,
+			off_hook_loop (PickUp, dialer,
 			               ButtonLeft, ButtonMiddle,
 			               tts, led)
 
