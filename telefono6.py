@@ -51,20 +51,6 @@ class Recorder ():
 		self.stop_recording ()
 		self.close()
 
-	def record(self, duration):
-		# Use a stream with no callback function in blocking mode
-		self._stream = self._pa.open(format=pyaudio.paInt16,
-		                             channels=self.channels,
-		                             rate=self.rate,
-		                             input=True,
-		                             frames_per_buffer=self.frames_per_buffer)
-
-		for _ in range(int(self.rate / self.frames_per_buffer * duration)):
-			audio = self._stream.read(self.frames_per_buffer)
-			self.wavefile.writeframes(audio)
-
-		return None
-
 	def start_recording(self):
 		self.indicator.on ()
 
