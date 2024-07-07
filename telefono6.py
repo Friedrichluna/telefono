@@ -124,8 +124,12 @@ class Recorder ():
 
 #---------------------- Dial ---------------------------------------------------------------------
 
-from gpiozero import Button, LED
+import gpiozero
 import time
+
+class Button (gpiozero.Button):
+	def __init__ (self, *args, **kwargs):
+		super ().__init__ (*args, **kwargs)
 
 
 DIAL_TIMEOUT = 200000
@@ -539,7 +543,7 @@ def main ():
 	ButtonLeft = Button(3) #Linker knopf (violett)red = Button(2) #Zähler für die gewählte Zahl (rot)(grün Gestr.)
 	ButtonMiddle = Button(27) #Mittlerer Knopf
 	SpeakerSwich = Button(17) #Rechter Kippschalter (grüner Anschluss)
-	led = LED(20)
+	led = gpiozero.LED (20)
 
 	dialer = Dailer (DialInUse, DialCounter)
 
