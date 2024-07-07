@@ -41,7 +41,17 @@ class Recorder ():
 
 		self._prepare_file ()
 
-		self._stream = None
+
+		# Use a stream with a callback in non-blocking mode
+		self._stream = self._pa.open(format=pyaudio.paInt16,
+		                             channels=self.channels,
+		                             rate=self.rate,
+		                             input=True,
+		                             frames_per_buffer=self.frames_per_buffer,
+		                             stream_callback=self.get_callback())
+
+		return
+
 
 	def __enter__(self):
 		self.start_recording ()
@@ -53,14 +63,6 @@ class Recorder ():
 
 	def start_recording(self):
 		self.indicator.on ()
-
-		# Use a stream with a callback in non-blocking mode
-		self._stream = self._pa.open(format=pyaudio.paInt16,
-		                             channels=self.channels,
-		                             rate=self.rate,
-		                             input=True,
-		                             frames_per_buffer=self.frames_per_buffer,
-		                             stream_callback=self.get_callback())
 		self._stream.start_stream()
 		return self
 
