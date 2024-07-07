@@ -595,31 +595,37 @@ def main ():
 			if ButtonLeft.is_pressed:          #Aufnahme Starten
 				pygame.mixer.music.stop() #Freiton wird unterbrochen
 				myNewWavName, newRecordingNumber = findNewFileName()
+				tts.say("Aufnahme Nr.: " + str(newRecordingNumber) + " wird gestartet") #ansage welche Aufnahme es ist
 
+				aborted = False
+				recordingTime = 0
 				with Recorder (myNewWavName, led, channels=2) as recfile2:
-					tts.say("Aufnahme Nr.: " + str(newRecordingNumber) + " wird gestartet") #ansage welche Aufnahme es ist
 					recfile2.start_recording()
-					recordingTime = 0
-					while True:
+
+					while recordingTime <= maxRecordingTime \
+					and PickUp.is_pressed \
+					and not ButtonLeft.is_released \
+					and not aborted:
 						time.sleep (0.1)
-						recordingTime = recordingTime + 1
-						if recordingTime > maxRecordingTime:    # beenden wenn mehr als 2min aufgenommen wurde
-							recfile2.stop_recording()
-							tts.say("Aufnahme Nr.: " + str(newRecordingNumber) + "wegen overtime beendet.")
-							recfile2.save ()
-							break
-						if (not PickUp.is_pressed) or ButtonLeft.is_released:
-							recfile2.stop_recording()
-							if recordingTime > minRecordingTime:
-								print ("Aufnahme Nr.: " + str(newRecordingNumber) + " beendet.")
-								recfile2.save ()
-							else:
-								tts.say ("Aufnahme zu kurz")
-							break
+						recordingTime += 1
+
 						if ButtonMiddle.is_released:
-							tts.say("Aufnahme Nr.: " + str(newRecordingNumber) + " abgebrochen")
-							recfile2.stop_recording()
-							break
+							aborted = True
+
+					if recordingTime > minRecordingTime and not aborted:
+						recfile2.save ()
+
+					recfile2.stop_recording()
+
+				if recordingTime > maxRecordingTime:
+					tts.say("Aufnahme Nr.: " + str(newRecordingNumber) + "wegen overtime beendet.")
+				elif aborted:
+					tts.say("Aufnahme Nr.: " + str(newRecordingNumber) + " abgebrochen")
+				elif recordingTime <= minRecordingTime:
+					tts.say ("Aufnahme zu kurz")
+				else:
+					print ("Aufnahme Nr.: " + str(newRecordingNumber) + " beendet.")
+
 
 			# open Menu
 			if ButtonMiddle.is_pressed:
