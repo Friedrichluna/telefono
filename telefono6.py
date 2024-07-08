@@ -289,12 +289,12 @@ def start_dial_tone ():
 def stop_dial_tone ():
 	pygame.mixer.music.stop ()
 
-def playFileNeg(tts, fileName, contButton):
+def play_recording (tts, recording, contButton):
 	if not contButton.is_pressed:
 		return
 
-	if os.path.exists (fileName):
-		pygame.mixer.music.load(fileName)
+	if os.path.exists (recording):
+		pygame.mixer.music.load(recording)
 		pygame.mixer.music.play()
 
 		while pygame.mixer.music.get_busy():
@@ -304,7 +304,6 @@ def playFileNeg(tts, fileName, contButton):
 	else:
 		tts.say("Diese Aufnahme existiert noch nicht.")
 
-#playFileNeg(tts, "audio.wav", PickUp)
 
 #--------------------------File Name Generator----------------------------------
 
@@ -362,7 +361,7 @@ class TTS():
 	def _random (self, _list, PickUp):
 		filename = newWavName (random.choice (_list))
 		print("playing: " + filename)
-		playFileNeg(self, filename, PickUp)
+		play_recording (self, filename, PickUp)
 
 	def random_prayer (self, PickUp):
 		self._random (self.supperPrayers, PickUp)
@@ -422,7 +421,7 @@ import time
 def ringing (tts, callingFile_, speaker, PickUp):
 	play_aloud (tts, RING_FILE, speaker, PickUp) #hört auf wenn PickUp == True
 	time.sleep (1) #test
-	playFileNeg(tts, callingFile_, PickUp) #hört auf wenn PickUp == False
+	play_recording (tts, callingFile_, PickUp) #hört auf wenn PickUp == False
 
 
 #--------------------------CallingRoutine----------------------------
@@ -546,7 +545,7 @@ def off_hook_loop (PickUp, dialer, ButtonLeft, ButtonMiddle, tts, led):
 
 			dialedNumber = dialer.get_number (dial_number_abort, led)
 			oldWavName = newWavName(dialedNumber)
-			playFileNeg(tts, oldWavName, PickUp) #hört auf wenn PickUp == False
+			play_recording (tts, oldWavName, PickUp) #hört auf wenn PickUp == False
 
 			start_dial_tone ()
 
