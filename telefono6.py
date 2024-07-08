@@ -274,14 +274,6 @@ def play_aloud (tts, fileName, speaker, breakButton):
 
 	speaker.deactivate ()
 
-
-def playFile2(fileName, breakButton1, breakButton2): #zwei abbruch Bedingungen
-	pygame.mixer.music.load(fileName)
-	pygame.mixer.music.play()
-	while pygame.mixer.music.get_busy():
-			if breakButton1.is_pressed or breakButton2.is_pressed:
-				pygame.mixer.music.stop()
-
 def start_dial_tone ():
 	pygame.mixer.music.load (DIAL_TONE_FILE)
 	pygame.mixer.music.play (loops=-1)
