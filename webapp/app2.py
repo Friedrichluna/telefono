@@ -283,7 +283,7 @@ IPC_BYTEORDER = "big"
 def queue_call (connection:socket.socket, recording:int):
 	data = recording.to_bytes (IPC_MAX_DATA, IPC_BYTEORDER,
 	                           signed=False)
-	connection.send (data)
+	connection.send (b"\0" + data)
 	return
 
 def getFreeDiskSpace():

@@ -449,8 +449,11 @@ def is_call_time ():
 
 	return False
 
-IPC_MAX_DATA = 4
+IPC_MAX_DATA = 1024
 IPC_BYTEORDER = "big"
+IPC_INT_SIZE = 4
+
+IPC_CALL = 0
 
 def handle_queued_call (connection, tts, speaker, PickUp):
 	try:
@@ -460,11 +463,15 @@ def handle_queued_call (connection, tts, speaker, PickUp):
 	except BlockingIOError:
 		return
 
-	recording = int.from_bytes (data, IPC_BYTEORDER, signed=False)
+	if data[0] == IPC_CALL:
+		data = data[1:]
+		recording = int.from_bytes (data[:IPC_INT_SIZE],
+		                            IPC_BYTEORDER, signed=False)
 
-	recording = newWavName (recording)
-	print ("call in queue: %s" % recording)
-	ringing (tts, recording, speaker, PickUp)
+		recording = newWavName (recording)
+		print ("call in queue: %s" % recording)
+		ringing (tts, recording, speaker, PickUp)
+
 
 
 def getWeekDayInt():
