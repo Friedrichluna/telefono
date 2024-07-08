@@ -238,11 +238,14 @@ class Dailer ():
 
 #-----------------------------Memory Handle-------------------------------------------------------
 
-def returnFileText(fileName):
-	file1 = open(str(fileName),"r")
-	readText = file1.read()
-	file1.close()
-	return(readText)
+def read_queue_file ():
+	if not os.path.exists (SERVER_QUEUE_FILE):
+		return ""
+
+	file1 = open (SERVER_QUEUE_FILE, "r")
+	readText = file1.read ()
+	file1.close ()
+	return readText
 
 def overWriteFile(fileName, writtenText):
 	file1 = open(fileName,"w")
@@ -471,7 +474,7 @@ def is_call_time ():
 	return False
 
 def callInQue(tts, queFileAdress, speaker, PickUp):
-	callingFileNumber = returnFileText(queFileAdress)
+	callingFileNumber = read_queue_file ()
 	callingFile = newWavName(callingFileNumber)
 
 	if callingFileNumber != "":
