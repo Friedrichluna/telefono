@@ -259,7 +259,10 @@ def overWriteFile(fileName, writtenText):
 #needs GPIOZero buttons
 import pygame
 
-def playFile(tts, fileName, breakButton):
+def play_aloud (tts, fileName, speaker, breakButton):
+	speaker.activate ()
+	time.sleep (2)
+
 	if os.path.exists (fileName):
 		pygame.mixer.music.load(fileName)
 		pygame.mixer.music.play()
@@ -269,7 +272,8 @@ def playFile(tts, fileName, breakButton):
 	else:
 		tts.say("Diese Aufnahme existiert noch nicht.")
 
-#playFile(tts, "audio.wav", ButtonLeft)
+	speaker.deactivate ()
+
 
 def playFile2(fileName, breakButton1, breakButton2): #zwei abbruch Bedingungen
 	pygame.mixer.music.load(fileName)
@@ -416,9 +420,7 @@ class SpeakerThread (Thread):
 import time
 
 def ringing (tts, callingFile_, speaker, PickUp):
-	speaker.activate ()
-	playFile(tts, RING_FILE, PickUp) #hört auf wenn PickUp == True
-	speaker.deactivate ()
+	play_aloud (tts, RING_FILE, speaker, PickUp) #hört auf wenn PickUp == True
 	time.sleep (1) #test
 	playFileNeg(tts, callingFile_, PickUp) #hört auf wenn PickUp == False
 
@@ -509,10 +511,7 @@ def findRandomMessage():
 
 
 def shout (tts, wavName, speaker, PickUp):
-	speaker.activate ()
-	time.sleep (2)
-	playFile(tts, wavName, PickUp) #hört auf wenn PickUp == True
-	speaker.deactivate ()
+	play_aloud (tts, wavName, speaker, PickUp) #hört auf wenn PickUp == True
 
 
 def turn_off (button):
