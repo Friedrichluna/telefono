@@ -497,6 +497,7 @@ def findRandomMessage():
 	return newWavName
 #---------------------------Shout------------------------------------------------------
 
+import socket
 
 def shout (tts, wavName, speaker, PickUp):
 	play_aloud (tts, wavName, speaker, PickUp) #hört auf wenn PickUp == True
@@ -599,6 +600,20 @@ def off_hook_loop (PickUp, dialer, ButtonLeft, ButtonMiddle, tts, led):
 	stop_dial_tone ()
 	return
 
+def run_webapp ():
+	# setup connection to webapp
+	server, client = socket.socketpair (socket.AF_UNIX,
+	                                    socket.SOCK_DGRAM, 0)
+
+	# pass file descriptor to webapp
+	client_fd = client.fileno ()
+
+	# start webapp
+	process = subprocess.Popen ([WEBAPP_EXEC, str (client_fd)],
+	                            pass_fds=(client_fd, ))
+
+	return process, server
+
 def main ():
 	# setup pygame
 	pygame.mixer.init()
@@ -628,7 +643,8 @@ def main ():
 	speakerThread = SpeakerThread (SpeakerSwich)
 	speakerThread.start()
 
-	webAppProcess = subprocess.Popen(['python3', WEBAPP_EXEC])
+	# start webapp
+	webAppProcess, connection = run_webapp ()
 
 	# initialize random module
 	random.seed ()

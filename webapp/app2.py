@@ -2,6 +2,8 @@
 
 import os
 import time
+import socket
+import sys
 
 from flask import Flask, redirect, render_template, request
 
@@ -361,8 +363,15 @@ class TelefonoWebApp (Flask):
 		return render_template("upload.html", content ="erfolgreich unter {} gespeichert!".format(file_path))
 
 def main ():
+	if not sys.argv[1].isdecimal ():
+		print ("invalid fileno")
+		sys.exit (1)
+
 	records = RecordIndexFile (RECORD_LIST_FILE)
 	records.sync_fs ()
+
+	# setup connection to server
+	connection = socket.socket (fileno=int(sys.argv[1]))
 
 	app = TelefonoWebApp (records)
 	app.run(host=FLASK_IP, port=FLASK_PORT, debug=FLASK_DEBUG)
