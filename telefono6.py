@@ -240,22 +240,17 @@ class Dailer ():
 
 def read_queue_file ():
 	if not os.path.exists (SERVER_QUEUE_FILE):
-		return ""
+		return None
 
 	file1 = open (SERVER_QUEUE_FILE, "r")
-	readText = file1.read ()
+	data = file1.read ()
 	file1.close ()
-	return readText
 
-def overWriteFile(fileName, writtenText):
-	file1 = open(fileName,"w")
-	file1.write(str(writtenText))
-	file1.close()
+	return newWavName (data)
 
-#oldText = returnFileText("fileNumber.txt")
-#overWriteFile("fileNumber.txt", str(int(oldText) + 1))
-#NewText = returnFileText("fileNumber.txt")
-#print(NewText)
+def clear_call_queue ():
+	if os.path.exists (SERVER_QUEUE_FILE):
+		os.unlink (SERVER_QUEUE_FILE)
 
 
 #---------------------------Pygame AudioPlayer------------------------------------
@@ -473,14 +468,13 @@ def is_call_time ():
 
 	return False
 
-def callInQue(tts, queFileAdress, speaker, PickUp):
-	callingFileNumber = read_queue_file ()
-	callingFile = newWavName(callingFileNumber)
+def handle_queued_call (tts, speaker, PickUp):
+	recording = read_queue_file ()
 
-	if callingFileNumber != "":
-		print("ringing Que!!")
-		ringing (tts, callingFile, speaker, PickUp)
-		overWriteFile(queFileAdress, "")
+	if recording:
+		print ("call in queue: %s" % recording)
+		ringing (tts, recording, speaker, PickUp)
+		clear_call_queue ()
 
 
 def getWeekDayInt():
@@ -652,7 +646,7 @@ def main ():
 			callingFile = findRandomMessage() #zufällige Datei die anruft
 			ringing (tts, callingFile, speakerThread, PickUp)
 
-		callInQue (tts, SERVER_QUEUE_FILE, speakerThread, PickUp)
+		handle_queued_call (tts, speakerThread, PickUp)
 
 		weekDayInt = getWeekDayInt()
 		if weekDayInt > 0 and weekDayInt < 4: #von Dienstag bis Freitag Wahr
