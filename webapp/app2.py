@@ -24,8 +24,6 @@ RECORD_SUFFIX = ".wav"
 RECORD_LIST_FILE = BASE_DIR + "/relevant/records.list"
 BACKUP_EXT = ".bak"
 
-SERVER_QUEUE_FILE = BASE_DIR + "/relevant/queFile.txt"
-
 UPLOAD_DIR = BASE_DIR
 
 LOG_FILE = BASE_DIR + "/relevant/webapp.log"
@@ -279,10 +277,14 @@ class RecordIndexFile ():
 		return
 
 
-def overWriteFile(fileName, writtenText):
-	file1 = open(fileName,"w")
-	file1.write(str(writtenText))
-	file1.close()
+IPC_MAX_DATA = 4
+IPC_BYTEORDER = "big"
+
+def queue_call (connection:socket.socket, recording:int):
+	data = recording.to_bytes (IPC_MAX_DATA, IPC_BYTEORDER,
+	                           signed=False)
+	connection.send (data)
+	return
 
 def getFreeDiskSpace():
 	hdd = psutil.disk_usage (UPLOAD_DIR)
@@ -290,10 +292,11 @@ def getFreeDiskSpace():
 
 
 class TelefonoWebApp (Flask):
-	def __init__ (self, records):
+	def __init__ (self, records, connection):
 		super ().__init__ (__name__)
 
 		self.records = records
+		self.connection = connection
 
 		self.add_url_rule ("/", "home", self.home, methods=["POST", "GET"])
 		self.add_url_rule ("/list", "list", self.list)
@@ -307,7 +310,14 @@ class TelefonoWebApp (Flask):
 		if request.method == "POST":
 			requested_number = request.form["nm"]
 			print(requested_number)
-			overWriteFile(SERVER_QUEUE_FILE, requested_number)
+
+			# ignore malicious number
+			if not requested_number.isdecimal ():
+				return render_template ("index.html")
+
+			recording = int (requested_number)
+			queue_call (self.connection, recording)
+
 			return render_template("index.html", content = requested_number)
 		else:
 			return render_template("index.html")
@@ -327,8 +337,14 @@ class TelefonoWebApp (Flask):
 	def get_value(self):
 		# Get the selected button value from the frontend
 		requested_number = request.form["selected_value"]
-		# Process the selected value as needed
-		overWriteFile(SERVER_QUEUE_FILE, requested_number)
+
+		# ignore malicious number
+		if not requested_number.isdecimal ():
+			return render_template("index.html")
+
+		recording = int (requested_number)
+		queue_call (self.connection, recording)
+
 		return redirect("/list") #jsonify({"message": "Value received successfully"})
 
 
@@ -373,7 +389,7 @@ def main ():
 	# setup connection to server
 	connection = socket.socket (fileno=int(sys.argv[1]))
 
-	app = TelefonoWebApp (records)
+	app = TelefonoWebApp (records, connection)
 	app.run(host=FLASK_IP, port=FLASK_PORT, debug=FLASK_DEBUG)
 
 if __name__ == "__main__":

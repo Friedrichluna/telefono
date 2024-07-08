@@ -12,8 +12,6 @@ RECORD_SUFFIX = ".wav"
 RING_FILE = BASE_DIR + "/relevant/telephone-ring-02.wav"
 DIAL_TONE_FILE = BASE_DIR + "/relevant/US_dial_tone.ogg.wav"
 
-SERVER_QUEUE_FILE = BASE_DIR + "/relevant/queFile.txt"
-
 WEBAPP_EXEC = BASE_DIR + '/../webapp/app2.py'
 
 LOG_FILE = BASE_DIR + "/relevant/telefono.log"
@@ -236,23 +234,6 @@ class Dailer ():
 		return dialedDigit
 
 
-#-----------------------------Memory Handle-------------------------------------------------------
-
-def read_queue_file ():
-	if not os.path.exists (SERVER_QUEUE_FILE):
-		return None
-
-	file1 = open (SERVER_QUEUE_FILE, "r")
-	data = file1.read ()
-	file1.close ()
-
-	return newWavName (data)
-
-def clear_call_queue ():
-	if os.path.exists (SERVER_QUEUE_FILE):
-		os.unlink (SERVER_QUEUE_FILE)
-
-
 #---------------------------Pygame AudioPlayer------------------------------------
 #needs GPIOZero buttons
 import pygame
@@ -468,13 +449,22 @@ def is_call_time ():
 
 	return False
 
-def handle_queued_call (tts, speaker, PickUp):
-	recording = read_queue_file ()
+IPC_MAX_DATA = 4
+IPC_BYTEORDER = "big"
 
-	if recording:
-		print ("call in queue: %s" % recording)
-		ringing (tts, recording, speaker, PickUp)
-		clear_call_queue ()
+def handle_queued_call (connection, tts, speaker, PickUp):
+	try:
+		data = connection.recv (IPC_MAX_DATA, socket.MSG_DONTWAIT)
+
+	# no queued call
+	except BlockingIOError:
+		return
+
+	recording = int.from_bytes (data, IPC_BYTEORDER, signed=False)
+
+	recording = newWavName (recording)
+	print ("call in queue: %s" % recording)
+	ringing (tts, recording, speaker, PickUp)
 
 
 def getWeekDayInt():
@@ -662,7 +652,7 @@ def main ():
 			callingFile = findRandomMessage() #zufällige Datei die anruft
 			ringing (tts, callingFile, speakerThread, PickUp)
 
-		handle_queued_call (tts, speakerThread, PickUp)
+		handle_queued_call (connection, tts, speakerThread, PickUp)
 
 		weekDayInt = getWeekDayInt()
 		if weekDayInt > 0 and weekDayInt < 4: #von Dienstag bis Freitag Wahr
