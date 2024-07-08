@@ -286,6 +286,11 @@ def queue_call (connection:socket.socket, recording:int):
 	connection.send (b"\0" + data)
 	return
 
+def queue_message (connection:socket.socket, message:str):
+	message = message.encode ()
+	connection.send (b"\1" + message + b"\0")
+	return
+
 def getFreeDiskSpace():
 	hdd = psutil.disk_usage (UPLOAD_DIR)
 	return round(hdd.free / (2**30), 2)
@@ -302,6 +307,7 @@ class TelefonoWebApp (Flask):
 		self.add_url_rule ("/list", "list", self.list)
 		self.add_url_rule ("/edit/<int:index>", "edit_value", self.edit_value, methods=["GET", "POST"])
 		self.add_url_rule ("/get_value", "get_value", self.get_value, methods=["POST"])
+		self.add_url_rule ("/say", "say", self.say, methods=["GET", "POST"])
 		self.add_url_rule ("/upload", "upload_page", self.upload_page)
 		self.add_url_rule ("/upload", "upload_file", self.upload_file, methods=["POST"])
 		return
@@ -347,6 +353,13 @@ class TelefonoWebApp (Flask):
 
 		return redirect("/list") #jsonify({"message": "Value received successfully"})
 
+	def say (self):
+		if request.method == "POST":
+			text = request.form["text"]
+
+			queue_message (self.connection, text)
+
+		return render_template ("say.html")
 
 
 	def upload_page(self):

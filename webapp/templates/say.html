@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block style %}
+
+		form {
+			padding-left: 15px;
+		}
+		form > * {
+			display: block;
+			margin-top: 0;
+			margin-bottom: 1rem;
+		}
+
+		.button.upload {
+			padding: .375rem .75rem;
+			font-size: 1rem;
+			line-height: 1.5;
+			border-radius: .25rem;
+		}
+{% endblock %}
+
+{% block title %} Telefono Home Page {% endblock %}
+
+{% block content%}
+	<nav>
+		<a href="/">Nummernfeld </a>
+		<a href="/list">Liste</a>
+		<a href="/upload">Upload</a>
+		<a class="active" href="/say">Text ansagen</a>
+	</nav>
+
+	<form method="post" enctype="multipart/form-data">
+		<label for="text">anzusagender Text:</label>
+		<textarea id="text" name="text"></textarea>
+		<input type="submit" class="upload button blue" value="Ansagen">
+	</form>
+{% endblock %}

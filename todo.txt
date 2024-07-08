@@ -2,4 +2,3 @@ What's with GPIO.close() ?
 
 WebApp:
 	- record and call functionality
-	- text to speech support

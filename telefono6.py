@@ -454,6 +454,7 @@ IPC_BYTEORDER = "big"
 IPC_INT_SIZE = 4
 
 IPC_CALL = 0
+IPC_MESSAGE = 1
 
 def handle_queued_call (connection, tts, speaker, PickUp):
 	try:
@@ -471,6 +472,16 @@ def handle_queued_call (connection, tts, speaker, PickUp):
 		recording = newWavName (recording)
 		print ("call in queue: %s" % recording)
 		ringing (tts, recording, speaker, PickUp)
+
+	if data[0] == IPC_MESSAGE:
+		data = data[1:]
+
+		index = data.find (b"\0")
+
+		# silently drop to long or malformed messages
+		if index != -1:
+			data = data[:index]
+			tts.say (data.decode ())
 
 
 
