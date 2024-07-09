@@ -216,7 +216,7 @@ def turn_off (button):
 
 	return False
 
-def off_hook_loop (PickUp, dial, ButtonLeft, ButtonMiddle, tts, led):
+def off_hook_loop (records, PickUp, dial, ButtonLeft, ButtonMiddle, tts, led):
 
 	maxRecordingTime = 1200     #in 0.1 sek
 	minRecordingTime = 20
@@ -264,6 +264,7 @@ def off_hook_loop (PickUp, dial, ButtonLeft, ButtonMiddle, tts, led):
 
 				if recordingTime > minRecordingTime and not aborted:
 					recorder.save ()
+					records.sync_fs ()
 
 			if recordingTime > maxRecordingTime:
 				tts.say("Aufnahme Nr.: " + str(newRecordingNumber) + "wegen overtime beendet.")
@@ -359,7 +360,7 @@ def main ():
 	while not turn_off (ButtonMiddle):
 
 		if PickUp.is_pressed:
-			off_hook_loop (PickUp, dial,
+			off_hook_loop (records, PickUp, dial,
 			               ButtonLeft, ButtonMiddle,
 			               tts, led)
 
