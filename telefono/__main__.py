@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
+import os
 import sys
 
 import gpiozero
@@ -185,18 +186,16 @@ def getWeekDayInt():
 
 
 #---------------------------random old Message-----------------------------------------
-import os
+def findRandomMessage (records):
+	messages = list (records.keys())
 
-def fileNumbers():
-	fileNameList = [f for f in os.listdir(RECORD_DIR) if os.path.isfile(os.path.join(RECORD_DIR, f))]
-	#print(fileNameList)
-	return fileNameList
+	if not messages:
+		return None
 
-def findRandomMessage():
-	fileNames = fileNumbers()
-	newWavName = RECORD_DIR + "/" + random.choice (fileNames)
-	print("Random Nachricht: " + newWavName)
-	return newWavName
+	message = newWavName (random.choice (messages))
+	print("Random Nachricht: " + message)
+	return message
+
 #---------------------------Shout------------------------------------------------------
 
 import socket
@@ -315,6 +314,7 @@ def run_webapp ():
 	process = subprocess.Popen ([WEBAPP_EXEC, str (client_fd)],
 	                            pass_fds=(client_fd, ))
 
+	time.sleep (3)
 	return process, server
 
 def main ():
@@ -352,6 +352,10 @@ def main ():
 	# initialize random module
 	random.seed ()
 
+	# initialize recording data
+	records = Records ()
+	records.sync_fs ()
+
 	while not turn_off (ButtonMiddle):
 
 		if PickUp.is_pressed:
@@ -362,8 +366,9 @@ def main ():
 		#-------------------------Klingelroutine-------------------------------------------
 		if is_call_time ():
 			print("ringing!!!!!!!")
-			callingFile = findRandomMessage() #zufällige Datei die anruft
-			ringing (tts, callingFile, speakerThread, PickUp)
+			callingFile = findRandomMessage (records) #zufällige Datei die anruft
+			if callingFile is not None:
+				ringing (tts, callingFile, speakerThread, PickUp)
 
 		handle_queued_call (connection, tts, speakerThread, PickUp)
 

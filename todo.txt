@@ -1,4 +1,6 @@
 What's with GPIO.close() ?
 
+handle synchronous access to Records
+
 WebApp:
 	- record and call functionality
