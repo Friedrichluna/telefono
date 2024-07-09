@@ -1,7 +1,9 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
+import fcntl
 import os
+
 import linkat
 
 try:
@@ -151,6 +153,8 @@ class Records ():
 				yield value
 
 	def __load (self, _file):
+		fcntl.flock(_file, fcntl.LOCK_SH)
+
 		self.__prevent_sync = True
 
 		for lineno, line in enumerate (_file.readlines ()):
@@ -190,9 +194,12 @@ class Records ():
 			self[number] = name
 
 		self.__prevent_sync = False
+
+		fcntl.flock(_file, fcntl.LOCK_UN)
 		return
 
 	def __store (self, _file):
+		fcntl.flock(_file, fcntl.LOCK_EX)
 
 		_file.truncate ()
 
@@ -213,6 +220,8 @@ class Records ():
 			_file.write ("\n")
 
 		_file.flush ()
+
+		fcntl.flock(_file, fcntl.LOCK_UN)
 		return
 
 	def __invalidate_fs (self):
