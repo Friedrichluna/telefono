@@ -109,7 +109,7 @@ DIAL_TIMEOUT = 200000
 DIAL_TIMEOUT_SLEEP = 0.001
 DIAL_SLEEP = 0.01
 
-class Dailer ():
+class Dial ():
 	def __init__ (self, DialInUse, DialCounter):
 		self.__flag = DialInUse
 		self.__counter = DialCounter
@@ -522,7 +522,7 @@ def turn_off (button):
 
 	return False
 
-def off_hook_loop (PickUp, dialer, ButtonLeft, ButtonMiddle, tts, led):
+def off_hook_loop (PickUp, dial, ButtonLeft, ButtonMiddle, tts, led):
 
 	maxRecordingTime = 1200     #in 0.1 sek
 	minRecordingTime = 20
@@ -538,10 +538,10 @@ def off_hook_loop (PickUp, dialer, ButtonLeft, ButtonMiddle, tts, led):
 
 	while PickUp.is_pressed:
 		# dialing
-		if dialer.is_used ():
+		if dial.is_used ():
 			stop_dial_tone ()
 
-			dialedNumber = dialer.get_number (dial_number_abort, led)
+			dialedNumber = dial.get_number (dial_number_abort, led)
 			oldWavName = newWavName(dialedNumber)
 			play_recording (tts, oldWavName, PickUp) #hört auf wenn PickUp == False
 
@@ -588,7 +588,7 @@ def off_hook_loop (PickUp, dialer, ButtonLeft, ButtonMiddle, tts, led):
 			stop_dial_tone ()
 
 			tts.say("Menü wird geöffnet.")
-			dialedOption = dialer.get_digit (dial_digit_abort, led)
+			dialedOption = dial.get_digit (dial_digit_abort, led)
 			# aborted
 			if dialedOption is None:
 				pass
@@ -638,7 +638,7 @@ def main ():
 	SpeakerSwich = Button(17) #Rechter Kippschalter (grüner Anschluss)
 	led = gpiozero.LED (20)
 
-	dialer = Dailer (DialInUse, DialCounter)
+	dial = Dial (DialInUse, DialCounter)
 
 	essenIstFertig1830 = newWavName(1830)
 	wucher1930 = newWavName(1930)
@@ -660,7 +660,7 @@ def main ():
 	while not turn_off (ButtonMiddle):
 
 		if PickUp.is_pressed:
-			off_hook_loop (PickUp, dialer,
+			off_hook_loop (PickUp, dial,
 			               ButtonLeft, ButtonMiddle,
 			               tts, led)
 
