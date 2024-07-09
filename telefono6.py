@@ -3,240 +3,20 @@
 
 import sys
 
-BASE_DIR = "/home/pi/telefono/telefono"
-
-RECORD_DIR = BASE_DIR
-RECORD_PREFIX = "recording"
-RECORD_SUFFIX = ".wav"
-
-RING_FILE = BASE_DIR + "/relevant/telephone-ring-02.wav"
-DIAL_TONE_FILE = BASE_DIR + "/relevant/US_dial_tone.ogg.wav"
-
-WEBAPP_EXEC = BASE_DIR + '/../webapp/app2.py'
-
-LOG_FILE = BASE_DIR + "/relevant/telefono.log"
-
-
-#-----------------------------recorder---------------------------------------
-import subprocess
-import time
-import wave
-
-import linkat
-import pyaudio
-
-
-CHANNELS = 2
-RATE = 44100
-FRAME_PER_BUFFER = 512
-
-class Recorder ():
-	def __init__ (self, fname, indicator,
-	              channels=CHANNELS, rate=RATE,
-	              frames_per_buffer=FRAME_PER_BUFFER):
-
-		self.fname = fname
-		self.indicator = indicator
-		self._pa = pyaudio.PyAudio ()
-
-		# Use a stream with a callback in non-blocking mode
-		self._stream = self._pa.open (format=pyaudio.paInt16,
-		                              channels=channels,
-		                              rate=rate,
-		                              input=True,
-		                              frames_per_buffer=frames_per_buffer,
-		                              stream_callback=self.__on_data)
-
-		# create temporary file
-		self.fd = os.open (os.path.dirname (self.fname),
-		                   os.O_TMPFILE | os.O_WRONLY,
-		                   mode=0o600)
-
-		self.wavefile = wave.open (os.fdopen (self.fd, "wb"), "w")
-		self.wavefile.setnchannels (channels)
-		self.wavefile.setsampwidth (self._pa.get_sample_size (pyaudio.paInt16))
-		self.wavefile.setframerate (rate)
-		return
-
-	def __on_data (self, in_data, frame_count, time_info, status):
-		self.wavefile.writeframes (in_data)
-		return None, pyaudio.paContinue
-
-	def save (self):
-		# atomically link file
-		linkat.link_at (linkat.AT_FDCWD, b"/proc/self/fd/%d" % self.fd,
-		                linkat.AT_FDCWD, self.fname.encode(),
-		                linkat.AT_SYMLINK_FOLLOW)
-		return
-
-	def __enter__ (self):
-		self.indicator.on ()
-		self._stream.start_stream ()
-
-		return self
-
-	def __exit__ (self, exception, value, traceback):
-		self._stream.stop_stream ()
-		self.indicator.off ()
-
-		self._stream.close ()
-		self._pa.terminate ()
-		self.wavefile.close ()
-		return
-
-
-#---------------------- Dial ---------------------------------------------------------------------
-
 import gpiozero
-import time
 
-class Button (gpiozero.Button):
-	def __init__ (self, *args, **kwargs):
-		super ().__init__ (*args, **kwargs)
+from recorder import Recorder
+from button import Button
+from dial import Dial
+from tts import TTS
+from speaker import SpeakerThread
 
-	@property
-	def is_released (self) -> bool:
-		if not self.is_pressed:
-			return False
-
-		while self.is_pressed:
-			pass
-
-		return True
-
-
-DIAL_TIMEOUT = 200000
-DIAL_TIMEOUT_SLEEP = 0.001
-DIAL_SLEEP = 0.01
-
-class Dial ():
-	def __init__ (self, DialInUse, DialCounter):
-		self.__flag = DialInUse
-		self.__counter = DialCounter
-		return
-
-	def is_used (self):
-		if not self.dialing:
-			return False
-
-		time.sleep (0.1)
-
-		return self.dialing
-
-	@property
-	def dialing (self):
-		return self.__flag.is_pressed
-
-	@property
-	def digit_moved (self):
-		return self.__counter.is_pressed
-
-	def get_number (self, abort, led):
-		led.blink(on_time=0.1, off_time=0.1, n=None, background=True)
-		number = 0
-
-		while not abort():
-
-			# timeout while idle
-			timeCounter = 0
-			while timeCounter <= DIAL_TIMEOUT \
-			and not abort ():
-
-				if self.dialing:
-					break
-				time.sleep (DIAL_TIMEOUT_SLEEP)
-				timeCounter += 1
-			else:
-				break
-
-			digit = 0
-			while self.dialing:
-
-				# wait for HIGH
-				while self.dialing:
-					time.sleep (DIAL_SLEEP)
-					if not self.digit_moved:
-						break
-				else:
-					break
-
-				digit += 1
-
-				# wait for LOW
-				while not self.digit_moved \
-				and self.dialing:
-					time.sleep (DIAL_SLEEP)
-
-			# not dialed
-			if digit == 0:
-				continue
-
-			# 0 dialed
-			if digit > 9:
-				digit = 0
-
-			number *= 10
-			number += digit
-			print(digit)
-
-		led.off()
-		return number
-
-	def get_digit (self, abort, led):
-		led.blink(on_time=0.1, off_time=0.1, n=None, background=True)
-
-		# timeout while idle
-		timeCounter = 0
-		while timeCounter <= DIAL_TIMEOUT \
-		and not abort():
-			if self.dialing:
-				break
-
-			time.sleep (DIAL_TIMEOUT_SLEEP)
-			timeCounter += 1
-		else:
-			led.off()
-			return None
-
-
-		dialedDigit = 0
-		while self.dialing:
-
-			# wait for LOW
-			while self.dialing:
-				if not self.digit_moved:
-					break
-
-				time.sleep (DIAL_SLEEP)
-			else:
-				break
-
-			dialedDigit += 1
-
-			# wait for HIGH
-			while not self.digit_moved \
-			and self.dialing:
-				time.sleep (DIAL_SLEEP)
-
-		# not dialed
-		if dialedDigit == 0:
-			dialedDigit = None
-
-		# 0 dialed
-		elif dialedDigit > 9:
-			dialedDigit = 0
-			print(dialedDigit)
-
-		else:
-			print(dialedDigit)
-
-		led.off()
-		return dialedDigit
-
+from CONSTANTS import *
 
 #---------------------------Pygame AudioPlayer------------------------------------
 #needs GPIOZero buttons
 import pygame
+import time
 
 def play_aloud (tts, fileName, speaker, breakButton):
 	speaker.activate ()
@@ -292,98 +72,6 @@ def findNewFileName ():
 		counter += 1
 		filename = newWavName (counter)
 	return filename, counter
-
-#--------------------------Text to Speech--------------------------------------
-#import sys
-#    sys.path.append('/home/pi/.local/lib/python3.9/site-packages')
-
-import datetime
-import pyttsx3
-import random
-
-class TTS():
-	supperPrayers = [101, 102, 103, 104, 105]
-	dicePrayers = [201, 202, 203, 204, 205, 206]
-	pater = [2, 10, 11, 19, 22, 26, 30, 88]
-
-	def __init__ (self):
-		self.__engine = pyttsx3.init()
-		self.__engine.setProperty('rate', 140)    # Speed percent (can go over 100)
-		self.__engine.setProperty('volume', 1)  # Volume 0-1
-		self.__engine.setProperty('voice', "german+f2") #sprache auf Deutsch ändern
-
-		return
-
-	def say (self, text):
-		print(text)
-		self.__engine.say(text)
-		#self.__engine.startLoop(False)
-		self.__engine.runAndWait()
-
-	def say_time (self):
-		print("uhrzeit ansagen")
-
-		FORMAT = "Es ist %H Uhr %M am %d.%m.%Y."
-		now = datetime.datetime.now()
-		timeInWords = now.strftime (FORMAT)
-
-		self.say(timeInWords)
-
-	def _random (self, _list, PickUp):
-		filename = newWavName (random.choice (_list))
-		print("playing: " + filename)
-		play_recording (self, filename, PickUp)
-
-	def random_prayer (self, PickUp):
-		self._random (self.supperPrayers, PickUp)
-
-	def random_dice_prayer (self, PickUp):
-		self._random (self.dicePrayers, PickUp)
-
-	def random_pater (self, PickUp):
-		self._random (self.pater, PickUp)
-
-
-
-#--------------------------Relay-----------------------------------------------
-import RPi.GPIO as GPIO
-from threading import Thread
-from threading import Event
-
-RELAIS_1_GPIO = 4
-
-class SpeakerThread (Thread):
-	def __init__ (self, switch, gpio=RELAIS_1_GPIO):
-		super ().__init__ ()
-
-		self.__switch = switch
-		self.__gpio = gpio
-
-		# GPIO Numbers instead of board numbers
-		GPIO.setmode(GPIO.BCM)
-		# GPIO Assign mode
-		GPIO.setup (self.__gpio, GPIO.OUT)
-
-		self.__event = Event ()
-		self.__stop = Event ()
-
-	def run (self):
-		while not self.__stop.is_set ():
-			if self.__event.is_set () or self.__switch.is_pressed:
-				GPIO.output (self.__gpio, GPIO.LOW) # on
-			else:
-				GPIO.output (self.__gpio, GPIO.HIGH) # off
-			time.sleep (0.2)
-
-	def activate (self):
-		self.__event.set ()
-
-	def deactivate (self):
-		self.__event.clear ()
-
-	def join (self, timeout=None):
-		self.__stop.set ()
-		super ().join (timeout)
 
 
 #---------------------------Ringing------------------------------------
@@ -506,6 +194,7 @@ def findRandomMessage():
 #---------------------------Shout------------------------------------------------------
 
 import socket
+import subprocess
 
 def shout (tts, wavName, speaker, PickUp):
 	play_aloud (tts, wavName, speaker, PickUp) #hört auf wenn PickUp == True
