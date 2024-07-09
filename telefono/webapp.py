@@ -139,6 +139,10 @@ class TelefonoWebApp (Flask):
 		return render_template("upload.html", content ="erfolgreich unter {} gespeichert!".format(file_path))
 
 def main ():
+	if len(sys.argv) < 2:
+		print ("no communication socket provided")
+		sys.exit (1)
+
 	if not sys.argv[1].isdecimal ():
 		print ("invalid fileno")
 		sys.exit (1)
