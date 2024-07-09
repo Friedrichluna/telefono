@@ -1,17 +1,23 @@
 #!/usr/bin/python3
-
+# -*- coding: utf-8 -*-
 
 import sys
 
 import gpiozero
 
-from recorder import Recorder
-from button import Button
-from dial import Dial
-from tts import TTS
-from speaker import SpeakerThread
+from . import *
 
-from CONSTANTS import *
+from .CONSTANTS import RECORD_DIR
+from .CONSTANTS import RECORD_PREFIX
+from .CONSTANTS import RECORD_SUFFIX
+
+from .CONSTANTS import RING_FILE
+from .CONSTANTS import DIAL_TONE_FILE
+
+from .CONSTANTS import WEBAPP_EXEC
+
+from .CONSTANTS import LOG_FILE
+
 
 #---------------------------Pygame AudioPlayer------------------------------------
 #needs GPIOZero buttons
