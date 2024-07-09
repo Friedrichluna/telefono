@@ -16,7 +16,7 @@ from .CONSTANTS import DIAL_TONE_FILE
 
 from .CONSTANTS import WEBAPP_EXEC
 
-from .CONSTANTS import LOG_FILE
+from .CONSTANTS import TELEFONO_LOG_FILE
 
 
 #---------------------------Pygame AudioPlayer------------------------------------
@@ -391,7 +391,7 @@ if __name__ == '__main__':
 	except Exception as error:
 
 		# creating/opening a file
-		f = open(LOG_FILE, "a")
+		f = open(TELEFONO_LOG_FILE, "a")
 
 		# writing in the file
 		f.write (time.asctime ())

@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+# -*- coding: utf-8 -*-
 
 import os
 import time
@@ -11,22 +12,20 @@ import linkat
 import psutil
 
 
-BASE_DIR = "/home/pi/telefono/data"
+from CONSTANTS import FLASK_DEBUG
+from CONSTANTS import FLASK_IP
+from CONSTANTS import FLASK_PORT
 
-FLASK_DEBUG = True
-FLASK_IP = "0.0.0.0"
-FLASK_PORT = 5000
+from CONSTANTS import RECORD_DIR
+from CONSTANTS import RECORD_PREFIX
+from CONSTANTS import RECORD_SUFFIX
 
-RECORD_DIR = BASE_DIR
-RECORD_PREFIX = "recording"
-RECORD_SUFFIX = ".wav"
+from CONSTANTS import RECORD_LIST_FILE
+from CONSTANTS import BACKUP_EXT
 
-RECORD_LIST_FILE = BASE_DIR + "/relevant/records.list"
-BACKUP_EXT = ".bak"
+from CONSTANTS import UPLOAD_DIR
 
-UPLOAD_DIR = BASE_DIR
-
-LOG_FILE = BASE_DIR + "/relevant/webapp.log"
+from CONSTANTS import WEBAPP_LOG_FILE
 
 
 class RecordIndexFile ():
@@ -411,7 +410,7 @@ if __name__ == "__main__":
 
 	except Exception as error:
 		# creating/opening a file
-		f = open(LOG_FILE, "a")
+		f = open(WEBAPP_LOG_FILE, "a")
 
 		# writing in the file
 		f.write (time.asctime ())
