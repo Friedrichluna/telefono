@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
-BASE_DIR = "/home/pi/telefono/telefono"
+BASE_DIR = "/home/pi/telefono/data"
 
 RECORD_DIR = BASE_DIR
 RECORD_PREFIX = "recording"
