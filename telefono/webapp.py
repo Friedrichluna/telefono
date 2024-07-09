@@ -18,8 +18,6 @@ from CONSTANTS import RECORD_DIR
 from CONSTANTS import RECORD_PREFIX
 from CONSTANTS import RECORD_SUFFIX
 
-from CONSTANTS import RECORD_LIST_FILE
-
 from CONSTANTS import UPLOAD_DIR
 
 from CONSTANTS import WEBAPP_LOG_FILE
@@ -145,7 +143,7 @@ def main ():
 		print ("invalid fileno")
 		sys.exit (1)
 
-	records = Records (RECORD_LIST_FILE)
+	records = Records ()
 	records.sync_fs ()
 
 	# setup connection to server

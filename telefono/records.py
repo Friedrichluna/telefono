@@ -9,6 +9,7 @@ try:
 	from .CONSTANTS import RECORD_PREFIX
 	from .CONSTANTS import RECORD_SUFFIX
 
+	from .CONSTANTS import RECORD_LIST_FILE
 	from .CONSTANTS import BACKUP_EXT
 
 except:
@@ -16,11 +17,12 @@ except:
 	from CONSTANTS import RECORD_PREFIX
 	from CONSTANTS import RECORD_SUFFIX
 
+	from CONSTANTS import RECORD_LIST_FILE
 	from CONSTANTS import BACKUP_EXT
 
 
 class Records ():
-	def __init__ (self, filename:str):
+	def __init__ (self, filename:str=RECORD_LIST_FILE):
 		self.__data = dict ()
 		self.__prevent_sync = False
 
