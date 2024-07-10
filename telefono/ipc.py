@@ -17,9 +17,9 @@ IPC_CALL_ID_SIZE = 4
 IPC_TTS_MESSAGE_SIZE = IPC_MAX_DATA -1 -1
 
 class IPC:
-	def __init__ (self, fd):
-		self.__fd = fd
-		self.__socket = socket.socket (fileno=fd)
+	def __init__ (self, socket):
+		self.__socket = socket
+		return
 
 	def _serialize_call (self, call_id:int) -> bytearray:
 		data = bytearray ()
@@ -87,11 +87,23 @@ class IPC:
 		self.__socket.send (message)
 		return
 
+	def _recv (self, blocking=True):
+		if blocking:
+			return self.__socket.recv (IPC_MAX_DATA)
+
+		try:
+			return self.__socket.recv (IPC_MAX_DATA,
+			                           socket.MSG_DONTWAIT)
+
+		# no queued call
+		except BlockingIOError:
+			return b""
+
 
 
 class IPC_Client (IPC):
 	def __init__ (self, fd):
-		super ().__init__ (fd)
+		super ().__init__ (socket.socket (fileno=fd))
 		return
 
 	def queue_call (self, call_id:int):
@@ -115,8 +127,7 @@ class IPC_Server (IPC):
 	                                            socket.SOCK_DGRAM,
 	                                            0)
 
-		self.__socket = server
-		self.__fd = server.fileno ()
+		super ().__init__ (server)
 
 		# needs to store the whole socket object,
 		# as otherwise it is GC'ed
@@ -128,14 +139,8 @@ class IPC_Server (IPC):
 
 	def handle_message (self, tts, speaker, PickUp,
 	                    newWavName, ringing):
-		try:
-			data = self.__socket.recv (IPC_MAX_DATA,
-			                           socket.MSG_DONTWAIT)
 
-		# no queued call
-		except BlockingIOError:
-			return
-
+		data = self._recv (blocking=False)
 		message_type, payload = self._deserialize (data)
 
 		if IPC_MESSAGE.ERROR == message_type:
