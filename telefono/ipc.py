@@ -8,8 +8,9 @@ IPC_MAX_DATA = 1024
 IPC_BYTEORDER = "big"
 
 class IPC_MESSAGE (enum.IntEnum):
-	CALL = 0
-	TTS = 1
+	ERROR = 0
+	CALL = 1
+	TTS = 2
 
 IPC_CALL_ID_SIZE = 4
 
@@ -50,7 +51,7 @@ class IPC:
 	def _deserialize (self, message:bytes) -> (IPC_MESSAGE, object):
 
 		if len (message) < 1:
-			return (None, None)
+			return (IPC_MESSAGE.ERROR, None)
 
 		message_type = IPC_MESSAGE (message[0])
 
@@ -61,7 +62,7 @@ class IPC:
 			payload = self.__deserialize_tts (message[1:])
 
 		if payload is None:
-			return (None, None)
+			return (IPC_MESSAGE.ERROR, None)
 
 		return (message_type, payload)
 
@@ -137,7 +138,7 @@ class IPC_Server (IPC):
 
 		message_type, payload = self._deserialize (data)
 
-		if message_type is None:
+		if IPC_MESSAGE.ERROR == message_type:
 			return
 
 		elif IPC_MESSAGE.CALL == message_type:
