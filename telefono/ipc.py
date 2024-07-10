@@ -52,6 +52,12 @@ class IPC:
 		return
 
 
+
+class IPC_Client (IPC):
+	def __init__ (self, fd):
+		super ().__init__ (fd)
+		return
+
 	def queue_call (self, call_id:int):
 		data = self._serialize_call (call_id)
 		self._send (data)

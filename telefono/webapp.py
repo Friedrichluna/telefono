@@ -22,7 +22,7 @@ from CONSTANTS import UPLOAD_DIR
 from CONSTANTS import WEBAPP_LOG_FILE
 
 from records import Records
-from ipc import IPC
+from ipc import IPC_Client
 
 
 def getFreeDiskSpace():
@@ -138,7 +138,7 @@ def main ():
 	records.sync_fs ()
 
 	# setup connection to server
-	ipc = IPC (int(sys.argv[1]))
+	ipc = IPC_Client (int(sys.argv[1]))
 
 	app = TelefonoWebApp (records, ipc)
 	app.run(host=FLASK_IP, port=FLASK_PORT, debug=FLASK_DEBUG)
