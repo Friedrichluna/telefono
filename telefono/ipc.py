@@ -47,6 +47,41 @@ class IPC:
 		data.append (0)
 		return data
 
+	def _deserialize (self, message:bytes) -> (IPC_MESSAGE, object):
+
+		if len (message) < 1:
+			return (None, None)
+
+		message_type = IPC_MESSAGE (message[0])
+
+		if IPC_MESSAGE.CALL == message_type:
+			payload = self.__deserialize_call (message[1:])
+
+		elif IPC_MESSAGE.TTS == message_type:
+			payload = self.__deserialize_tts (message[1:])
+
+		if payload is None:
+			return (None, None)
+
+		return (message_type, payload)
+
+	def __deserialize_call (self, message:bytes) -> int:
+		if len (message) < IPC_CALL_ID_SIZE:
+			return None
+
+		call_id = int.from_bytes (message[:IPC_CALL_ID_SIZE],
+		                          IPC_BYTEORDER, signed=False)
+
+		return call_id
+
+	def __deserialize_tts (self, message:bytes) -> str:
+		size = 0
+		while size < IPC_TTS_MESSAGE_SIZE \
+		and message[size] != 0:
+			size += 1
+
+		return message[:size].decode ()
+
 	def _send (self, message):
 		self.__socket.send (message)
 		return
