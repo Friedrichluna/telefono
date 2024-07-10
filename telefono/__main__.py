@@ -19,6 +19,8 @@ from .CONSTANTS import WEBAPP_EXEC
 
 from .CONSTANTS import TELEFONO_LOG_FILE
 
+from .ipc import IPC_Server
+
 
 #---------------------------Pygame AudioPlayer------------------------------------
 #needs GPIOZero buttons
@@ -144,41 +146,6 @@ def is_call_time ():
 
 	return False
 
-IPC_MAX_DATA = 1024
-IPC_BYTEORDER = "big"
-IPC_INT_SIZE = 4
-
-IPC_CALL = 0
-IPC_MESSAGE = 1
-
-def handle_queued_call (connection, tts, speaker, PickUp):
-	try:
-		data = connection.recv (IPC_MAX_DATA, socket.MSG_DONTWAIT)
-
-	# no queued call
-	except BlockingIOError:
-		return
-
-	if data[0] == IPC_CALL:
-		data = data[1:]
-		recording = int.from_bytes (data[:IPC_INT_SIZE],
-		                            IPC_BYTEORDER, signed=False)
-
-		recording = newWavName (recording)
-		print ("call in queue: %s" % recording)
-		ringing (tts, recording, speaker, PickUp)
-
-	if data[0] == IPC_MESSAGE:
-		data = data[1:]
-
-		index = data.find (b"\0")
-
-		# silently drop to long or malformed messages
-		if index != -1:
-			data = data[:index]
-			tts.say (data.decode ())
-
-
 
 def getWeekDayInt():
 	now = datetime.datetime.now()
@@ -303,20 +270,13 @@ def off_hook_loop (records, PickUp, dial, ButtonLeft, ButtonMiddle, tts, led):
 	stop_dial_tone ()
 	return
 
-def run_webapp ():
-	# setup connection to webapp
-	server, client = socket.socketpair (socket.AF_UNIX,
-	                                    socket.SOCK_DGRAM, 0)
-
-	# pass file descriptor to webapp
-	client_fd = client.fileno ()
-
+def run_webapp (fd):
 	# start webapp
-	process = subprocess.Popen ([WEBAPP_EXEC, str (client_fd)],
-	                            pass_fds=(client_fd, ))
+	process = subprocess.Popen ([WEBAPP_EXEC, str (fd)],
+	                            pass_fds=(fd, ))
 
 	time.sleep (3)
-	return process, server
+	return process
 
 def main ():
 	# setup pygame
@@ -342,13 +302,14 @@ def main ():
 
 	pygame.init()
 
+	ipc = IPC_Server ()
 
 	# Thread for Speaker
 	speakerThread = SpeakerThread (SpeakerSwich)
 	speakerThread.start()
 
 	# start webapp
-	webAppProcess, connection = run_webapp ()
+	webAppProcess = run_webapp (ipc.get_client_fd ())
 
 	# initialize random module
 	random.seed ()
@@ -371,7 +332,8 @@ def main ():
 			if callingFile is not None:
 				ringing (tts, callingFile, speakerThread, PickUp)
 
-		handle_queued_call (connection, tts, speakerThread, PickUp)
+		ipc.handle_message (tts, speakerThread, PickUp,
+		                    newWavName, ringing)
 
 		weekDayInt = getWeekDayInt()
 		if weekDayInt > 0 and weekDayInt < 4: #von Dienstag bis Freitag Wahr

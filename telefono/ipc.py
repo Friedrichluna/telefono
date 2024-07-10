@@ -105,3 +105,47 @@ class IPC_Client (IPC):
 
 		self._send (data)
 		return
+
+
+class IPC_Server (IPC):
+	def __init__ (self):
+
+		server, client = socket.socketpair (socket.AF_UNIX,
+	                                            socket.SOCK_DGRAM,
+	                                            0)
+
+		self.__socket = server
+		self.__fd = server.fileno ()
+
+		# needs to store the whole socket object,
+		# as otherwise it is GC'ed
+		self.__client = client
+		return
+
+	def get_client_fd (self):
+		return self.__client.fileno ()
+
+	def handle_message (self, tts, speaker, PickUp,
+	                    newWavName, ringing):
+		try:
+			data = self.__socket.recv (IPC_MAX_DATA,
+			                           socket.MSG_DONTWAIT)
+
+		# no queued call
+		except BlockingIOError:
+			return
+
+		message_type, payload = self._deserialize (data)
+
+		if message_type is None:
+			return
+
+		elif IPC_MESSAGE.CALL == message_type:
+			recording = newWavName (payload)
+			print ("call in queue: %s" % recording)
+			ringing (tts, recording, speaker, PickUp)
+
+		elif IPC_MESSAGE.TTS == message_type:
+			tts.say (payload)
+
+		return
