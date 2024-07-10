@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 import time
-import socket
 import sys
 
 from flask import Flask, redirect, render_template, request
@@ -23,20 +22,8 @@ from CONSTANTS import UPLOAD_DIR
 from CONSTANTS import WEBAPP_LOG_FILE
 
 from records import Records
+from ipc import IPC
 
-IPC_MAX_DATA = 4
-IPC_BYTEORDER = "big"
-
-def queue_call (connection:socket.socket, recording:int):
-	data = recording.to_bytes (IPC_MAX_DATA, IPC_BYTEORDER,
-	                           signed=False)
-	connection.send (b"\0" + data)
-	return
-
-def queue_message (connection:socket.socket, message:str):
-	message = message.encode ()
-	connection.send (b"\1" + message + b"\0")
-	return
 
 def getFreeDiskSpace():
 	hdd = psutil.disk_usage (UPLOAD_DIR)
@@ -44,11 +31,11 @@ def getFreeDiskSpace():
 
 
 class TelefonoWebApp (Flask):
-	def __init__ (self, records, connection):
+	def __init__ (self, records, ipc):
 		super ().__init__ (__name__)
 
 		self.records = records
-		self.connection = connection
+		self.ipc = ipc
 
 		self.add_url_rule ("/", "home", self.home, methods=["POST", "GET"])
 		self.add_url_rule ("/list", "list", self.list)
@@ -69,7 +56,7 @@ class TelefonoWebApp (Flask):
 				return render_template ("index.html")
 
 			recording = int (requested_number)
-			queue_call (self.connection, recording)
+			self.ipc.queue_call (recording)
 
 			return render_template("index.html", content = requested_number)
 		else:
@@ -96,7 +83,7 @@ class TelefonoWebApp (Flask):
 			return render_template("index.html")
 
 		recording = int (requested_number)
-		queue_call (self.connection, recording)
+		self.ipc.queue_call (recording)
 
 		return redirect("/list") #jsonify({"message": "Value received successfully"})
 
@@ -104,7 +91,7 @@ class TelefonoWebApp (Flask):
 		if request.method == "POST":
 			text = request.form["text"]
 
-			queue_message (self.connection, text)
+			self.ipc.queue_message (text)
 
 		return render_template ("say.html")
 
@@ -151,9 +138,9 @@ def main ():
 	records.sync_fs ()
 
 	# setup connection to server
-	connection = socket.socket (fileno=int(sys.argv[1]))
+	ipc = IPC (int(sys.argv[1]))
 
-	app = TelefonoWebApp (records, connection)
+	app = TelefonoWebApp (records, ipc)
 	app.run(host=FLASK_IP, port=FLASK_PORT, debug=FLASK_DEBUG)
 
 if __name__ == "__main__":
