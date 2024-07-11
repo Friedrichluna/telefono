@@ -14,15 +14,18 @@ class EventQueue:
 		self.__events = list ()
 		return
 
-	def add_call (self, call:int, time=0):
+	def __add_event (self, time, event):
 
 		index = 0
 		while index < len (self.__events) \
-		and self.__events[index][1] <= time:
+		and self.__events[index][0] <= time:
 			index += 1
 
-		self.__events.insert (index,
-		                     (EVENT_TYPE.CALL, time, call))
+		self.__events.insert (index, (time, event))
+		return
+
+	def add_call (self, call:int, time=0):
+		self.__add_event (time, (EVENT_TYPE.CALL, call))
 		return
 
 	def __get_time (self):
@@ -32,11 +35,11 @@ class EventQueue:
 		if 0 == len (self.__events):
 			return
 
-		if self.__events[0][1] < self.__get_time ():
-			event = self.__events.pop (0)
+		if self.__events[0][0] < self.__get_time ():
+			event = self.__events.pop (0)[1]
 
 			if EVENT_TYPE.CALL == event[0]:
-				self.__process_call (event[2], tts, speaker, PickUp, newWavName, ringing)
+				self.__process_call (event[1], tts, speaker, PickUp, newWavName, ringing)
 
 		return
 
