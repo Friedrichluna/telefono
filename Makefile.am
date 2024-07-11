@@ -31,7 +31,7 @@ if HAVE_SYSTEMD
 systemd_DATA = telefono.service
 
 install-data-hook:
-	systemctl enable telefono
+	-systemctl enable telefono
 endif
 
 EXTRA_DIST += telefono.service
