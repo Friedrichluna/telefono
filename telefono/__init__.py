@@ -7,7 +7,7 @@ from .recorder import Recorder
 from .speaker import SpeakerThread
 from .tts import TTS
 from .records import Records
-from .call_queue import CallQueue
+from .event_queue import EventQueue
 
 __all__ = [
 	"Button",
@@ -16,5 +16,5 @@ __all__ = [
 	"SpeakerThread",
 	"TTS",
 	"Records",
-	"CallQueue",
+	"EventQueue",
 ]

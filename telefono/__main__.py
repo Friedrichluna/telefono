@@ -319,7 +319,7 @@ def main ():
 	records.sync_fs ()
 
 	# initialize call queue
-	queue = CallQueue ()
+	queue = EventQueue ()
 
 	while not turn_off (ButtonMiddle):
 
