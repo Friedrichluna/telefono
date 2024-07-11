@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.69])
-AC_INIT([Telefono], [1.0], [],
+AC_INIT([Telefono], [1.0], [friedrich.lunacek@gmx.de],
         [telefono], [https://gitlab.mn.tu-dresden.de/josc941e/telefono])
 AC_CONFIG_SRCDIR([telefono/ipc.py])
 AC_CONFIG_AUX_DIR([build-aux])
