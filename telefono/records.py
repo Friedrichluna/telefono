@@ -6,21 +6,12 @@ import os
 
 import linkat
 
-try:
-	from .CONSTANTS import RECORD_DIR
-	from .CONSTANTS import RECORD_PREFIX
-	from .CONSTANTS import RECORD_SUFFIX
+from .CONSTANTS import RECORD_DIR
+from .CONSTANTS import RECORD_PREFIX
+from .CONSTANTS import RECORD_SUFFIX
 
-	from .CONSTANTS import RECORD_LIST_FILE
-	from .CONSTANTS import BACKUP_EXT
-
-except:
-	from CONSTANTS import RECORD_DIR
-	from CONSTANTS import RECORD_PREFIX
-	from CONSTANTS import RECORD_SUFFIX
-
-	from CONSTANTS import RECORD_LIST_FILE
-	from CONSTANTS import BACKUP_EXT
+from .CONSTANTS import RECORD_LIST_FILE
+from .CONSTANTS import BACKUP_EXT
 
 
 class Records ():

@@ -9,20 +9,20 @@ from flask import Flask, redirect, render_template, request
 import psutil
 
 
-from CONSTANTS import FLASK_DEBUG
-from CONSTANTS import FLASK_IP
-from CONSTANTS import FLASK_PORT
+from .CONSTANTS import FLASK_DEBUG
+from .CONSTANTS import FLASK_IP
+from .CONSTANTS import FLASK_PORT
 
-from CONSTANTS import RECORD_DIR
-from CONSTANTS import RECORD_PREFIX
-from CONSTANTS import RECORD_SUFFIX
+from .CONSTANTS import RECORD_DIR
+from .CONSTANTS import RECORD_PREFIX
+from .CONSTANTS import RECORD_SUFFIX
 
-from CONSTANTS import UPLOAD_DIR
+from .CONSTANTS import UPLOAD_DIR
 
-from CONSTANTS import WEBAPP_LOG_FILE
+from .CONSTANTS import WEBAPP_LOG_FILE
 
-from records import Records
-from ipc import IPC_Client
+from .records import Records
+from .ipc import IPC_Client
 
 
 def getFreeDiskSpace():

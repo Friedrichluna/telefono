@@ -272,7 +272,7 @@ def off_hook_loop (records, PickUp, dial, ButtonLeft, ButtonMiddle, tts, led):
 
 def run_webapp (fd):
 	# start webapp
-	process = subprocess.Popen ([WEBAPP_EXEC, str (fd)],
+	process = subprocess.Popen ([*WEBAPP_EXEC, str (fd)],
 	                            pass_fds=(fd, ))
 
 	time.sleep (3)

@@ -16,7 +16,7 @@ BACKUP_EXT = ".bak"
 
 UPLOAD_DIR = DATA_DIR
 
-WEBAPP_EXEC = BASE_DIR + "/telefono/webapp.py"
+WEBAPP_EXEC = ("python3", "-m", "telefono.webapp")
 
 FLASK_DEBUG = True
 FLASK_IP = "0.0.0.0"
