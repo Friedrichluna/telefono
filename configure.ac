@@ -15,6 +15,24 @@ AM_MAINTAINER_MODE([enable])
 # Checks for programs.
 AM_PATH_PYTHON(3)
 
+PKG_PROG_PKG_CONFIG()
+
+AC_ARG_WITH([systemddir],
+     [AS_HELP_STRING([--with-systemddir=DIR], [Directory for systemd service files])],,
+     [with_systemddir=auto])
+
+AS_IF([test "x$with_systemddir" = "xyes" -o "x$with_systemddir" = "xauto"], [
+  systemddir=$($PKG_CONFIG --variable=systemdsystemunitdir systemd)
+
+  AS_IF([test "x$systemddir" = "x"],
+    [AS_IF([test "x$with_systemddir" = "xyes"],
+      [AC_MSG_ERROR([systemd support requested but pkg-config unable to query systemd package])])
+    with_systemddir=no])])
+
+AC_SUBST([systemddir], [$systemddir])
+
+AM_CONDITIONAL([HAVE_SYSTEMD], [test "x$with_systemddir" != "xno"])
+
 # Checks for libraries.
 
 # Checks for header files.

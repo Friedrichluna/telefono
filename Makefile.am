@@ -26,4 +26,13 @@ EXTRA_DIST += data/US_dial_tone.ogg.wav
 EXTRA_DIST += data/telephone-ring-02.wav
 EXTRA_DIST += data/records.list
 
+
+if HAVE_SYSTEMD
+systemd_DATA = telefono.service
+endif
+
+EXTRA_DIST += telefono.service
+
 ACLOCAL_AMFLAGS = --install -I build-macro
+
+AM_DISTCHECK_CONFIGURE_FLAGS = --with-systemddir=$$dc_install_base/$(systemddir)
