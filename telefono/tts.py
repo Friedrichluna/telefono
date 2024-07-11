@@ -34,9 +34,9 @@ class TTS():
 		self.say(timeInWords)
 
 	def _random (self, _list, PickUp):
-		filename = newWavName (random.choice (_list))
-		print("playing: " + filename)
-		play_recording (self, filename, PickUp)
+		recording = random.choice (_list)
+		print("playing: %d" % recording)
+		play_recording (self, recording, PickUp)
 
 	def random_prayer (self, PickUp):
 		self._random (self.supperPrayers, PickUp)

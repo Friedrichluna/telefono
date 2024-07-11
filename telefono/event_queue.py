@@ -98,7 +98,7 @@ class EventQueue:
 	def __get_time (self):
 		return time.time ()
 
-	def process (self, tts, speaker, PickUp, newWavName, ringing, shout):
+	def process (self, tts, speaker, PickUp, ringing, shout):
 		if 0 == len (self.__events):
 			return
 
@@ -107,13 +107,13 @@ class EventQueue:
 			event = self.__events.pop (0)[1]
 
 			if EVENT_TYPE.CALL == event[0]:
-				self.__process_call (event[1], tts, speaker, PickUp, newWavName, ringing)
+				self.__process_call (event[1], tts, speaker, PickUp, ringing)
 
 			elif EVENT_TYPE.TEXT == event[0]:
 				self.__process_text (event[1], tts)
 
 			elif EVENT_TYPE.DAILY_RANDOM == event[0]:
-				self.__process_call (event[1], tts, speaker, PickUp, newWavName, ringing)
+				self.__process_call (event[1], tts, speaker, PickUp, ringing)
 
 				tomorrow = datetime.date.today ()
 				tomorrow += datetime.timedelta (1)
@@ -134,14 +134,12 @@ class EventQueue:
 		return
 
 	def __process_call (self, call,
-	                    tts, speaker, PickUp, newWavName, ringing):
-		recording = newWavName (call)
-		print ("call in queue: %s" % recording)
-		ringing (tts, recording, speaker, PickUp)
+	                    tts, speaker, PickUp, ringing):
+		print ("call in queue: %d" % call)
+		ringing (tts, call, speaker, PickUp)
 
 	def __process_text (self, text, tts):
 		tts.say (text)
 
 	def __process_shout (self, call, shout, tts, speaker, PickUp):
-		recording = newWavName (call)
-		shout (tts, recording, speaker, PickUp)
+		shout (tts, call, speaker, PickUp)

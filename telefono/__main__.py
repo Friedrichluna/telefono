@@ -53,6 +53,8 @@ def play_recording (tts, recording, contButton):
 	if not contButton.is_pressed:
 		return
 
+	recording = newWavName (recording)
+
 	if os.path.exists (recording):
 		pygame.mixer.music.load(recording)
 		pygame.mixer.music.play()
@@ -99,7 +101,8 @@ import socket
 import subprocess
 import random
 
-def shout (tts, wavName, speaker, PickUp):
+def shout (tts, call, speaker, PickUp):
+	wavName = newWavName (call)
 	play_aloud (tts, wavName, speaker, PickUp) #hört auf wenn PickUp == True
 
 
@@ -134,8 +137,7 @@ def off_hook_loop (records, PickUp, dial, ButtonLeft, ButtonMiddle, tts, led):
 			stop_dial_tone ()
 
 			dialedNumber = dial.get_number (dial_number_abort, led)
-			oldWavName = newWavName(dialedNumber)
-			play_recording (tts, oldWavName, PickUp) #hört auf wenn PickUp == False
+			play_recording (tts, dialedNumber, PickUp) #hört auf wenn PickUp == False
 
 			start_dial_tone ()
 
@@ -268,7 +270,7 @@ def main ():
 
 		ipc.handle_message (queue)
 
-		queue.process (tts, speakerThread, PickUp, newWavName, ringing, shout)
+		queue.process (tts, speakerThread, PickUp, ringing, shout)
 
 		time.sleep (0.5)
 
