@@ -34,4 +34,7 @@
 		<textarea id="text" name="text"></textarea>
 		<input type="submit" class="upload button blue" value="Ansagen">
 	</form>
+{% if message %}
+	<p class="message">{{message}}</p>
+{% endif %}
 {% endblock %}

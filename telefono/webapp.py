@@ -56,9 +56,10 @@ class TelefonoWebApp (Flask):
 				return render_template ("index.html")
 
 			recording = int (requested_number)
-			self.ipc.queue_call (recording)
+			answer = self.ipc.queue_call (recording)
 
-			return render_template("index.html", content = requested_number)
+			return render_template("index.html",
+			                       message=answer)
 		else:
 			return render_template("index.html")
 
@@ -83,17 +84,19 @@ class TelefonoWebApp (Flask):
 			return render_template("index.html")
 
 		recording = int (requested_number)
-		self.ipc.queue_call (recording)
+		answer = self.ipc.queue_call (recording)
 
-		return redirect("/list") #jsonify({"message": "Value received successfully"})
+		return redirect("/list")
 
 	def say (self):
 		if request.method == "POST":
 			text = request.form["text"]
 
-			self.ipc.queue_message (text)
+			answer = self.ipc.queue_message (text)
+		else:
+			answer = None
 
-		return render_template ("say.html")
+		return render_template ("say.html", message=answer)
 
 
 	def upload_page(self):

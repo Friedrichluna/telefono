@@ -26,5 +26,7 @@
 		<input type="number" id="number" name="nm" />
 		<input type="submit" value="let it call"/>
 	</form>
-	<p class="response">{{content}}</p>
+{% if message %}
+	<p class="message">{{message}}</p>
+{% endif %}
 {% endblock %}
