@@ -10,6 +10,8 @@ RECORD_SUFFIX = ".wav"
 
 RING_FILE = DATA_DIR + "/telephone-ring-02.wav"
 DIAL_TONE_FILE = DATA_DIR + "/US_dial_tone.ogg.wav"
+STARTUP_FILE = DATA_DIR + "/startup.wav"
+SHUTDOWN_FILE = DATA_DIR + "/shutdown.wav"
 
 RECORD_LIST_FILE = DATA_DIR + "/records.list"
 BACKUP_EXT = ".bak"

@@ -14,6 +14,8 @@ from .CONSTANTS import RECORD_SUFFIX
 
 from .CONSTANTS import RING_FILE
 from .CONSTANTS import DIAL_TONE_FILE
+from .CONSTANTS import STARTUP_FILE
+from .CONSTANTS import SHUTDOWN_FILE
 
 from .CONSTANTS import WEBAPP_EXEC
 
@@ -27,7 +29,7 @@ from .ipc import IPC_Server
 import pygame
 import time
 
-def play_aloud (tts, fileName, speaker, breakButton):
+def play_aloud (tts, fileName, speaker, breakButton=None):
 	speaker.activate ()
 	time.sleep (2)
 
@@ -35,7 +37,8 @@ def play_aloud (tts, fileName, speaker, breakButton):
 		pygame.mixer.music.load(fileName)
 		pygame.mixer.music.play()
 		while pygame.mixer.music.get_busy():
-				if breakButton.is_pressed:
+				if breakButton is not None \
+				and breakButton.is_pressed:
 					pygame.mixer.music.stop()
 	else:
 		tts.say("Diese Aufnahme existiert noch nicht.")
@@ -261,6 +264,8 @@ def main ():
 	queue.add_shout (1930, dinner_weekday, datetime.time (19, 30))
 	queue.add_shout (2014, every_weekday, datetime.time (20, 00))
 
+	play_aloud (tts, STARTUP_FILE, speakerThread)
+
 	while not turn_off (ButtonMiddle):
 
 		if PickUp.is_pressed:
@@ -274,6 +279,7 @@ def main ():
 
 		time.sleep (0.5)
 
+	play_aloud (tts, SHUTDOWN_FILE, speakerThread)
 
 	speakerThread.join()
 	webAppProcess.terminate()
