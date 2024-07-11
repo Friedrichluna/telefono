@@ -3,6 +3,7 @@
 
 import fcntl
 import os
+import random
 
 import linkat
 
@@ -267,3 +268,9 @@ class Records ():
 
 				self.__validate (record)
 		return
+
+	def get_random (self):
+		if not self.__data:
+			return None
+
+		return random.choice (list (self.__data.keys ()))
