@@ -92,21 +92,9 @@ def ringing (tts, callingFile_, speaker, PickUp):
 	play_recording (tts, callingFile_, PickUp) #hört auf wenn PickUp == False
 
 
-#--------------------------CallingRoutine----------------------------
-import datetime
-
-def getTimeInt():
-	now = datetime.datetime.now()
-	current_time = now.strftime("%H%M%S")
-	return(int(current_time))
-
-def getWeekDayInt():
-	now = datetime.datetime.now()
-	return now.weekday()
-
-
 #---------------------------Shout------------------------------------------------------
 
+import datetime
 import socket
 import subprocess
 import random
@@ -239,10 +227,6 @@ def main ():
 
 	dial = Dial (DialInUse, DialCounter)
 
-	essenIstFertig1830 = newWavName(1830)
-	wucher1930 = newWavName(1930)
-	tagesschau2000 = newWavName(2014)
-
 	pygame.init()
 
 	ipc = IPC_Server ()
@@ -264,6 +248,17 @@ def main ():
 	# initialize call queue
 	queue = EventQueue (records)
 
+	def dinner_weekday (_datetime:datetime.datetime):
+		weekday = _datetime.isoweekday () % 7
+		return (1 < weekday < 5)
+
+	def every_weekday (_datetime:datetime.datetime):
+		return True
+
+	queue.add_shout (1830, dinner_weekday, datetime.time (18, 30))
+	queue.add_shout (1930, dinner_weekday, datetime.time (19, 30))
+	queue.add_shout (2014, every_weekday, datetime.time (20, 00))
+
 	while not turn_off (ButtonMiddle):
 
 		if PickUp.is_pressed:
@@ -273,16 +268,7 @@ def main ():
 
 		ipc.handle_message (queue)
 
-		queue.process (tts, speakerThread, PickUp, newWavName, ringing)
-
-		weekDayInt = getWeekDayInt()
-		if weekDayInt > 0 and weekDayInt < 4: #von Dienstag bis Freitag Wahr
-			if getTimeInt() == 183000:
-				shout (tts, essenIstFertig1830, speakerThread, PickUp)
-			if getTimeInt() == 193000:
-				shout (tts, wucher1930, speakerThread, PickUp)
-		if getTimeInt() == 200000:
-			shout (tts, tagesschau2000, speakerThread, PickUp)
+		queue.process (tts, speakerThread, PickUp, newWavName, ringing, shout)
 
 		time.sleep (0.5)
 

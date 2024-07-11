@@ -14,6 +14,7 @@ class EVENT_TYPE (enum.IntEnum):
 	CALL = 0
 	TEXT = 1
 	DAILY_RANDOM = 2
+	DAILY_SHOUT = 3
 
 
 class EventQueue:
@@ -53,6 +54,21 @@ class EventQueue:
 		self.__add_event (time, (EVENT_TYPE.TEXT, text))
 		return
 
+	def add_shout (self, call:int, filter,
+	               time:datetime.time, day:datetime.date=None):
+
+		if day is None:
+			day = datetime.date.today ()
+
+		time = datetime.datetime.combine (day, time)
+		time = int (time.timestamp ())
+
+		event = (EVENT_TYPE.DAILY_SHOUT, call, filter)
+
+		self.__add_event (time, event)
+		return
+
+
 	def __get_random_call_time (self, day:datetime.date) -> int:
 		min_hour = datetime.time (MIN_HOUR)
 		max_hour = datetime.time (MAX_HOUR)
@@ -82,11 +98,12 @@ class EventQueue:
 	def __get_time (self):
 		return time.time ()
 
-	def process (self, tts, speaker, PickUp, newWavName, ringing):
+	def process (self, tts, speaker, PickUp, newWavName, ringing, shout):
 		if 0 == len (self.__events):
 			return
 
-		if self.__events[0][0] < self.__get_time ():
+		_time = self.__events[0][0]
+		if _time < self.__get_time ():
 			event = self.__events.pop (0)[1]
 
 			if EVENT_TYPE.CALL == event[0]:
@@ -102,6 +119,18 @@ class EventQueue:
 				tomorrow += datetime.timedelta (1)
 				self.__add_random_call (tomorrow)
 
+			elif EVENT_TYPE.DAILY_SHOUT == event[0]:
+				date = datetime.datetime.fromtimestamp (_time)
+				if event[2] (date):
+					self.__process_shout (event[1], shout, tts, speaker, PickUp)
+
+				# schedule for next day
+				tomorrow = datetime.date.today ()
+				tomorrow += datetime.timedelta (1)
+
+				self.add_shout (event[1], event[2],
+				                date.time (), tomorrow)
+
 		return
 
 	def __process_call (self, call,
@@ -112,3 +141,7 @@ class EventQueue:
 
 	def __process_text (self, text, tts):
 		tts.say (text)
+
+	def __process_shout (self, call, shout, tts, speaker, PickUp):
+		recording = newWavName (call)
+		shout (tts, recording, speaker, PickUp)
