@@ -271,7 +271,7 @@ def main ():
 			               ButtonLeft, ButtonMiddle,
 			               tts, led)
 
-		ipc.handle_message (queue, tts)
+		ipc.handle_message (queue)
 
 		queue.process (tts, speakerThread, PickUp, newWavName, ringing)
 

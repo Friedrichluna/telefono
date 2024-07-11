@@ -182,7 +182,7 @@ class IPC_Server (IPC):
 	def get_client_fd (self):
 		return self.__client.fileno ()
 
-	def handle_message (self, queue, tts):
+	def handle_message (self, queue):
 
 		data = self._recv (IPC_MAX_DATA, blocking=False)
 		if b"" == data:
@@ -203,7 +203,7 @@ class IPC_Server (IPC):
 			return
 
 		elif IPC_MESSAGE.TTS == message_type:
-			tts.say (payload)
+			queue.add_text (payload)
 
 			data = self._serialize_answer (IPC_ANSWER.OK)
 			self._send (data)

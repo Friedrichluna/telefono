@@ -12,7 +12,8 @@ from .CONSTANTS import MAX_HOUR
 
 class EVENT_TYPE (enum.IntEnum):
 	CALL = 0
-	DAILY_RANDOM = 1
+	TEXT = 1
+	DAILY_RANDOM = 2
 
 
 class EventQueue:
@@ -46,6 +47,10 @@ class EventQueue:
 
 	def add_call (self, call:int, time=0):
 		self.__add_event (time, (EVENT_TYPE.CALL, call))
+		return
+
+	def add_text (self, text:str, time=0):
+		self.__add_event (time, (EVENT_TYPE.TEXT, text))
 		return
 
 	def __get_random_call_time (self, day:datetime.date) -> int:
@@ -87,6 +92,9 @@ class EventQueue:
 			if EVENT_TYPE.CALL == event[0]:
 				self.__process_call (event[1], tts, speaker, PickUp, newWavName, ringing)
 
+			elif EVENT_TYPE.TEXT == event[0]:
+				self.__process_text (event[1], tts)
+
 			elif EVENT_TYPE.DAILY_RANDOM == event[0]:
 				self.__process_call (event[1], tts, speaker, PickUp, newWavName, ringing)
 
@@ -101,3 +109,6 @@ class EventQueue:
 		recording = newWavName (call)
 		print ("call in queue: %s" % recording)
 		ringing (tts, recording, speaker, PickUp)
+
+	def __process_text (self, text, tts):
+		tts.say (text)
