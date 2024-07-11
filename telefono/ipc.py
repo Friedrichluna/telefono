@@ -16,6 +16,14 @@ IPC_CALL_ID_SIZE = 4
 
 IPC_TTS_MESSAGE_SIZE = IPC_MAX_DATA -1 -1
 
+
+class IPC_ANSWER (enum.IntEnum):
+	OK = 0
+	ERROR = 1
+
+IPC_ANSWER_SIZE = 4
+
+
 class IPC:
 	def __init__ (self, socket):
 		self.__socket = socket
@@ -83,16 +91,33 @@ class IPC:
 
 		return message[:size].decode ()
 
+	def _serialize_answer (self, answer:IPC_ANSWER) -> bytearray:
+		data = bytearray ()
+
+		answer_id = answer.to_bytes (IPC_ANSWER_SIZE,
+		                             IPC_BYTEORDER,
+		                             signed=False)
+		data.extend (answer_id)
+		return data
+
+	def _deserialize_answer (self, message:bytes) -> IPC_ANSWER:
+		if len(message) < IPC_ANSWER_SIZE:
+			return IPC_ANSWER.ERROR
+
+		answer = int.from_bytes (message[:IPC_ANSWER_SIZE],
+		                         IPC_BYTEORDER, signed=False)
+		return IPC_ANSWER (answer)
+
 	def _send (self, message):
 		self.__socket.send (message)
 		return
 
-	def _recv (self, blocking=True):
+	def _recv (self, size, blocking=True):
 		if blocking:
-			return self.__socket.recv (IPC_MAX_DATA)
+			return self.__socket.recv (size)
 
 		try:
-			return self.__socket.recv (IPC_MAX_DATA,
+			return self.__socket.recv (size,
 			                           socket.MSG_DONTWAIT)
 
 		# no queued call
@@ -109,15 +134,35 @@ class IPC_Client (IPC):
 	def queue_call (self, call_id:int):
 		data = self._serialize_call (call_id)
 		self._send (data)
-		return
+
+		data = self._recv (IPC_ANSWER_SIZE)
+		answer = self._deserialize_answer (data)
+
+		if IPC_ANSWER.OK == answer:
+			return "Anruf %d abgesetzt" % call_id
+
+		elif IPC_ANSWER.ERROR == answer:
+			return "Ein Fehler ist aufgetreten."
+
+		return "Ein Fehler ist aufgetreten."
 
 	def queue_message (self, message:str):
 		data = self._serialize_tts (message)
 		if not data:
-			return
+			return "Ein Fehler ist aufgetreten."
 
 		self._send (data)
-		return
+
+		data = self._recv (IPC_ANSWER_SIZE)
+		answer = self._deserialize_answer (data)
+
+		if IPC_ANSWER.OK == answer:
+			return "Text angesagt"
+
+		elif IPC_ANSWER.ERROR == answer:
+			return "Ein Fehler ist aufgetreten."
+
+		return "Ein Fehler ist aufgetreten."
 
 
 class IPC_Server (IPC):
@@ -140,10 +185,15 @@ class IPC_Server (IPC):
 	def handle_message (self, tts, speaker, PickUp,
 	                    newWavName, ringing):
 
-		data = self._recv (blocking=False)
+		data = self._recv (IPC_MAX_DATA, blocking=False)
+		if b"" == data:
+			return
+
 		message_type, payload = self._deserialize (data)
 
 		if IPC_MESSAGE.ERROR == message_type:
+			data = self._serialize_answer (IPC_ANSWER.ERROR)
+			self._send (data)
 			return
 
 		elif IPC_MESSAGE.CALL == message_type:
@@ -151,7 +201,17 @@ class IPC_Server (IPC):
 			print ("call in queue: %s" % recording)
 			ringing (tts, recording, speaker, PickUp)
 
+			data = self._serialize_answer (IPC_ANSWER.OK)
+			self._send (data)
+			return
+
 		elif IPC_MESSAGE.TTS == message_type:
 			tts.say (payload)
 
+			data = self._serialize_answer (IPC_ANSWER.OK)
+			self._send (data)
+			return
+
+		data = self._serialize_answer (IPC_ANSWER.ERROR)
+		self._send (data)
 		return
