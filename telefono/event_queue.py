@@ -45,11 +45,12 @@ class EventQueue:
 		self.__add_event (time, (EVENT_TYPE.TEXT, text))
 		return
 
-	def add_shout (self, call:int, filter,
-	               time:datetime.time, day:datetime.date=None):
+	def add_shout (self, call:int, filter, time:datetime.time):
+		day = datetime.date.today ()
 
-		if day is None:
-			day = datetime.date.today ()
+		# don't schedule for the past
+		if time < datetime.datetime.now ().time ():
+			day += datetime.timedelta (1)
 
 		time = datetime.datetime.combine (day, time)
 		time = int (time.timestamp ())
@@ -63,6 +64,15 @@ class EventQueue:
 	def __get_random_call_time (self, day:datetime.date) -> int:
 		min_hour = datetime.time (MIN_HOUR)
 		max_hour = datetime.time (MAX_HOUR)
+
+		# don't schedule for the past
+		current_time = datetime.datetime.now ().time ()
+
+		if max_hour < current_time:
+			day += datetime.timedelta (1)
+
+		elif min_hour < current_time:
+			min_hour = current_time
 
 		min_date = datetime.datetime.combine (day, min_hour)
 		max_date = datetime.datetime.combine (day, max_hour)
@@ -115,12 +125,8 @@ class EventQueue:
 				if event[2] (date):
 					self.__process_shout (event[1], shout, tts, speaker, PickUp)
 
-				# schedule for next day
-				tomorrow = datetime.date.today ()
-				tomorrow += datetime.timedelta (1)
-
 				self.add_shout (event[1], event[2],
-				                date.time (), tomorrow)
+				                date.time ())
 
 		return
 
