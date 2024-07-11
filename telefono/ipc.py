@@ -182,8 +182,7 @@ class IPC_Server (IPC):
 	def get_client_fd (self):
 		return self.__client.fileno ()
 
-	def handle_message (self, tts, speaker, PickUp,
-	                    newWavName, ringing):
+	def handle_message (self, queue, tts):
 
 		data = self._recv (IPC_MAX_DATA, blocking=False)
 		if b"" == data:
@@ -197,9 +196,7 @@ class IPC_Server (IPC):
 			return
 
 		elif IPC_MESSAGE.CALL == message_type:
-			recording = newWavName (payload)
-			print ("call in queue: %s" % recording)
-			ringing (tts, recording, speaker, PickUp)
+			queue.add_call (payload)
 
 			data = self._serialize_answer (IPC_ANSWER.OK)
 			self._send (data)

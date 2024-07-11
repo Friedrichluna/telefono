@@ -318,6 +318,9 @@ def main ():
 	records = Records ()
 	records.sync_fs ()
 
+	# initialize call queue
+	queue = CallQueue ()
+
 	while not turn_off (ButtonMiddle):
 
 		if PickUp.is_pressed:
@@ -332,8 +335,9 @@ def main ():
 			if callingFile is not None:
 				ringing (tts, callingFile, speakerThread, PickUp)
 
-		ipc.handle_message (tts, speakerThread, PickUp,
-		                    newWavName, ringing)
+		ipc.handle_message (queue, tts)
+
+		queue.process (tts, speakerThread, PickUp, newWavName, ringing)
 
 		weekDayInt = getWeekDayInt()
 		if weekDayInt > 0 and weekDayInt < 4: #von Dienstag bis Freitag Wahr
