@@ -94,79 +94,22 @@ def ringing (tts, callingFile_, speaker, PickUp):
 
 #--------------------------CallingRoutine----------------------------
 import datetime
-import random
-import time
-
-MIN_HOUR = 15
-MAX_HOUR = 21
-SECONDS_PER_DAY = 86400
-call_minute = None
 
 def getTimeInt():
 	now = datetime.datetime.now()
 	current_time = now.strftime("%H%M%S")
 	return(int(current_time))
 
-# minutes since midnight
-def current_day_minute ():
-	# this is only approximately,
-	# because the number of seconds per day isn't constant.
-	return (time.time () % SECONDS_PER_DAY) // 60
-
-def get_random_call_minute ():
-	return random.randint (MIN_HOUR * 60, MAX_HOUR * 60)
-
-
-def is_call_time ():
-	global call_minute
-	global schedule_call
-
-	# ring at startup
-	if (call_minute is None):
-		schedule_call = False
-		call_minute = get_random_call_minute ()
-		print ("call scheduled for: %02d:%02d Uhr"
-		       % (call_minute // 60, call_minute % 60))
-		return True
-
-	current_time = current_day_minute ()
-	# ring at scheduled time
-	if current_time == call_minute and not schedule_call:
-		# schedule next call
-		schedule_call = True
-		return True
-
-	# schedule outside allowed call time -> call only once per day
-	current_time //= 60
-	if schedule_call and current_time not in range (MIN_HOUR, MAX_HOUR):
-		schedule_call = False
-		call_minute = get_random_call_minute ()
-		print ("call scheduled for: %02d:%02d Uhr"
-		       % (call_minute // 60, call_minute % 60))
-
-	return False
-
-
 def getWeekDayInt():
 	now = datetime.datetime.now()
 	return now.weekday()
 
 
-#---------------------------random old Message-----------------------------------------
-def findRandomMessage (records):
-	messages = list (records.keys())
-
-	if not messages:
-		return None
-
-	message = newWavName (random.choice (messages))
-	print("Random Nachricht: " + message)
-	return message
-
 #---------------------------Shout------------------------------------------------------
 
 import socket
 import subprocess
+import random
 
 def shout (tts, wavName, speaker, PickUp):
 	play_aloud (tts, wavName, speaker, PickUp) #hört auf wenn PickUp == True
@@ -319,7 +262,7 @@ def main ():
 	records.sync_fs ()
 
 	# initialize call queue
-	queue = EventQueue ()
+	queue = EventQueue (records)
 
 	while not turn_off (ButtonMiddle):
 
@@ -327,13 +270,6 @@ def main ():
 			off_hook_loop (records, PickUp, dial,
 			               ButtonLeft, ButtonMiddle,
 			               tts, led)
-
-		#-------------------------Klingelroutine-------------------------------------------
-		if is_call_time ():
-			print("ringing!!!!!!!")
-			callingFile = findRandomMessage (records) #zufällige Datei die anruft
-			if callingFile is not None:
-				ringing (tts, callingFile, speakerThread, PickUp)
 
 		ipc.handle_message (queue, tts)
 
