@@ -25,15 +25,6 @@ class EventQueue:
 
 		# schedule daily random call
 		self.__add_random_call (datetime.datetime.today ())
-
-		# schedule startup call
-		call = self.__records.get_random ()
-		if call is None:
-			print ("no call available")
-
-		else:
-			self.add_call (call)
-
 		return
 
 	def __add_event (self, time, event):
