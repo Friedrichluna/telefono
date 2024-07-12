@@ -8,6 +8,7 @@ pkgpython_PYTHON += telefono/button.py
 pkgpython_PYTHON += telefono/dial.py
 pkgpython_PYTHON += telefono/event_queue.py
 pkgpython_PYTHON += telefono/ipc.py
+pkgpython_PYTHON += telefono/player.py
 pkgpython_PYTHON += telefono/recorder.py
 pkgpython_PYTHON += telefono/records.py
 pkgpython_PYTHON += telefono/speaker.py

@@ -1,4 +1,5 @@
 handle synchronous access to Records
+remove newWavName from Player
 
 WebApp:
 	- record and call functionality

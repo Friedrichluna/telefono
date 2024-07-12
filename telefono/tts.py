@@ -33,16 +33,16 @@ class TTS():
 
 		self.say(timeInWords)
 
-	def _random (self, _list, PickUp):
+	def _random (self, player, _list, PickUp):
 		recording = random.choice (_list)
 		print("playing: %d" % recording)
-		play_recording (self, recording, PickUp)
+		player.play_recording (self, recording, PickUp)
 
-	def random_prayer (self, PickUp):
-		self._random (self.supperPrayers, PickUp)
+	def random_prayer (self, player, PickUp):
+		self._random (player, self.supperPrayers, PickUp)
 
-	def random_dice_prayer (self, PickUp):
-		self._random (self.dicePrayers, PickUp)
+	def random_dice_prayer (self, player, PickUp):
+		self._random (player, self.dicePrayers, PickUp)
 
-	def random_pater (self, PickUp):
-		self._random (self.pater, PickUp)
+	def random_pater (self, player, PickUp):
+		self._random (player, self.pater, PickUp)

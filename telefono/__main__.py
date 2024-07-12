@@ -3,6 +3,7 @@
 
 import os
 import sys
+import time
 
 import gpiozero
 
@@ -12,8 +13,6 @@ from .CONSTANTS import RECORD_DIR
 from .CONSTANTS import RECORD_PREFIX
 from .CONSTANTS import RECORD_SUFFIX
 
-from .CONSTANTS import RING_FILE
-from .CONSTANTS import DIAL_TONE_FILE
 from .CONSTANTS import STARTUP_FILE
 from .CONSTANTS import SHUTDOWN_FILE
 
@@ -22,51 +21,6 @@ from .CONSTANTS import WEBAPP_EXEC
 from .CONSTANTS import TELEFONO_LOG_FILE
 
 from .ipc import IPC_Server
-
-
-#---------------------------Pygame AudioPlayer------------------------------------
-import pygame
-import time
-
-def play_aloud (tts, fileName, speaker, breakButton=None):
-	speaker.activate ()
-	time.sleep (2)
-
-	if os.path.exists (fileName):
-		pygame.mixer.music.load(fileName)
-		pygame.mixer.music.play()
-		while pygame.mixer.music.get_busy():
-				if breakButton is not None \
-				and breakButton.is_pressed:
-					pygame.mixer.music.stop()
-	else:
-		tts.say("Diese Aufnahme existiert noch nicht.")
-
-	speaker.deactivate ()
-
-def start_dial_tone ():
-	pygame.mixer.music.load (DIAL_TONE_FILE)
-	pygame.mixer.music.play (loops=-1)
-
-def stop_dial_tone ():
-	pygame.mixer.music.stop ()
-
-def play_recording (tts, recording, contButton):
-	if not contButton.is_pressed:
-		return
-
-	recording = newWavName (recording)
-
-	if os.path.exists (recording):
-		pygame.mixer.music.load(recording)
-		pygame.mixer.music.play()
-
-		while pygame.mixer.music.get_busy():
-			time.sleep (0.01)
-			if not contButton.is_pressed:
-				pygame.mixer.music.stop()
-	else:
-		tts.say("Diese Aufnahme existiert noch nicht.")
 
 
 #--------------------------File Name Generator----------------------------------
@@ -87,25 +41,10 @@ def findNewFileName ():
 	return filename, counter
 
 
-#---------------------------Ringing------------------------------------
-import time
-
-def ringing (tts, callingFile_, speaker, PickUp):
-	play_aloud (tts, RING_FILE, speaker, PickUp) #hört auf wenn PickUp == True
-	time.sleep (1) #test
-	play_recording (tts, callingFile_, PickUp) #hört auf wenn PickUp == False
-
-
-#---------------------------Shout------------------------------------------------------
-
 import datetime
 import socket
 import subprocess
 import random
-
-def shout (tts, call, speaker, PickUp):
-	wavName = newWavName (call)
-	play_aloud (tts, wavName, speaker, PickUp) #hört auf wenn PickUp == True
 
 
 def turn_off (button):
@@ -119,7 +58,7 @@ def turn_off (button):
 
 	return False
 
-def off_hook_loop (records, PickUp, dial, ButtonLeft, ButtonMiddle, tts, led):
+def off_hook_loop (records, player, PickUp, dial, ButtonLeft, ButtonMiddle, tts, led):
 
 	maxRecordingTime = 1200     #in 0.1 sek
 	minRecordingTime = 20
@@ -131,21 +70,21 @@ def off_hook_loop (records, PickUp, dial, ButtonLeft, ButtonMiddle, tts, led):
 		return not PickUp.is_pressed
 
 
-	start_dial_tone ()
+	player.start_dial_tone ()
 
 	while PickUp.is_pressed:
 		# dialing
 		if dial.is_used ():
-			stop_dial_tone ()
+			player.stop_dial_tone ()
 
 			dialedNumber = dial.get_number (dial_number_abort, led)
-			play_recording (tts, dialedNumber, PickUp) #hört auf wenn PickUp == False
+			player.play_recording (tts, dialedNumber, PickUp) #hört auf wenn PickUp == False
 
-			start_dial_tone ()
+			player.start_dial_tone ()
 
 		# recording
 		if ButtonLeft.is_pressed:
-			stop_dial_tone ()
+			player.stop_dial_tone ()
 
 			myNewWavName, newRecordingNumber = findNewFileName()
 			tts.say("Aufnahme Nr.: " + str(newRecordingNumber) + " wird gestartet") #ansage welche Aufnahme es ist
@@ -177,12 +116,12 @@ def off_hook_loop (records, PickUp, dial, ButtonLeft, ButtonMiddle, tts, led):
 			else:
 				print ("Aufnahme Nr.: " + str(newRecordingNumber) + " beendet.")
 
-			start_dial_tone ()
+			player.start_dial_tone ()
 
 
 		# open Menu
 		if ButtonMiddle.is_pressed:
-			stop_dial_tone ()
+			player.stop_dial_tone ()
 
 			tts.say("Menü wird geöffnet.")
 			dialedOption = dial.get_digit (dial_digit_abort, led)
@@ -192,17 +131,17 @@ def off_hook_loop (records, PickUp, dial, ButtonLeft, ButtonMiddle, tts, led):
 			if dialedOption == 0:
 				tts.say_time ()
 			elif dialedOption == 1:
-				tts.random_prayer (PickUp)
+				tts.random_prayer (player, PickUp)
 			elif dialedOption == 2:
-				tts.random_dice_prayer (PickUp)
+				tts.random_dice_prayer (player, PickUp)
 			elif dialedOption == 3:
-				tts.random_pater (PickUp)
+				tts.random_pater (play, PickUp)
 			else:
 				tts.say("Das habe ich nicht verstanden. Auf wiederhören")
 
-			start_dial_tone ()
+			player.start_dial_tone ()
 
-	stop_dial_tone ()
+	player.stop_dial_tone ()
 	return
 
 def run_webapp (fd):
@@ -214,8 +153,6 @@ def run_webapp (fd):
 	return process
 
 def main ():
-	# setup pygame
-	pygame.mixer.init()
 
 	# setup text to speech
 	tts = TTS ()
@@ -231,13 +168,13 @@ def main ():
 
 	dial = Dial (DialInUse, DialCounter)
 
-	pygame.init()
-
 	ipc = IPC_Server ()
 
 	# Thread for Speaker
 	speakerThread = SpeakerThread (SpeakerSwich)
 	speakerThread.start()
+
+	player = Player (newWavName)
 
 	# start webapp
 	webAppProcess = run_webapp (ipc.get_client_fd ())
@@ -263,22 +200,22 @@ def main ():
 	queue.add_shout (1930, dinner_weekday, datetime.time (19, 30))
 	queue.add_shout (2014, every_weekday, datetime.time (20, 00))
 
-	play_aloud (tts, STARTUP_FILE, speakerThread)
+	player.play_aloud (tts, STARTUP_FILE, speakerThread)
 
 	while not turn_off (ButtonMiddle):
 
 		if PickUp.is_pressed:
-			off_hook_loop (records, PickUp, dial,
+			off_hook_loop (records, player, PickUp, dial,
 			               ButtonLeft, ButtonMiddle,
 			               tts, led)
 
 		ipc.handle_message (queue)
 
-		queue.process (tts, speakerThread, PickUp, ringing, shout)
+		queue.process (tts, speakerThread, PickUp, player)
 
 		time.sleep (0.5)
 
-	play_aloud (tts, SHUTDOWN_FILE, speakerThread)
+	player.play_aloud (tts, SHUTDOWN_FILE, speakerThread)
 
 	speakerThread.join()
 	webAppProcess.terminate()
