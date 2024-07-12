@@ -16,13 +16,14 @@ class Player ():
 	__dicePrayers = [201, 202, 203, 204, 205, 206]
 	__pater = [2, 10, 11, 19, 22, 26, 30, 88]
 
-	def __init__ (self, hook, tts, newWavName):
+	def __init__ (self, hook, tts, speaker, newWavName):
 		# setup pygame
 		pygame.mixer.init()
 		pygame.init()
 
 		self.__hook = hook
 		self.__tts = tts
+		self.__speaker = speaker
 		self.newWavName = newWavName
 		return
 
@@ -35,12 +36,12 @@ class Player ():
 	def __never (self):
 		return False
 
-	def __play (self, fileName, speaker, abort):
+	def __play (self, fileName, abort, aloud=False):
 		if abort ():
 			return
 
-		if speaker is not None:
-			speaker.activate ()
+		if aloud:
+			self.__speaker.activate ()
 			time.sleep (2)
 
 		if os.path.exists (fileName):
@@ -53,14 +54,14 @@ class Player ():
 		else:
 			self.__tts.say("Diese Aufnahme existiert noch nicht.")
 
-		if speaker is not None:
-			speaker.deactivate ()
+		if aloud:
+			self.__speaker.deactivate ()
 
 		return
 
-	def play_aloud (self, fileName, speaker):
-		return  self.__play (fileName, speaker,
-		                     abort=self.__never)
+	def play_aloud (self, fileName):
+		return  self.__play (fileName,
+		                     abort=self.__never, aloud=True)
 
 	def start_dial_tone (self):
 		pygame.mixer.music.load (DIAL_TONE_FILE)
@@ -72,19 +73,17 @@ class Player ():
 	def play_recording (self, recording):
 		recording = self.newWavName (recording)
 
-		return self.__play (recording, speaker=None,
-		             abort=self.__on_hook)
+		return self.__play (recording, abort=self.__on_hook)
 
-	def ringing (self, callingFile_, speaker):
-		self.__play (RING_FILE, speaker,
-		             abort=self.__off_hook)
+	def ringing (self, callingFile_):
+		self.__play (RING_FILE, abort=self.__off_hook, aloud=True)
 		time.sleep (1) #test
 		self.play_recording (callingFile_)
 
-	def shout (self, call, speaker):
+	def shout (self, call):
 		wavName = self.newWavName (call)
-		self.__play (wavName, speaker,
-		             abort=self.__off_hook)
+		self.__play (wavName,
+		             abort=self.__off_hook, aloud=True)
 
 	def __play_random (self, files):
 		recording = random.choice (files)

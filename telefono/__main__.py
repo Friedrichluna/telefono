@@ -174,7 +174,7 @@ def main ():
 	speakerThread = SpeakerThread (SpeakerSwich)
 	speakerThread.start()
 
-	player = Player (PickUp, tts, newWavName)
+	player = Player (PickUp, tts, speakerThread, newWavName)
 
 	# start webapp
 	webAppProcess = run_webapp (ipc.get_client_fd ())
@@ -200,7 +200,7 @@ def main ():
 	queue.add_shout (1930, dinner_weekday, datetime.time (19, 30))
 	queue.add_shout (2014, every_weekday, datetime.time (20, 00))
 
-	player.play_aloud (STARTUP_FILE, speakerThread)
+	player.play_aloud (STARTUP_FILE)
 
 	while not turn_off (ButtonMiddle):
 
@@ -211,11 +211,11 @@ def main ():
 
 		ipc.handle_message (queue)
 
-		queue.process (tts, speakerThread, player)
+		queue.process (tts, player)
 
 		time.sleep (0.5)
 
-	player.play_aloud (SHUTDOWN_FILE, speakerThread)
+	player.play_aloud (SHUTDOWN_FILE)
 
 	speakerThread.join()
 	webAppProcess.terminate()
