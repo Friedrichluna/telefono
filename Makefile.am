@@ -21,7 +21,8 @@ EXTRA_DIST =
 EXTRA_DIST += telefono/CONSTANTS.py.in
 
 edit = sed -e 's|@pkgdatadir[@]|$(pkgdatadir)|g' \
-           -e 's|@pkglocalstatedir[@]|$(pkglocalstatedir)|g'
+           -e 's|@pkglocalstatedir[@]|$(pkglocalstatedir)|g' \
+           -e 's|@templatedir[@]|$(templatedir)|g'
 
 telefono/CONSTANTS.py: Makefile
 	$(MKDIR_P) telefono
@@ -45,18 +46,21 @@ dist_pkgdata_DATA += data/shutdown.wav
 dist_pkgdata_DATA += data/ring.wav
 dist_pkgdata_DATA += data/dial.wav
 
+templatedir = $(pkgdatadir)/templates
+dist_template_DATA =
+dist_template_DATA += telefono/templates/base.html
+dist_template_DATA += telefono/templates/edit.html
+dist_template_DATA += telefono/templates/index.html
+dist_template_DATA += telefono/templates/list.html
+dist_template_DATA += telefono/templates/say.html
+dist_template_DATA += telefono/templates/upload.html
+
 pkglocalstatedir = $(localstatedir)/$(PACKAGE)
 dist_pkglocalstate_DATA =
 dist_pkglocalstate_DATA += data/records.list
 
 EXTRA_DIST += README.md
 EXTRA_DIST += todo.txt
-EXTRA_DIST += telefono/templates/base.html
-EXTRA_DIST += telefono/templates/edit.html
-EXTRA_DIST += telefono/templates/index.html
-EXTRA_DIST += telefono/templates/list.html
-EXTRA_DIST += telefono/templates/say.html
-EXTRA_DIST += telefono/templates/upload.html
 
 
 if HAVE_SYSTEMD

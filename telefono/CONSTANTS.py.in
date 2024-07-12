@@ -22,6 +22,7 @@ WEBAPP_EXEC = ("python3", "-m", "telefono.webapp")
 FLASK_DEBUG = True
 FLASK_IP = "0.0.0.0"
 FLASK_PORT = 5000
+FLASK_TEMPLATES = "@templatedir@"
 
 MIN_HOUR = 15
 MAX_HOUR = 21

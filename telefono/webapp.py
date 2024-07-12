@@ -12,6 +12,7 @@ import psutil
 from .CONSTANTS import FLASK_DEBUG
 from .CONSTANTS import FLASK_IP
 from .CONSTANTS import FLASK_PORT
+from .CONSTANTS import FLASK_TEMPLATES
 
 from .CONSTANTS import RECORD_DIR
 from .CONSTANTS import RECORD_PREFIX
@@ -30,7 +31,7 @@ def getFreeDiskSpace():
 
 class TelefonoWebApp (Flask):
 	def __init__ (self, records, ipc):
-		super ().__init__ (__name__)
+		super ().__init__ (__name__, template_folder=FLASK_TEMPLATES)
 
 		self.records = records
 		self.ipc = ipc
