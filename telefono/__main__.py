@@ -131,11 +131,11 @@ def off_hook_loop (records, player, PickUp, dial, ButtonLeft, ButtonMiddle, tts,
 			if dialedOption == 0:
 				tts.say_time ()
 			elif dialedOption == 1:
-				tts.random_prayer (player, PickUp)
+				player.random_prayer (PickUp)
 			elif dialedOption == 2:
-				tts.random_dice_prayer (player, PickUp)
+				player.random_dice_prayer (PickUp)
 			elif dialedOption == 3:
-				tts.random_pater (play, PickUp)
+				player.random_pater (PickUp)
 			else:
 				tts.say("Das habe ich nicht verstanden. Auf wiederhören")
 

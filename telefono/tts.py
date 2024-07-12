@@ -6,10 +6,6 @@ import pyttsx3
 import random
 
 class TTS():
-	supperPrayers = [101, 102, 103, 104, 105]
-	dicePrayers = [201, 202, 203, 204, 205, 206]
-	pater = [2, 10, 11, 19, 22, 26, 30, 88]
-
 	def __init__ (self):
 		self.__engine = pyttsx3.init()
 		self.__engine.setProperty('rate', 140)    # Speed percent (can go over 100)
@@ -32,17 +28,3 @@ class TTS():
 		timeInWords = now.strftime (FORMAT)
 
 		self.say(timeInWords)
-
-	def _random (self, player, _list, PickUp):
-		recording = random.choice (_list)
-		print("playing: %d" % recording)
-		player.play_recording (self, recording, PickUp)
-
-	def random_prayer (self, player, PickUp):
-		self._random (player, self.supperPrayers, PickUp)
-
-	def random_dice_prayer (self, player, PickUp):
-		self._random (player, self.dicePrayers, PickUp)
-
-	def random_pater (self, player, PickUp):
-		self._random (player, self.pater, PickUp)

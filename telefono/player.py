@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import os
+import random
 import time
 
 import pygame
@@ -11,6 +12,10 @@ from .CONSTANTS import RING_FILE
 
 
 class Player ():
+	__supperPrayers = [101, 102, 103, 104, 105]
+	__dicePrayers = [201, 202, 203, 204, 205, 206]
+	__pater = [2, 10, 11, 19, 22, 26, 30, 88]
+
 	def __init__ (self, newWavName):
 		# setup pygame
 		pygame.mixer.init()
@@ -67,3 +72,18 @@ class Player ():
 	def shout (self, tts, call, speaker, PickUp):
 		wavName = self.newWavName (call)
 		self.play_aloud (tts, wavName, speaker, PickUp) #hört auf wenn PickUp == True
+
+	def __play_random (self, files, PickUp):
+		recording = random.choice (files)
+		print("playing: %d" % recording)
+		self.play_recording (recording, PickUp)
+		return
+
+	def random_prayer (self, PickUp):
+		return self.__play_random (self.__supperPrayers, PickUp)
+
+	def random_dice_prayer (self, PickUp):
+		return self.__play_random (self.__dicePrayers, PickUp)
+
+	def random_pater (self, PickUp):
+		return self.__play_random (self.__pater, PickUp)
