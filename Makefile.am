@@ -20,7 +20,8 @@ nodist_pkgpython_PYTHON += telefono/CONSTANTS.py
 EXTRA_DIST =
 EXTRA_DIST += telefono/CONSTANTS.py.in
 
-edit = sed -e 's|@pkgdatadir[@]|$(pkgdatadir)|g'
+edit = sed -e 's|@pkgdatadir[@]|$(pkgdatadir)|g' \
+           -e 's|@pkglocalstatedir[@]|$(pkglocalstatedir)|g'
 
 telefono/CONSTANTS.py: Makefile
 	$(MKDIR_P) telefono
@@ -44,6 +45,9 @@ dist_pkgdata_DATA += data/shutdown.wav
 dist_pkgdata_DATA += data/ring.wav
 dist_pkgdata_DATA += data/dial.wav
 
+pkglocalstatedir = $(localstatedir)/$(PACKAGE)
+dist_pkglocalstate_DATA =
+dist_pkglocalstate_DATA += data/records.list
 
 EXTRA_DIST += README.md
 EXTRA_DIST += todo.txt
@@ -53,7 +57,6 @@ EXTRA_DIST += telefono/templates/index.html
 EXTRA_DIST += telefono/templates/list.html
 EXTRA_DIST += telefono/templates/say.html
 EXTRA_DIST += telefono/templates/upload.html
-EXTRA_DIST += data/records.list
 
 
 if HAVE_SYSTEMD
