@@ -25,7 +25,6 @@ from .ipc import IPC_Server
 
 
 #---------------------------Pygame AudioPlayer------------------------------------
-#needs GPIOZero buttons
 import pygame
 import time
 
@@ -283,8 +282,14 @@ def main ():
 
 	speakerThread.join()
 	webAppProcess.terminate()
-	#GPIO.close()
-	#GPIOZero.close()
+
+	DialCounter.close ()
+	DialInUse.close ()
+	PickUp.close ()
+	ButtonLeft.close ()
+	ButtonMiddle.close ()
+	SpeakerSwich.close ()
+	led.close ()
 
 if __name__ == '__main__':
 	try:
