@@ -19,8 +19,6 @@ from .CONSTANTS import RECORD_SUFFIX
 
 from .CONSTANTS import UPLOAD_DIR
 
-from .CONSTANTS import WEBAPP_LOG_FILE
-
 from .records import Records
 from .ipc import IPC_Client
 
@@ -147,18 +145,4 @@ def main ():
 	app.run(host=FLASK_IP, port=FLASK_PORT, debug=FLASK_DEBUG)
 
 if __name__ == "__main__":
-	try:
-		main ()
-
-	except Exception as error:
-		# creating/opening a file
-		f = open(WEBAPP_LOG_FILE, "a")
-
-		# writing in the file
-		f.write (time.asctime ())
-		f.write (": ")
-		f.write (str (error))
-		f.write ("\n")
-
-		# closing the file
-		f.close()
+	main ()

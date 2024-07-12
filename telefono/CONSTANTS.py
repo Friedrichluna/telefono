@@ -24,8 +24,5 @@ FLASK_DEBUG = True
 FLASK_IP = "0.0.0.0"
 FLASK_PORT = 5000
 
-TELEFONO_LOG_FILE = DATA_DIR + "/telefono.log"
-WEBAPP_LOG_FILE = DATA_DIR + "/webapp.log"
-
 MIN_HOUR = 15
 MAX_HOUR = 21

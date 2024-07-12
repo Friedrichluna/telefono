@@ -18,7 +18,6 @@ from .CONSTANTS import SHUTDOWN_FILE
 
 from .CONSTANTS import WEBAPP_EXEC
 
-from .CONSTANTS import TELEFONO_LOG_FILE
 
 from .ipc import IPC_Server
 
@@ -223,19 +222,4 @@ def main ():
 
 
 if __name__ == '__main__':
-	try:
-		main ()
-
-	except Exception as error:
-
-		# creating/opening a file
-		f = open(TELEFONO_LOG_FILE, "a")
-
-		# writing in the file
-		f.write (time.asctime ())
-		f.write (": ")
-		f.write (str (error))
-		f.write ("\n")
-
-		# closing the file
-		f.close()
+	main ()
