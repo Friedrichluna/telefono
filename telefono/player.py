@@ -7,7 +7,7 @@ import time
 
 import pygame
 
-from .CONSTANTS import DIAL_TONE_FILE
+from .CONSTANTS import DIAL_FILE
 from .CONSTANTS import RING_FILE
 
 
@@ -64,7 +64,7 @@ class Player ():
 		                     abort=self.__never, aloud=True)
 
 	def start_dial_tone (self):
-		pygame.mixer.music.load (DIAL_TONE_FILE)
+		pygame.mixer.music.load (DIAL_FILE)
 		pygame.mixer.music.play (loops=-1)
 
 	def stop_dial_tone (self):

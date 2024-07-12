@@ -26,8 +26,8 @@ EXTRA_DIST += telefono/templates/say.html
 EXTRA_DIST += telefono/templates/upload.html
 EXTRA_DIST += data/startup.wav
 EXTRA_DIST += data/shutdown.wav
-EXTRA_DIST += data/US_dial_tone.ogg.wav
-EXTRA_DIST += data/telephone-ring-02.wav
+EXTRA_DIST += data/ring.wav
+EXTRA_DIST += data/dial.wav
 EXTRA_DIST += data/records.list
 
 

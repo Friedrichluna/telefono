@@ -8,8 +8,8 @@ RECORD_DIR = DATA_DIR
 RECORD_PREFIX = "recording"
 RECORD_SUFFIX = ".wav"
 
-RING_FILE = DATA_DIR + "/telephone-ring-02.wav"
-DIAL_TONE_FILE = DATA_DIR + "/US_dial_tone.ogg.wav"
+RING_FILE = DATA_DIR + "/ring.wav"
+DIAL_FILE = DATA_DIR + "/dial.wav"
 STARTUP_FILE = DATA_DIR + "/startup.wav"
 SHUTDOWN_FILE = DATA_DIR + "/shutdown.wav"
 
