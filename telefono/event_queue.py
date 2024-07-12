@@ -108,13 +108,13 @@ class EventQueue:
 			event = self.__events.pop (0)[1]
 
 			if EVENT_TYPE.CALL == event[0]:
-				self.__process_call (event[1], tts, speaker, player)
+				self.__process_call (event[1], speaker, player)
 
 			elif EVENT_TYPE.TEXT == event[0]:
 				self.__process_text (event[1], tts)
 
 			elif EVENT_TYPE.DAILY_RANDOM == event[0]:
-				self.__process_call (event[1], tts, speaker, player)
+				self.__process_call (event[1], speaker, player)
 
 				tomorrow = datetime.date.today ()
 				tomorrow += datetime.timedelta (1)
@@ -123,7 +123,7 @@ class EventQueue:
 			elif EVENT_TYPE.DAILY_SHOUT == event[0]:
 				date = datetime.datetime.fromtimestamp (_time)
 				if event[2] (date):
-					self.__process_shout (event[1], player, tts, speaker)
+					self.__process_shout (event[1], player, speaker)
 
 				self.add_shout (event[1], event[2],
 				                date.time ())
@@ -131,12 +131,12 @@ class EventQueue:
 		return
 
 	def __process_call (self, call,
-	                    tts, speaker, player):
+	                    speaker, player):
 		print ("call in queue: %d" % call)
-		player.ringing (tts, call, speaker)
+		player.ringing (call, speaker)
 
 	def __process_text (self, text, tts):
 		tts.say (text)
 
-	def __process_shout (self, call, player, tts, speaker):
-		player.shout (tts, call, speaker)
+	def __process_shout (self, call, player, speaker):
+		player.shout (call, speaker)

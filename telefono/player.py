@@ -16,12 +16,13 @@ class Player ():
 	__dicePrayers = [201, 202, 203, 204, 205, 206]
 	__pater = [2, 10, 11, 19, 22, 26, 30, 88]
 
-	def __init__ (self, hook, newWavName):
+	def __init__ (self, hook, tts, newWavName):
 		# setup pygame
 		pygame.mixer.init()
 		pygame.init()
 
 		self.__hook = hook
+		self.__tts = tts
 		self.newWavName = newWavName
 		return
 
@@ -34,7 +35,7 @@ class Player ():
 	def __never (self):
 		return False
 
-	def __play (self, tts, fileName, speaker, abort):
+	def __play (self, fileName, speaker, abort):
 		if abort ():
 			return
 
@@ -50,15 +51,15 @@ class Player ():
 				if abort ():
 					pygame.mixer.music.stop()
 		else:
-			tts.say("Diese Aufnahme existiert noch nicht.")
+			self.__tts.say("Diese Aufnahme existiert noch nicht.")
 
 		if speaker is not None:
 			speaker.deactivate ()
 
 		return
 
-	def play_aloud (self, tts, fileName, speaker):
-		return  self.__play (tts, fileName, speaker,
+	def play_aloud (self, fileName, speaker):
+		return  self.__play (fileName, speaker,
 		                     abort=self.__never)
 
 	def start_dial_tone (self):
@@ -68,21 +69,21 @@ class Player ():
 	def stop_dial_tone (self):
 		pygame.mixer.music.stop ()
 
-	def play_recording (self, tts, recording):
+	def play_recording (self, recording):
 		recording = self.newWavName (recording)
 
-		return self.__play (tts, recording, speaker=None,
+		return self.__play (recording, speaker=None,
 		             abort=self.__on_hook)
 
-	def ringing (self, tts, callingFile_, speaker):
-		self.__play (tts, RING_FILE, speaker,
+	def ringing (self, callingFile_, speaker):
+		self.__play (RING_FILE, speaker,
 		             abort=self.__off_hook)
 		time.sleep (1) #test
-		self.play_recording (tts, callingFile_)
+		self.play_recording (callingFile_)
 
-	def shout (self, tts, call, speaker):
+	def shout (self, call, speaker):
 		wavName = self.newWavName (call)
-		self.__play (tts, wavName, speaker,
+		self.__play (wavName, speaker,
 		             abort=self.__off_hook)
 
 	def __play_random (self, files):

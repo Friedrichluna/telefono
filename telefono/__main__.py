@@ -78,7 +78,7 @@ def off_hook_loop (records, player, PickUp, dial, ButtonLeft, ButtonMiddle, tts,
 			player.stop_dial_tone ()
 
 			dialedNumber = dial.get_number (dial_number_abort, led)
-			player.play_recording (tts, dialedNumber)
+			player.play_recording (dialedNumber)
 
 			player.start_dial_tone ()
 
@@ -174,7 +174,7 @@ def main ():
 	speakerThread = SpeakerThread (SpeakerSwich)
 	speakerThread.start()
 
-	player = Player (PickUp, newWavName)
+	player = Player (PickUp, tts, newWavName)
 
 	# start webapp
 	webAppProcess = run_webapp (ipc.get_client_fd ())
@@ -200,7 +200,7 @@ def main ():
 	queue.add_shout (1930, dinner_weekday, datetime.time (19, 30))
 	queue.add_shout (2014, every_weekday, datetime.time (20, 00))
 
-	player.play_aloud (tts, STARTUP_FILE, speakerThread)
+	player.play_aloud (STARTUP_FILE, speakerThread)
 
 	while not turn_off (ButtonMiddle):
 
@@ -215,7 +215,7 @@ def main ():
 
 		time.sleep (0.5)
 
-	player.play_aloud (tts, SHUTDOWN_FILE, speakerThread)
+	player.play_aloud (SHUTDOWN_FILE, speakerThread)
 
 	speakerThread.join()
 	webAppProcess.terminate()
