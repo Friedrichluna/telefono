@@ -224,6 +224,8 @@ def main ():
 	SpeakerSwich.close ()
 	led.close ()
 
+	player.quit ()
+
 	return 0
 
 

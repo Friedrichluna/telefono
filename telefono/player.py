@@ -99,3 +99,6 @@ class Player ():
 
 	def random_pater (self):
 		return self.__play_random (self.__pater)
+
+	def quit (self):
+		return pygame.quit ()
