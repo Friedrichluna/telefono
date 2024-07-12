@@ -132,10 +132,10 @@ class EventQueue:
 
 	def __process_call (self, call, player):
 		print ("call in queue: %d" % call)
-		player.ringing (call)
+		player.call (call)
 
 	def __process_text (self, text, tts):
 		tts.say (text)
 
 	def __process_shout (self, call, player):
-		player.shout (call)
+		player.call (call, ring=False)

@@ -75,15 +75,15 @@ class Player ():
 
 		return self.__play (recording, abort=self.__on_hook)
 
-	def ringing (self, callingFile_):
-		self.__play (RING_FILE, abort=self.__off_hook, aloud=True)
-		time.sleep (1) #test
-		self.play_recording (callingFile_)
+	def call (self, call, ring=True):
+		if ring:
+			self.__play (RING_FILE, abort=self.__off_hook,
+			             aloud=True)
+			time.sleep (1) #test
 
-	def shout (self, call):
-		wavName = self.newWavName (call)
-		self.__play (wavName,
-		             abort=self.__off_hook, aloud=True)
+		recording = self.newWavName (call)
+		return self.__play (recording, abort=self.__on_hook,
+		                    aloud=(not ring))
 
 	def __play_random (self, files):
 		recording = random.choice (files)
