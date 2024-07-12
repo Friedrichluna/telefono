@@ -145,18 +145,18 @@ def off_hook_loop (records, player, PickUp, dial, ButtonLeft, ButtonMiddle, tts,
 	return
 
 def run_webapp (fd):
-	# start webapp
-	process = subprocess.Popen ([*WEBAPP_EXEC, str (fd)],
-	                            pass_fds=(fd, ))
-
-	time.sleep (3)
-	return process
+	return subprocess.Popen ([*WEBAPP_EXEC, str (fd)],
+	                         pass_fds=(fd, ))
 
 def main ():
+	# initialize random module
+	random.seed ()
 
-	# setup text to speech
-	tts = TTS ()
+	ipc = IPC_Server ()
 
+	# initialize recording data
+	records = Records ()
+	records.sync_fs ()
 
 	DialCounter = Button(2) #Zähler für die gewählte Zahl (rot)
 	DialInUse = Button(26) #Wählscheibe wird benutzt (grau)(weiß im Tel)
@@ -168,23 +168,11 @@ def main ():
 
 	dial = Dial (DialInUse, DialCounter)
 
-	ipc = IPC_Server ()
-
-	# Thread for Speaker
 	speakerThread = SpeakerThread (SpeakerSwich)
 	speakerThread.start()
 
+	tts = TTS ()
 	player = Player (PickUp, tts, speakerThread, newWavName)
-
-	# start webapp
-	webAppProcess = run_webapp (ipc.get_client_fd ())
-
-	# initialize random module
-	random.seed ()
-
-	# initialize recording data
-	records = Records ()
-	records.sync_fs ()
 
 	# initialize call queue
 	queue = EventQueue (records)
@@ -199,6 +187,9 @@ def main ():
 	queue.add_shout (1830, dinner_weekday, datetime.time (18, 30))
 	queue.add_shout (1930, dinner_weekday, datetime.time (19, 30))
 	queue.add_shout (2014, every_weekday, datetime.time (20, 00))
+
+	# start webapp
+	webAppProcess = run_webapp (ipc.get_client_fd ())
 
 	player.play_aloud (STARTUP_FILE)
 
@@ -217,8 +208,8 @@ def main ():
 
 	player.play_aloud (SHUTDOWN_FILE)
 
-	speakerThread.join()
-	webAppProcess.terminate()
+	webAppProcess.terminate ()
+	speakerThread.join ()
 
 	DialCounter.close ()
 	DialInUse.close ()
@@ -227,6 +218,9 @@ def main ():
 	ButtonMiddle.close ()
 	SpeakerSwich.close ()
 	led.close ()
+
+	return 0
+
 
 if __name__ == '__main__':
 	try:
