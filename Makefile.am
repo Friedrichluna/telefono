@@ -59,8 +59,9 @@ pkglocalstatedir = $(localstatedir)/$(PACKAGE)
 dist_pkglocalstate_DATA =
 dist_pkglocalstate_DATA += data/records.list
 
-EXTRA_DIST += README.md
-EXTRA_DIST += todo.txt
+dist_doc_DATA =
+dist_doc_DATA += README.md
+dist_doc_DATA += todo.txt
 
 
 if HAVE_SYSTEMD
