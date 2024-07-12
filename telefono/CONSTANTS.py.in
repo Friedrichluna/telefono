@@ -2,9 +2,9 @@
 # -*- coding: utf-8 -*-
 
 BASE_DIR = "/home/pi/telefono"
-DATA_DIR = BASE_DIR + "/data"
+DATA_DIR = "@pkgdatadir@"
 
-RECORD_DIR = DATA_DIR
+RECORD_DIR = BASE_DIR + "/data"
 RECORD_PREFIX = "recording"
 RECORD_SUFFIX = ".wav"
 
@@ -13,10 +13,10 @@ DIAL_FILE = DATA_DIR + "/dial.wav"
 STARTUP_FILE = DATA_DIR + "/startup.wav"
 SHUTDOWN_FILE = DATA_DIR + "/shutdown.wav"
 
-RECORD_LIST_FILE = DATA_DIR + "/records.list"
+RECORD_LIST_FILE = BASE_DIR + "/data" + "/records.list"
 BACKUP_EXT = ".bak"
 
-UPLOAD_DIR = DATA_DIR
+UPLOAD_DIR = BASE_DIR + "/data"
 
 WEBAPP_EXEC = ("python3", "-m", "telefono.webapp")
 

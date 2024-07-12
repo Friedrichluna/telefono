@@ -12,6 +12,8 @@ AM_INIT_AUTOMAKE([foreign -Wall -Werror subdir-objects])
 
 AM_MAINTAINER_MODE([enable])
 
+AC_PROG_MKDIR_P()
+
 # Checks for programs.
 AM_PATH_PYTHON(3)
 
