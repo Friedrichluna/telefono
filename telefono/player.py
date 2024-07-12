@@ -16,11 +16,12 @@ class Player ():
 	__dicePrayers = [201, 202, 203, 204, 205, 206]
 	__pater = [2, 10, 11, 19, 22, 26, 30, 88]
 
-	def __init__ (self, newWavName):
+	def __init__ (self, hook, newWavName):
 		# setup pygame
 		pygame.mixer.init()
 		pygame.init()
 
+		self.__hook = hook
 		self.newWavName = newWavName
 		return
 
@@ -64,26 +65,26 @@ class Player ():
 		else:
 			tts.say("Diese Aufnahme existiert noch nicht.")
 
-	def ringing (self, tts, callingFile_, speaker, PickUp):
-		self.play_aloud (tts, RING_FILE, speaker, PickUp) #hört auf wenn PickUp == True
+	def ringing (self, tts, callingFile_, speaker):
+		self.play_aloud (tts, RING_FILE, speaker, self.__hook) #hört auf wenn PickUp == True
 		time.sleep (1) #test
-		self.play_recording (tts, callingFile_, PickUp) #hört auf wenn PickUp == False
+		self.play_recording (tts, callingFile_, self.__hook) #hört auf wenn PickUp == False
 
-	def shout (self, tts, call, speaker, PickUp):
+	def shout (self, tts, call, speaker):
 		wavName = self.newWavName (call)
-		self.play_aloud (tts, wavName, speaker, PickUp) #hört auf wenn PickUp == True
+		self.play_aloud (tts, wavName, speaker, self.__hook) #hört auf wenn PickUp == True
 
-	def __play_random (self, files, PickUp):
+	def __play_random (self, files):
 		recording = random.choice (files)
 		print("playing: %d" % recording)
-		self.play_recording (recording, PickUp)
+		self.play_recording (recording, self.__hook)
 		return
 
-	def random_prayer (self, PickUp):
-		return self.__play_random (self.__supperPrayers, PickUp)
+	def random_prayer (self):
+		return self.__play_random (self.__supperPrayers)
 
-	def random_dice_prayer (self, PickUp):
-		return self.__play_random (self.__dicePrayers, PickUp)
+	def random_dice_prayer (self):
+		return self.__play_random (self.__dicePrayers)
 
-	def random_pater (self, PickUp):
-		return self.__play_random (self.__pater, PickUp)
+	def random_pater (self):
+		return self.__play_random (self.__pater)

@@ -131,11 +131,11 @@ def off_hook_loop (records, player, PickUp, dial, ButtonLeft, ButtonMiddle, tts,
 			if dialedOption == 0:
 				tts.say_time ()
 			elif dialedOption == 1:
-				player.random_prayer (PickUp)
+				player.random_prayer ()
 			elif dialedOption == 2:
-				player.random_dice_prayer (PickUp)
+				player.random_dice_prayer ()
 			elif dialedOption == 3:
-				player.random_pater (PickUp)
+				player.random_pater ()
 			else:
 				tts.say("Das habe ich nicht verstanden. Auf wiederhören")
 
@@ -174,7 +174,7 @@ def main ():
 	speakerThread = SpeakerThread (SpeakerSwich)
 	speakerThread.start()
 
-	player = Player (newWavName)
+	player = Player (PickUp, newWavName)
 
 	# start webapp
 	webAppProcess = run_webapp (ipc.get_client_fd ())
@@ -211,7 +211,7 @@ def main ():
 
 		ipc.handle_message (queue)
 
-		queue.process (tts, speakerThread, PickUp, player)
+		queue.process (tts, speakerThread, player)
 
 		time.sleep (0.5)
 
