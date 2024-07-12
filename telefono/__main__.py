@@ -78,7 +78,7 @@ def off_hook_loop (records, player, PickUp, dial, ButtonLeft, ButtonMiddle, tts,
 			player.stop_dial_tone ()
 
 			dialedNumber = dial.get_number (dial_number_abort, led)
-			player.play_recording (tts, dialedNumber, PickUp) #hört auf wenn PickUp == False
+			player.play_recording (tts, dialedNumber)
 
 			player.start_dial_tone ()
 
