@@ -1,5 +1,19 @@
 handle synchronous access to Records
+-> send changes over ipc
+
 remove newWavName from Player
 
 WebApp:
 	- record and call functionality
+	- improve layout
+		- style heading
+		- maybe max-width ?
+
+better time telling
+better tones
+
+better systemd integration
+- listen to SIGTERM
+- run as user unit
+
+run under separate user
