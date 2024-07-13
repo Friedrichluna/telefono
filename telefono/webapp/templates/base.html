@@ -65,10 +65,57 @@
 			line-height: inherit;
 		}
 
-		.message {
-			padding-left: 15px;
+		#message {
+			margin: 10px 15px;
+			padding: 10px;
+			border-radius: 3px;
 		}
 
+		#message:target {
+			display:none;
+		}
+
+		#message > a {
+			float: right;
+			color: inherit;
+			text-decoration: inherit;
+		}
+
+		#message.info {
+			color: #059;
+			background-color: #BEF;
+		}
+
+		#message.info::before {
+		  content: "\1F6C8 ";
+		}
+
+		#message.success {
+			color: #270;
+			background-color: #DFF2BF;
+		}
+
+		#message.success::before {
+		  content: "\2714 ";
+		}
+
+		#message.warning {
+			color: #9F6000;
+			background-color: #FEEFB3;
+		}
+
+		#message.warning::before {
+		  content: "\26A0 ";
+		}
+
+		#message.error {
+			color: #D8000C;
+			background-color: #FFBABA;
+		}
+
+		#message.error::before {
+		  content: "\274C ";
+		}
 
 		[type="submit"] {
 			cursor: pointer;
@@ -142,6 +189,11 @@
 </head>
 <body>
 	<h1>Telefon-Webapp</h1>
+{% if message %}
+	<p id="message" class="{{ message_type }} ">{{ message }}
+		<a href="#message">&#10006;</a>
+	</p>
+{% endif %}
 	{% block content %}
 	{% endblock %}
 </body>

@@ -139,17 +139,17 @@ class IPC_Client (IPC):
 		answer = self._deserialize_answer (data)
 
 		if IPC_ANSWER.OK == answer:
-			return "Anruf %d abgesetzt" % call_id
+			return "Anruf %d abgesetzt" % call_id, "success"
 
 		elif IPC_ANSWER.ERROR == answer:
-			return "Ein Fehler ist aufgetreten."
+			return "Ein Fehler ist aufgetreten.", "error"
 
-		return "Ein Fehler ist aufgetreten."
+		return "Ein Fehler ist aufgetreten.", "error"
 
 	def queue_message (self, message:str):
 		data = self._serialize_tts (message)
 		if not data:
-			return "Ein Fehler ist aufgetreten."
+			return "Ein Fehler ist aufgetreten.", "error"
 
 		self._send (data)
 
@@ -157,12 +157,12 @@ class IPC_Client (IPC):
 		answer = self._deserialize_answer (data)
 
 		if IPC_ANSWER.OK == answer:
-			return "Text angesagt"
+			return "Text angesagt", "success"
 
 		elif IPC_ANSWER.ERROR == answer:
-			return "Ein Fehler ist aufgetreten."
+			return "Ein Fehler ist aufgetreten.", "error"
 
-		return "Ein Fehler ist aufgetreten."
+		return "Ein Fehler ist aufgetreten.", "error"
 
 
 class IPC_Server (IPC):

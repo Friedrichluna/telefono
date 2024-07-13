@@ -44,10 +44,11 @@ class TelefonoWebApp (Flask):
 				return render_template ("index.html")
 
 			recording = int (requested_number)
-			answer = self.ipc.queue_call (recording)
+			message, message_type = self.ipc.queue_call (recording)
 
 			return render_template("index.html",
-			                       message=answer)
+			                       message=message,
+			                       message_type=message_type)
 		else:
 			return render_template("index.html")
 
@@ -72,7 +73,7 @@ class TelefonoWebApp (Flask):
 			return render_template("index.html")
 
 		recording = int (requested_number)
-		answer = self.ipc.queue_call (recording)
+		message, message_type = self.ipc.queue_call (recording)
 
 		return redirect("/list")
 
@@ -80,11 +81,13 @@ class TelefonoWebApp (Flask):
 		if request.method == "POST":
 			text = request.form["text"]
 
-			answer = self.ipc.queue_message (text)
+			message, message_type = self.ipc.queue_message (text)
 		else:
-			answer = None
+			message, message_type = None, None
 
-		return render_template ("say.html", message=answer)
+		return render_template ("say.html",
+		                        message=message,
+		                        message_type=message_type)
 
 
 	def upload_page(self):
@@ -100,18 +103,26 @@ class TelefonoWebApp (Flask):
 			return redirect ("/upload")
 
 		if not requested_number.isdecimal ():
-			return render_template("upload.html", content ="Keine Nummer angegeben!".format(requested_number))
+			return render_template("upload.html",
+				message="Keine Nummer angegeben!",
+				message_type="error")
 
 		requested_number = int(requested_number)
 
 		if requested_number in self.records:
-			return render_template("upload.html", content ="Nummer {} existiert bereits!".format(requested_number))
+			return render_template("upload.html",
+				message="Nummer %d existiert bereits!" % requested_number,
+				message_type="error")
 		if not uploaded_file.filename.endswith(".wav"):
-			return render_template("upload.html", content = "Bitte nur .wav hochladen!")
+			return render_template("upload.html",
+				message="Bitte nur .wav hochladen!",
+				message_type="error")
 
 		file_path = UPLOAD_DIR + "/" + RECORD_PREFIX + str(requested_number) + RECORD_SUFFIX
 		uploaded_file.save(file_path)
 
 		self.records.sync_fs ()
 		print("test")
-		return render_template("upload.html", content ="erfolgreich unter {} gespeichert!".format(file_path))
+		return render_template("upload.html",
+			message="erfolgreich unter %s gespeichert!" % file_path,
+			message_type="success")

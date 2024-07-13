@@ -52,9 +52,6 @@
 		<a href="/upload">Upload</a>
 		<a href="/say">Text ansagen</a>
 	</nav>
-{% if message %}
-	<p class="message">{{message}}</p>
-{% endif %}
 {% for number in records %}
 	<section>
 		<form action="/get_value" method="post">

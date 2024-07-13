@@ -45,9 +45,6 @@
 		<label for="number">gew&uuml;nschte Nummer:</label>
 		<input type="number" id="number" name="requestedNumber" min=0 >
 		<input type="submit" class="upload button blue" value="Hochladen">
-	{% if content %}
-		<p>{{content}}</p>
-	{% endif %}
 		<p>Freier Speicher: {{diskSpace}} GiB</p>
 	</form>
 {% endblock %}
