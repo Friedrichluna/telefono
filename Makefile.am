@@ -12,7 +12,12 @@ pkgpython_PYTHON += telefono/recorder.py
 pkgpython_PYTHON += telefono/records.py
 pkgpython_PYTHON += telefono/speaker.py
 pkgpython_PYTHON += telefono/tts.py
-pkgpython_PYTHON += telefono/webapp.py
+
+webappdir = $(pkgpythondir)/webapp
+webapp_PYTHON =
+webapp_PYTHON += telefono/webapp/__init__.py
+webapp_PYTHON += telefono/webapp/__main__.py
+webapp_PYTHON += telefono/webapp/webapp.py
 
 nodist_pkgpython_PYTHON =
 nodist_pkgpython_PYTHON += telefono/CONSTANTS.py
@@ -48,12 +53,12 @@ dist_pkgdata_DATA += data/dial.wav
 
 templatedir = $(pkgdatadir)/templates
 dist_template_DATA =
-dist_template_DATA += telefono/templates/base.html
-dist_template_DATA += telefono/templates/edit.html
-dist_template_DATA += telefono/templates/index.html
-dist_template_DATA += telefono/templates/list.html
-dist_template_DATA += telefono/templates/say.html
-dist_template_DATA += telefono/templates/upload.html
+dist_template_DATA += telefono/webapp/templates/base.html
+dist_template_DATA += telefono/webapp/templates/edit.html
+dist_template_DATA += telefono/webapp/templates/index.html
+dist_template_DATA += telefono/webapp/templates/list.html
+dist_template_DATA += telefono/webapp/templates/say.html
+dist_template_DATA += telefono/webapp/templates/upload.html
 
 pkglocalstatedir = $(localstatedir)/$(PACKAGE)
 dist_pkglocalstate_DATA =

@@ -1,27 +1,16 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
-import time
-import sys
-
 from flask import Flask, redirect, render_template, request
 
 import psutil
 
+from ..CONSTANTS import FLASK_TEMPLATES
 
-from .CONSTANTS import FLASK_DEBUG
-from .CONSTANTS import FLASK_IP
-from .CONSTANTS import FLASK_PORT
-from .CONSTANTS import FLASK_TEMPLATES
+from ..CONSTANTS import RECORD_PREFIX
+from ..CONSTANTS import RECORD_SUFFIX
 
-from .CONSTANTS import RECORD_DIR
-from .CONSTANTS import RECORD_PREFIX
-from .CONSTANTS import RECORD_SUFFIX
-
-from .CONSTANTS import UPLOAD_DIR
-
-from .records import Records
-from .ipc import IPC_Client
+from ..CONSTANTS import UPLOAD_DIR
 
 
 def getFreeDiskSpace():
@@ -126,24 +115,3 @@ class TelefonoWebApp (Flask):
 		self.records.sync_fs ()
 		print("test")
 		return render_template("upload.html", content ="erfolgreich unter {} gespeichert!".format(file_path))
-
-def main ():
-	if len(sys.argv) < 2:
-		print ("no communication socket provided")
-		sys.exit (1)
-
-	if not sys.argv[1].isdecimal ():
-		print ("invalid fileno")
-		sys.exit (1)
-
-	records = Records ()
-	records.sync_fs ()
-
-	# setup connection to server
-	ipc = IPC_Client (int(sys.argv[1]))
-
-	app = TelefonoWebApp (records, ipc)
-	app.run(host=FLASK_IP, port=FLASK_PORT, debug=FLASK_DEBUG)
-
-if __name__ == "__main__":
-	main ()
