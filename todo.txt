@@ -1,3 +1,5 @@
+translate README
+
 handle synchronous access to Records
 -> send changes over ipc
 
@@ -17,3 +19,6 @@ better systemd integration
 - run as user unit
 
 run under separate user
+
+mention running sudo on make install in README
+don't run sudo on make install
