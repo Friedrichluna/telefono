@@ -62,7 +62,7 @@ dist_template_DATA += telefono/webapp/templates/upload.html
 
 pkglocalstatedir = $(localstatedir)/$(PACKAGE)
 dist_pkglocalstate_DATA =
-dist_pkglocalstate_DATA += data/records.list
+dist_pkglocalstate_DATA += data/records.list.example
 
 dist_doc_DATA =
 dist_doc_DATA += README.md
