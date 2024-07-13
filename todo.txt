@@ -3,4 +3,3 @@ remove newWavName from Player
 
 WebApp:
 	- record and call functionality
-	- show answer when calling from list

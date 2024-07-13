@@ -26,9 +26,8 @@ class TelefonoWebApp (Flask):
 		self.ipc = ipc
 
 		self.add_url_rule ("/", "home", self.home, methods=["POST", "GET"])
-		self.add_url_rule ("/list", "list", self.list)
+		self.add_url_rule ("/list", "list", self.list, methods=["POST", "GET"])
 		self.add_url_rule ("/edit/<int:index>", "edit_value", self.edit_value, methods=["GET", "POST"])
-		self.add_url_rule ("/get_value", "get_value", self.get_value, methods=["POST"])
 		self.add_url_rule ("/say", "say", self.say, methods=["GET", "POST"])
 		self.add_url_rule ("/upload", "upload_page", self.upload_page)
 		self.add_url_rule ("/upload", "upload_file", self.upload_file, methods=["POST"])
@@ -54,7 +53,23 @@ class TelefonoWebApp (Flask):
 
 	def list(self):
 		self.records.sync_fs ()
-		return render_template("list.html", records=self.records)
+
+		message, message_type = None, None
+
+		if request.method == "POST":
+			# Get the selected button value from the frontend
+			requested_number = request.form["selected_value"]
+
+			# ignore malicious number
+			if not requested_number.isdecimal ():
+				return render_template("index.html")
+
+			recording = int (requested_number)
+			message, message_type = self.ipc.queue_call (recording)
+
+		return render_template("list.html", records=self.records,
+		                       message=message,
+		                       message_type=message_type)
 
 	def edit_value(self, index):
 		if request.method == "POST":
@@ -63,19 +78,6 @@ class TelefonoWebApp (Flask):
 
 			return redirect("/list")
 		return render_template("edit.html", index=index, value=self.records[index])
-
-	def get_value(self):
-		# Get the selected button value from the frontend
-		requested_number = request.form["selected_value"]
-
-		# ignore malicious number
-		if not requested_number.isdecimal ():
-			return render_template("index.html")
-
-		recording = int (requested_number)
-		message, message_type = self.ipc.queue_call (recording)
-
-		return redirect("/list")
 
 	def say (self):
 		if request.method == "POST":

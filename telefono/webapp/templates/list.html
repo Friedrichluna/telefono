@@ -54,7 +54,7 @@
 	</nav>
 {% for number in records %}
 	<section>
-		<form action="/get_value" method="post">
+		<form method="post">
 			<input type="submit" name="selected_value" value="{{ number }}" class="button gray">
 		</form>
 		{{ records[number] }}
