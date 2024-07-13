@@ -21,6 +21,7 @@ from .CONSTANTS import WEBAPP_EXEC
 from .CONSTANTS import MOAN_PROPABILITY
 
 from .ipc import IPC_Server
+from .player import Player
 
 
 #--------------------------File Name Generator----------------------------------
