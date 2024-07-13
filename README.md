@@ -14,5 +14,4 @@ Lautsprecher:
 Mit dem Kippschalter rechts, kann man das Telefon auf laut oder leise schalten. Die Klingel ist immer Laut.
 
 ## Schaltplan
-![image](https://github.com/Friedrichluna/telefono/assets/154459612/ddafd878-a48c-417e-80f2-06288154721c)
-
+![image](https://gitlab.mn.tu-dresden.de/josc941e/telefono/-/raw/master/docs/circuit_diagram.png)

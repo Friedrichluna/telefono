@@ -67,6 +67,7 @@ dist_pkglocalstate_DATA += data/records.list.example
 dist_doc_DATA =
 dist_doc_DATA += README.md
 dist_doc_DATA += todo.txt
+dist_doc_DATA += docs/circuit_diagram.png
 
 
 if HAVE_SYSTEMD
