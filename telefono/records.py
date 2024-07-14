@@ -34,6 +34,15 @@ class Record ():
 		if 'description' == name:
 			return self.__description
 
+		if 'filename' == name:
+			filename = ""
+			filename += RECORD_DIR
+			filename += "/"
+			filename += RECORD_PREFIX
+			filename += str(self.__number)
+			filename += RECORD_SUFFIX
+			return filename
+
 		return super ().__getattribute__ (name)
 
 	def __setattr__ (self, name, value):
@@ -47,6 +56,9 @@ class Record ():
 		if 'description' == name:
 			self.__description = value
 			return
+
+		if 'filename' == name:
+			raise AttributeError ("read-only attribute")
 
 		return super ().__setattr__ (name, value)
 

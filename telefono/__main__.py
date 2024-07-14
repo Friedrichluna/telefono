@@ -178,7 +178,7 @@ def main ():
 	speakerThread.start()
 
 	tts = TTS ()
-	player = Player (PickUp, tts, speakerThread, newWavName)
+	player = Player (PickUp, tts, speakerThread)
 
 	# initialize call queue
 	queue = EventQueue (records)

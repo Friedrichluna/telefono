@@ -3,8 +3,6 @@ translate README
 handle synchronous access to Records
 -> send changes over ipc
 
-remove newWavName from Player
-
 WebApp:
 	- record and call functionality
 	- improve layout

@@ -10,13 +10,15 @@ import pygame
 from .CONSTANTS import DIAL_FILE
 from .CONSTANTS import RING_FILE
 
+from . import Record
+
 
 class Player ():
 	__supperPrayers = [101, 102, 103, 104, 105]
 	__dicePrayers = [201, 202, 203, 204, 205, 206]
 	__pater = [2, 10, 11, 19, 22, 26, 30, 88]
 
-	def __init__ (self, hook, tts, speaker, newWavName):
+	def __init__ (self, hook, tts, speaker):
 		# setup pygame
 		pygame.mixer.init()
 		pygame.init()
@@ -24,7 +26,6 @@ class Player ():
 		self.__hook = hook
 		self.__tts = tts
 		self.__speaker = speaker
-		self.newWavName = newWavName
 		return
 
 	def __on_hook (self):
@@ -71,7 +72,7 @@ class Player ():
 		pygame.mixer.music.stop ()
 
 	def play_recording (self, recording):
-		recording = self.newWavName (recording)
+		recording = Record (recording, "").filename
 
 		return self.__play (recording, abort=self.__on_hook)
 
@@ -81,7 +82,7 @@ class Player ():
 			             aloud=True)
 			time.sleep (1) #test
 
-		recording = self.newWavName (call)
+		recording = Record (call, "").filename
 		return self.__play (recording, abort=self.__on_hook,
 		                    aloud=(not ring))
 
