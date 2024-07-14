@@ -6,6 +6,7 @@ from .dial import Dial
 from .recorder import Recorder
 from .speaker import SpeakerThread
 from .tts import TTS
+from .records import Record
 from .records import Records
 from .event_queue import EventQueue
 

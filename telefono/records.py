@@ -15,6 +15,42 @@ from .CONSTANTS import RECORD_LIST_FILE
 from .CONSTANTS import BACKUP_EXT
 
 
+class Record ():
+	def __init__ (self, number:int, description:str,
+	              exists:bool=False):
+
+		self.__number = number
+		self.__description = description
+		self.__exists = exists
+		return
+
+	def __getattribute__ (self, name):
+		if 'number' == name:
+			return self.__number
+
+		if 'exists' == name:
+			return self.__exists
+
+		if 'description' == name:
+			return self.__description
+
+		return super ().__getattribute__ (name)
+
+	def __setattr__ (self, name, value):
+		if 'number' == name:
+			raise AttributeError ("read-only attribute")
+
+		if 'exists' == name:
+			self.__exists = value
+			return
+
+		if 'description' == name:
+			self.__description = value
+			return
+
+		return super ().__setattr__ (name, value)
+
+
 class Records ():
 	def __init__ (self, filename:str=RECORD_LIST_FILE):
 		self.__data = dict ()
