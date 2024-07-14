@@ -76,10 +76,15 @@ class Records ():
 		return None
 
 	def __contains__ (self, key):
-		return self.__data.get (key, (..., False))[1]
+		record = self.__data.get (key)
+
+		if None is record:
+			return False
+
+		return record.exists
 
 	def __getitem__ (self, key):
-		return self.__data.__getitem__ (key)[0]
+		return self.__data.__getitem__ (key)
 
 	def __setitem__ (self, key, value):
 		if int != type (key):
@@ -92,16 +97,14 @@ class Records ():
 			      "Invalid value %s, must be str not %s."
 			      % (repr(value), type (value)))
 
-		ret = self.__data.__setitem__ (key, (value, False))
-
+		self.__data.__setitem__ (key, Record (key, value))
 		self.sync_data ()
-		return ret
+		return
 
 	def __delitem__ (self, key):
-		ret = self.__data.__delitem__ (key)
-
+		self.__data.__delitem__ (key)
 		self.sync_data ()
-		return ret
+		return
 
 
 	def __iter__ (self):
@@ -111,8 +114,8 @@ class Records ():
 
 	def __len__ (self):
 		length = 0
-		for key, (value, exists) in self.__data.items ():
-			if exists:
+		for key, record in self.__data.items ():
+			if record.exists:
 				length += 1
 		return length
 
@@ -121,37 +124,36 @@ class Records ():
 
 
 	def clear (self):
-		ret = self.__data.clear ()
-
+		self.__data.clear ()
 		self.sync_data ()
-		return ret
+		return
 
 	def copy (self):
 		c = Records ()
 		c.__data = self.__data.copy ()
 		return c
 
-	def get (self, key, default=""):
-		return self.__data.get (key, (default, ))[0]
+	def get (self, key, default=None):
+		return self.__data.get (key, default)
 
 	def items (self):
-		for key, (value, exists) in self.__data.items ():
-			if exists:
-				yield (key, value)
+		for key, record in self.__data.items ():
+			if record.exists:
+				yield record
 
 	def keys (self):
-		for key, (value, exists) in self.__data.items ():
-			if exists:
+		for key, record in self.__data.items ():
+			if record.exists:
 				yield key
 
 	def pop (self, key, *args, **kwargs):
-		ret = self.__data.pop (key, *args, **kwargs)[0]
+		ret = self.__data.pop (key, *args, **kwargs)
 
 		self.sync_data ()
 		return ret
 
 	def popitem (self):
-		ret = self.__data.popitem ()[0]
+		ret = self.__data.popitem ()
 
 		self.sync_data ()
 		return ret
@@ -167,7 +169,7 @@ class Records ():
 			      "Invalid default %s, must be str not %s."
 			      % (repr(default), type (default)))
 
-		ret = self.__data.setdefault (key, (default, False))
+		ret = self.__data.setdefault (key, Record (key, default))
 
 		self.sync_data ()
 		return ret
@@ -176,9 +178,9 @@ class Records ():
 		raise NotImplementedError
 
 	def values (self):
-		for key, (value, exists) in self.__data.items ():
-			if exists:
-				yield value
+		for key, record in self.__data.items ():
+			if record.exists:
+				yield record.description
 
 	def __load (self, _file):
 		fcntl.flock(_file, fcntl.LOCK_SH)
@@ -236,7 +238,7 @@ class Records ():
 		keys.sort ()
 
 		for key in keys:
-			name = self[key].strip ()
+			name = self[key].description.strip ()
 
 			# ignore empty names
 			if not name:
@@ -253,13 +255,13 @@ class Records ():
 		return
 
 	def __invalidate_fs (self):
-		for key, (value, exists) in self.__data.items ():
-			self.__data[key] = (value, False)
+		for record in self.__data.values ():
+			record.exists = False
 		return
 
 	def __validate (self, key):
 		self.setdefault (key)
-		self.__data[key] = (self.__data[key][0], True)
+		self.__data[key].exists = True
 		return
 
 	def sync_data (self):

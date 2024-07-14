@@ -57,7 +57,7 @@
 		<form method="post">
 			<input type="submit" name="selected_value" value="{{ number }}" class="button gray">
 		</form>
-		{{ records[number] }}
+		{{ records[number].description }}
 		<a href="/edit/{{ number }}" class="button blue">&#9998;</a>
 	</section>
 {% endfor %}
