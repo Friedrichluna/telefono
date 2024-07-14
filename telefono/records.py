@@ -324,3 +324,11 @@ class Records ():
 			return None
 
 		return random.choice (list (self.__data.keys ()))
+
+	def add_next (self):
+		number = 0
+		while number in self:
+			number += 1
+
+		# generate new Record
+		return self.setdefault (number)

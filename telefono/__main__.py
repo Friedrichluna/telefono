@@ -1,7 +1,10 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
-import os
+import datetime
+import random
+import socket
+import subprocess
 import sys
 import time
 
@@ -22,30 +25,6 @@ from .CONSTANTS import MOAN_PROPABILITY
 
 from .ipc import IPC_Server
 from .player import Player
-
-
-#--------------------------File Name Generator----------------------------------
-
-def newWavName(wav_number):
-	return RECORD_DIR + "/" + RECORD_PREFIX + str(wav_number) + RECORD_SUFFIX
-
-
-#--------------------------FindNewFile-----------------------------------------
-import os
-
-def findNewFileName ():
-	counter = 0
-	filename = newWavName (counter)
-	while os.path.exists (filename):
-		counter += 1
-		filename = newWavName (counter)
-	return filename, counter
-
-
-import datetime
-import socket
-import subprocess
-import random
 
 
 def turn_off (button):
@@ -87,12 +66,12 @@ def off_hook_loop (records, player, PickUp, dial, ButtonLeft, ButtonMiddle, tts,
 		if ButtonLeft.is_pressed:
 			player.stop_dial_tone ()
 
-			myNewWavName, newRecordingNumber = findNewFileName()
-			tts.say("Aufnahme Nr.: " + str(newRecordingNumber) + " wird gestartet") #ansage welche Aufnahme es ist
+			record = records.add_next ()
+			tts.say("Aufnahme Nr.: " + str(record.number) + " wird gestartet")
 
 			aborted = False
 			recordingTime = 0
-			with Recorder (myNewWavName, led) as recorder:
+			with Recorder (record.filename, led) as recorder:
 
 				while recordingTime <= maxRecordingTime \
 				and PickUp.is_pressed \
@@ -109,13 +88,13 @@ def off_hook_loop (records, player, PickUp, dial, ButtonLeft, ButtonMiddle, tts,
 					records.sync_fs ()
 
 			if recordingTime > maxRecordingTime:
-				tts.say("Aufnahme Nr.: " + str(newRecordingNumber) + "wegen overtime beendet.")
+				tts.say("Aufnahme Nr.: " + str(record.number) + "wegen overtime beendet.")
 			elif aborted:
-				tts.say("Aufnahme Nr.: " + str(newRecordingNumber) + " abgebrochen")
+				tts.say("Aufnahme Nr.: " + str(record.number) + " abgebrochen")
 			elif recordingTime <= minRecordingTime:
 				tts.say ("Aufnahme zu kurz")
 			else:
-				print ("Aufnahme Nr.: " + str(newRecordingNumber) + " beendet.")
+				print ("Aufnahme Nr.: " + str(record.number) + " beendet.")
 
 			player.start_dial_tone ()
 
