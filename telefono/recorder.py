@@ -64,4 +64,4 @@ class Recorder ():
 		self._stream.close ()
 		self._pa.terminate ()
 		self.wavefile.close ()
-		return
+		return False
