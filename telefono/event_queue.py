@@ -111,7 +111,7 @@ class EventQueue:
 				self.__process_call (event[1], player)
 
 			elif EVENT_TYPE.TEXT == event[0]:
-				self.__process_text (event[1], tts)
+				self.__process_text (event[1], tts, player)
 
 			elif EVENT_TYPE.DAILY_RANDOM == event[0]:
 				self.__process_call (event[1], player)
@@ -132,10 +132,19 @@ class EventQueue:
 
 	def __process_call (self, call, player):
 		print ("call in queue: %d" % call)
-		player.call (call)
+		if player.call (call):
+			# still off-hook
+			player.play_busy_tone ()
+		return
 
-	def __process_text (self, text, tts):
+	def __process_text (self, text, tts, player):
 		tts.say (text)
+		# still off-hook
+		player.play_busy_tone ()
+		return
 
 	def __process_shout (self, call, player):
-		player.call (call, ring=False)
+		if player.call (call, ring=False):
+			# still off-hook
+			player.play_busy_tone ()
+		return
