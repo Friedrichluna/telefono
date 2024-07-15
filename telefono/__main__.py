@@ -55,7 +55,7 @@ def off_hook_loop (records, player, PickUp, dial, ButtonLeft, ButtonMiddle, tts,
 	while PickUp.is_pressed:
 		# dialing
 		if dial.is_used ():
-			player.stop_dial_tone ()
+			player.stop_tone ()
 
 			dialedNumber = dial.get_number (dial_number_abort, led)
 			if not player.play_recording (dialedNumber):
@@ -67,7 +67,7 @@ def off_hook_loop (records, player, PickUp, dial, ButtonLeft, ButtonMiddle, tts,
 
 		# recording
 		if ButtonLeft.is_pressed:
-			player.stop_dial_tone ()
+			player.stop_tone ()
 
 			record = records.add_next ()
 			tts.say("Aufnahme Nr.: " + str(record.number) + " wird gestartet")
@@ -104,7 +104,7 @@ def off_hook_loop (records, player, PickUp, dial, ButtonLeft, ButtonMiddle, tts,
 
 		# open Menu
 		if ButtonMiddle.is_pressed:
-			player.stop_dial_tone ()
+			player.stop_tone ()
 
 			tts.say("Menü wird geöffnet.")
 			dialedOption = dial.get_digit (dial_digit_abort, led)
@@ -131,13 +131,10 @@ def off_hook_loop (records, player, PickUp, dial, ButtonLeft, ButtonMiddle, tts,
 			player.start_busy_tone ()
 			break
 
-	else:
-		player.stop_dial_tone ()
-
 	while PickUp.is_pressed:
 		pass
 
-	player.stop_busy_tone ()
+	player.stop_tone ()
 
 	# moan
 	if random.random () < MOAN_PROPABILITY:

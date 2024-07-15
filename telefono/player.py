@@ -74,27 +74,21 @@ class Player ():
 		return self.__play (fileName,
 		                    abort=self.__never, aloud=True)
 
-	def __stop_tone (self):
+	def stop_tone (self):
 		if self.__process is not None:
 			self.__process.terminate ()
 			self.__process = None
 		return
 
 	def start_dial_tone (self):
-		self.__stop_tone ()
+		self.stop_tone ()
 		self.__process = subprocess.Popen (SOX_DIAL)
 		return
 
-	def stop_dial_tone (self):
-		return self.__stop_tone ()
-
 	def start_busy_tone (self):
-		self.__stop_tone ()
+		self.stop_tone ()
 		self.__process = subprocess.Popen (SOX_BUSY)
 		return
-
-	def stop_busy_tone (self):
-		return self.__stop_tone ()
 
 	def play_recording (self, recording) -> bool:
 		recording = Record (recording, "").filename
