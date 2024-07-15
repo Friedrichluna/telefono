@@ -44,3 +44,16 @@ SOX_BUSY = (*SOX_BASE,
             "sin", "425",
             "pad", "0", "0.5",
             *SOX_VOL, *SOX_REMIX, *SOX_REPEAT)
+
+SOX_SIT = (*SOX_BASE,
+           "synth", "0.33",
+           "sin", "950",
+           "sin", "1400",
+           "sin", "1800",
+           "delay", "0", "0.33", "0.66",
+           "pad", "0", "1",
+           *SOX_VOL, *SOX_REMIX, *SOX_REPEAT)
+
+
+NO_NUMBER_DELAY = 0.01
+NO_NUMBER_TIMEOUT = 60 / NO_NUMBER_DELAY

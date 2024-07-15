@@ -12,6 +12,10 @@ from .CONSTANTS import RING_FILE
 
 from .CONSTANTS import SOX_DIAL
 from .CONSTANTS import SOX_BUSY
+from .CONSTANTS import SOX_SIT
+
+from .CONSTANTS import NO_NUMBER_DELAY
+from .CONSTANTS import NO_NUMBER_TIMEOUT
 
 from . import Record
 
@@ -60,7 +64,18 @@ class Player ():
 					pygame.mixer.music.stop()
 					aborted = True
 		else:
-			self.__tts.say("Diese Aufnahme existiert noch nicht.")
+			self.start_sit_tone ()
+
+			timer = 0
+			while timer < NO_NUMBER_TIMEOUT:
+				if abort ():
+					self.stop_tone ()
+					return False
+
+				time.sleep (NO_NUMBER_DELAY)
+				timer += 1
+
+			self.stop_tone ()
 
 		if aloud:
 			self.__speaker.deactivate ()
@@ -97,6 +112,11 @@ class Player ():
 			pass
 
 		self.stop_tone ()
+		return
+
+	def start_sit_tone (self):
+		self.stop_tone ()
+		self.__process = subprocess.Popen (SOX_SIT)
 		return
 
 	def play_recording (self, recording) -> bool:
