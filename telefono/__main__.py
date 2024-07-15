@@ -62,7 +62,8 @@ def off_hook_loop (records, player, PickUp, dial, ButtonLeft, ButtonMiddle, tts,
 				# hang up
 				break
 
-			player.start_dial_tone ()
+			player.start_busy_tone ()
+			break
 
 		# recording
 		if ButtonLeft.is_pressed:
@@ -98,8 +99,8 @@ def off_hook_loop (records, player, PickUp, dial, ButtonLeft, ButtonMiddle, tts,
 			else:
 				print ("Aufnahme Nr.: " + str(record.number) + " beendet.")
 
-			player.start_dial_tone ()
-
+			player.start_busy_tone ()
+			break
 
 		# open Menu
 		if ButtonMiddle.is_pressed:
@@ -127,10 +128,16 @@ def off_hook_loop (records, player, PickUp, dial, ButtonLeft, ButtonMiddle, tts,
 			else:
 				tts.say("Das habe ich nicht verstanden. Auf wiederhören")
 
-			player.start_dial_tone ()
+			player.start_busy_tone ()
+			break
 
 	else:
 		player.stop_dial_tone ()
+
+	while PickUp.is_pressed:
+		pass
+
+	player.stop_busy_tone ()
 
 	# moan
 	if random.random () < MOAN_PROPABILITY:

@@ -11,6 +11,7 @@ import pygame
 from .CONSTANTS import RING_FILE
 
 from .CONSTANTS import SOX_DIAL
+from .CONSTANTS import SOX_BUSY
 
 from . import Record
 
@@ -28,7 +29,7 @@ class Player ():
 		self.__hook = hook
 		self.__tts = tts
 		self.__speaker = speaker
-		self.__dial_process = None
+		self.__process = None
 		return
 
 	def __on_hook (self):
@@ -73,18 +74,27 @@ class Player ():
 		return self.__play (fileName,
 		                    abort=self.__never, aloud=True)
 
-	def start_dial_tone (self):
-		if self.__dial_process is not None:
-			self.__dial_process.terminate ()
+	def __stop_tone (self):
+		if self.__process is not None:
+			self.__process.terminate ()
+			self.__process = None
+		return
 
-		self.__dial_process = subprocess.Popen (SOX_DIAL)
+	def start_dial_tone (self):
+		self.__stop_tone ()
+		self.__process = subprocess.Popen (SOX_DIAL)
 		return
 
 	def stop_dial_tone (self):
-		if self.__dial_process is not None:
-			self.__dial_process.terminate ()
-			self.__dial_process = None
+		return self.__stop_tone ()
+
+	def start_busy_tone (self):
+		self.__stop_tone ()
+		self.__process = subprocess.Popen (SOX_BUSY)
 		return
+
+	def stop_busy_tone (self):
+		return self.__stop_tone ()
 
 	def play_recording (self, recording) -> bool:
 		recording = Record (recording, "").filename

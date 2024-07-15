@@ -31,9 +31,16 @@ MOAN_PROPABILITY = 0.1
 SOX_BASE = ("play", "-n")
 SOX_VOL = ("vol", "-20dB")
 SOX_REMIX =  ("remix", "-")
+SOX_REPEAT =  ("repeat", "-")
 
 SOX_DIAL = (*SOX_BASE,
             "synth",
             "sin", "350",
             "sin", "440",
             *SOX_VOL, *SOX_REMIX)
+
+SOX_BUSY = (*SOX_BASE,
+            "synth", "0.5",
+            "sin", "425",
+            "pad", "0", "0.5",
+            *SOX_VOL, *SOX_REMIX, *SOX_REPEAT)
