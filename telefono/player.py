@@ -37,9 +37,11 @@ class Player ():
 	def __never (self):
 		return False
 
-	def __play (self, fileName, abort, aloud=False):
+	def __play (self, fileName, abort, aloud=False) -> bool:
 		if abort ():
-			return
+			return False
+
+		aborted = False
 
 		if aloud:
 			self.__speaker.activate ()
@@ -52,17 +54,21 @@ class Player ():
 				time.sleep (0.01)
 				if abort ():
 					pygame.mixer.music.stop()
+					aborted = True
 		else:
 			self.__tts.say("Diese Aufnahme existiert noch nicht.")
 
 		if aloud:
 			self.__speaker.deactivate ()
 
-		return
+		if abort ():
+			aborted = True
 
-	def play_aloud (self, fileName):
-		return  self.__play (fileName,
-		                     abort=self.__never, aloud=True)
+		return not aborted
+
+	def play_aloud (self, fileName) -> True:
+		return self.__play (fileName,
+		                    abort=self.__never, aloud=True)
 
 	def start_dial_tone (self):
 		pygame.mixer.music.load (DIAL_FILE)
@@ -71,34 +77,38 @@ class Player ():
 	def stop_dial_tone (self):
 		pygame.mixer.music.stop ()
 
-	def play_recording (self, recording):
+	def play_recording (self, recording) -> bool:
 		recording = Record (recording, "").filename
 
 		return self.__play (recording, abort=self.__on_hook)
 
-	def call (self, call, ring=True):
+	def call (self, call, ring=True) -> bool:
 		if ring:
-			self.__play (RING_FILE, abort=self.__off_hook,
-			             aloud=True)
+			if self.__play (RING_FILE,
+			                abort=self.__off_hook,
+			                aloud=True):
+
+				# never picked up
+				return False
+
 			time.sleep (1) #test
 
 		recording = Record (call, "").filename
 		return self.__play (recording, abort=self.__on_hook,
 		                    aloud=(not ring))
 
-	def __play_random (self, files):
+	def __play_random (self, files) -> bool:
 		recording = random.choice (files)
 		print("playing: %d" % recording)
-		self.play_recording (recording)
-		return
+		return self.play_recording (recording)
 
-	def random_prayer (self):
+	def random_prayer (self) -> bool:
 		return self.__play_random (self.__supperPrayers)
 
-	def random_dice_prayer (self):
+	def random_dice_prayer (self) -> bool:
 		return self.__play_random (self.__dicePrayers)
 
-	def random_pater (self):
+	def random_pater (self) -> bool:
 		return self.__play_random (self.__pater)
 
 	def quit (self):

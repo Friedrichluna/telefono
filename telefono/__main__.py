@@ -58,7 +58,9 @@ def off_hook_loop (records, player, PickUp, dial, ButtonLeft, ButtonMiddle, tts,
 			player.stop_dial_tone ()
 
 			dialedNumber = dial.get_number (dial_number_abort, led)
-			player.play_recording (dialedNumber)
+			if not player.play_recording (dialedNumber):
+				# hang up
+				break
 
 			player.start_dial_tone ()
 
@@ -111,17 +113,24 @@ def off_hook_loop (records, player, PickUp, dial, ButtonLeft, ButtonMiddle, tts,
 			if dialedOption == 0:
 				tts.say_time ()
 			elif dialedOption == 1:
-				player.random_prayer ()
+				if not player.random_prayer ():
+					# hang up
+					break
 			elif dialedOption == 2:
-				player.random_dice_prayer ()
+				if not player.random_dice_prayer ():
+					# hang up
+					break
 			elif dialedOption == 3:
-				player.random_pater ()
+				if not player.random_pater ():
+					# hang up
+					break
 			else:
 				tts.say("Das habe ich nicht verstanden. Auf wiederhören")
 
 			player.start_dial_tone ()
 
-	player.stop_dial_tone ()
+	else:
+		player.stop_dial_tone ()
 
 	# moan
 	if random.random () < MOAN_PROPABILITY:
