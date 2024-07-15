@@ -45,6 +45,26 @@ SOX_BUSY = (*SOX_BASE,
             "pad", "0", "0.5",
             *SOX_VOL, *SOX_REMIX, *SOX_REPEAT)
 
+SOX_RING = (*SOX_BASE,
+            "synth", "1",
+            "sin", "425",
+            "pad", "0", "4",
+            *SOX_VOL, *SOX_REMIX, *SOX_REPEAT)
+
+SOX_RELEASE = (*SOX_BASE,
+               "synth", "0.25",
+               "sin", "425",
+               "pad", "0", "0.25",
+               *SOX_VOL, *SOX_REMIX, *SOX_REPEAT)
+
+SOX_DIAL_SECONDARY = SOX_DIAL
+
+SOX_DIAL_SPECIAL = (*SOX_BASE,
+                    "synth", "0.5",
+                    "sin", "425",
+                    "pad", "0", "0.05",
+                    *SOX_VOL, *SOX_REMIX, *SOX_REPEAT)
+
 SOX_SIT = (*SOX_BASE,
            "synth", "0.33",
            "sin", "950",
@@ -53,6 +73,20 @@ SOX_SIT = (*SOX_BASE,
            "delay", "0", "0.33", "0.66",
            "pad", "0", "1",
            *SOX_VOL, *SOX_REMIX, *SOX_REPEAT)
+
+SOX_CONGESTION = (*SOX_BASE,
+                  "synth", "0.25",
+                  "sin", "425",
+                  "pad", "0", "0.25",
+                  *SOX_VOL, *SOX_REMIX, *SOX_REPEAT)
+
+SOX_CALL_WAIT = (*SOX_BASE,
+                 "synth", "0.2",
+                 "sin", "425",
+                 "sin", "425",
+                 "delay", "0" "0.4"
+                 "pad", "0", "9",
+                 *SOX_VOL, *SOX_REMIX, *SOX_REPEAT)
 
 
 NO_NUMBER_DELAY = 0.01
