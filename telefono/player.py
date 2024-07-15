@@ -90,6 +90,15 @@ class Player ():
 		self.__process = subprocess.Popen (SOX_BUSY)
 		return
 
+	def play_busy_tone (self):
+		self.start_busy_tone ()
+
+		while self.__off_hook ():
+			pass
+
+		self.stop_tone ()
+		return
+
 	def play_recording (self, recording) -> bool:
 		recording = Record (recording, "").filename
 
