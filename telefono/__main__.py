@@ -57,7 +57,7 @@ def off_hook_loop (records, player, PickUp, dial, ButtonLeft, ButtonMiddle, tts,
 		if dial.is_used ():
 			player.stop_tone ()
 
-			dialedNumber = dial.get_number (dial_number_abort, led)
+			dialedNumber = dial.get_number (dial_number_abort, led, player)
 			if player.play_recording (dialedNumber):
 				# still off-hook
 				player.play_busy_tone ()
@@ -105,7 +105,7 @@ def off_hook_loop (records, player, PickUp, dial, ButtonLeft, ButtonMiddle, tts,
 			player.stop_tone ()
 
 			tts.say("Menü wird geöffnet.")
-			dialedOption = dial.get_digit (dial_digit_abort, led)
+			dialedOption = dial.get_digit (dial_digit_abort, led, player)
 			# aborted
 			if dialedOption is None:
 				pass

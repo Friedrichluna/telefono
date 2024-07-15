@@ -14,6 +14,23 @@ from .CONSTANTS import SOX_DIAL
 from .CONSTANTS import SOX_BUSY
 from .CONSTANTS import SOX_SIT
 
+from .CONSTANTS import SOX_NUMBER_1
+from .CONSTANTS import SOX_NUMBER_2
+from .CONSTANTS import SOX_NUMBER_3
+from .CONSTANTS import SOX_NUMBER_4
+from .CONSTANTS import SOX_NUMBER_5
+from .CONSTANTS import SOX_NUMBER_6
+from .CONSTANTS import SOX_NUMBER_7
+from .CONSTANTS import SOX_NUMBER_8
+from .CONSTANTS import SOX_NUMBER_9
+from .CONSTANTS import SOX_NUMBER_S
+from .CONSTANTS import SOX_NUMBER_0
+from .CONSTANTS import SOX_NUMBER_R
+from .CONSTANTS import SOX_NUMBER_A
+from .CONSTANTS import SOX_NUMBER_B
+from .CONSTANTS import SOX_NUMBER_C
+from .CONSTANTS import SOX_NUMBER_D
+
 from .CONSTANTS import NO_NUMBER_DELAY
 from .CONSTANTS import NO_NUMBER_TIMEOUT
 
@@ -138,6 +155,48 @@ class Player ():
 		recording = Record (call, "").filename
 		return self.__play (recording, abort=self.__on_hook,
 		                    aloud=(not ring))
+
+	def dial_sound (self, number):
+
+		if 1 == number:
+			command = SOX_NUMBER_1
+		elif 2 == number:
+			command = SOX_NUMBER_2
+		elif 3 == number:
+			command = SOX_NUMBER_3
+		elif 4 == number:
+			command = SOX_NUMBER_4
+		elif 5 == number:
+			command = SOX_NUMBER_5
+		elif 6 == number:
+			command = SOX_NUMBER_6
+		elif 7 == number:
+			command = SOX_NUMBER_7
+		elif 8 == number:
+			command = SOX_NUMBER_8
+		elif 9 == number:
+			command = SOX_NUMBER_9
+		elif "*" == number:
+			command = SOX_NUMBER_S
+		elif 0 == number:
+			command = SOX_NUMBER_0
+		elif "#" == number:
+			command = SOX_NUMBER_R
+		elif "A" == number:
+			command = SOX_NUMBER_A
+		elif "B" == number:
+			command = SOX_NUMBER_B
+		elif "C" == number:
+			command = SOX_NUMBER_C
+		elif "D" == number:
+			command = SOX_NUMBER_D
+		else:
+			print ("dialed unknown number %s", str(number))
+			return
+
+		self.stop_tone ()
+		self.__process = subprocess.Popen (command)
+		return
 
 	def __play_random (self, files) -> bool:
 		recording = random.choice (files)

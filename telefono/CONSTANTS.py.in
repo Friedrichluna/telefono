@@ -88,6 +88,32 @@ SOX_CALL_WAIT = (*SOX_BASE,
                  "pad", "0", "9",
                  *SOX_VOL, *SOX_REMIX, *SOX_REPEAT)
 
+# length and pad must be >= 65ms
+SOX_NUMBER = lambda low_freq, high_freq: \
+             (*SOX_BASE,
+              "synth", "0.1",
+              "sin", str (low_freq),
+              "sin", str (high_freq),
+              "pad", "0", "0.1",
+              *SOX_VOL, *SOX_REMIX)
+
+SOX_NUMBER_1 = SOX_NUMBER (697, 1209)
+SOX_NUMBER_2 = SOX_NUMBER (697, 1336)
+SOX_NUMBER_3 = SOX_NUMBER (697, 1477)
+SOX_NUMBER_4 = SOX_NUMBER (770, 1209)
+SOX_NUMBER_5 = SOX_NUMBER (770, 1336)
+SOX_NUMBER_6 = SOX_NUMBER (770, 1477)
+SOX_NUMBER_7 = SOX_NUMBER (852, 1209)
+SOX_NUMBER_8 = SOX_NUMBER (852, 1336)
+SOX_NUMBER_9 = SOX_NUMBER (852, 1477)
+SOX_NUMBER_S = SOX_NUMBER (941, 1209)
+SOX_NUMBER_0 = SOX_NUMBER (941, 1336)
+SOX_NUMBER_R = SOX_NUMBER (941, 1477)
+SOX_NUMBER_A = SOX_NUMBER (697, 1633)
+SOX_NUMBER_B = SOX_NUMBER (770, 1633)
+SOX_NUMBER_C = SOX_NUMBER (852, 1633)
+SOX_NUMBER_D = SOX_NUMBER (941, 1633)
+
 
 NO_NUMBER_DELAY = 0.01
 NO_NUMBER_TIMEOUT = 60 / NO_NUMBER_DELAY

@@ -73,7 +73,7 @@ class Dial ():
 
 		return digit
 
-	def get_digit (self, abort, led):
+	def get_digit (self, abort, led, player):
 		led.blink (on_time=0.1, off_time=0.1, n=None, background=True)
 
 		digit = self.__get_digit (abort)
@@ -83,12 +83,13 @@ class Dial ():
 			digit = None
 
 		if digit is not None:
+			player.dial_sound (digit)
 			print(digit)
 
 		led.off ()
 		return digit
 
-	def get_number (self, abort, led):
+	def get_number (self, abort, led, player):
 		led.blink (on_time=0.1, off_time=0.1, n=None, background=True)
 		number = 0
 
@@ -105,6 +106,8 @@ class Dial ():
 
 			number *= 10
 			number += digit
+
+			player.dial_sound (digit)
 
 		led.off ()
 		return number
