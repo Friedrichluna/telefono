@@ -49,7 +49,6 @@ dist_pkgdata_DATA =
 dist_pkgdata_DATA += data/startup.wav
 dist_pkgdata_DATA += data/shutdown.wav
 dist_pkgdata_DATA += data/ring.wav
-dist_pkgdata_DATA += data/dial.wav
 
 templatedir = $(pkgdatadir)/templates
 dist_template_DATA =

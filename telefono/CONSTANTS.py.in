@@ -8,7 +8,6 @@ RECORD_PREFIX = "recording"
 RECORD_SUFFIX = ".wav"
 
 RING_FILE = DATA_DIR + "/ring.wav"
-DIAL_FILE = DATA_DIR + "/dial.wav"
 STARTUP_FILE = DATA_DIR + "/startup.wav"
 SHUTDOWN_FILE = DATA_DIR + "/shutdown.wav"
 
@@ -28,3 +27,13 @@ MIN_HOUR = 15
 MAX_HOUR = 21
 
 MOAN_PROPABILITY = 0.1
+
+SOX_BASE = ("play", "-n")
+SOX_VOL = ("vol", "-20dB")
+SOX_REMIX =  ("remix", "-")
+
+SOX_DIAL = (*SOX_BASE,
+            "synth",
+            "sin", "350",
+            "sin", "440",
+            *SOX_VOL, *SOX_REMIX)

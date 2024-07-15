@@ -10,7 +10,6 @@ WebApp:
 		- maybe max-width ?
 
 better time telling
-better tones
 
 better systemd integration
 - listen to SIGTERM

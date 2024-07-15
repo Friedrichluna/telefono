@@ -3,12 +3,14 @@
 
 import os
 import random
+import subprocess
 import time
 
 import pygame
 
-from .CONSTANTS import DIAL_FILE
 from .CONSTANTS import RING_FILE
+
+from .CONSTANTS import SOX_DIAL
 
 from . import Record
 
@@ -26,6 +28,7 @@ class Player ():
 		self.__hook = hook
 		self.__tts = tts
 		self.__speaker = speaker
+		self.__dial_process = None
 		return
 
 	def __on_hook (self):
@@ -71,11 +74,17 @@ class Player ():
 		                    abort=self.__never, aloud=True)
 
 	def start_dial_tone (self):
-		pygame.mixer.music.load (DIAL_FILE)
-		pygame.mixer.music.play (loops=-1)
+		if self.__dial_process is not None:
+			self.__dial_process.terminate ()
+
+		self.__dial_process = subprocess.Popen (SOX_DIAL)
+		return
 
 	def stop_dial_tone (self):
-		pygame.mixer.music.stop ()
+		if self.__dial_process is not None:
+			self.__dial_process.terminate ()
+			self.__dial_process = None
+		return
 
 	def play_recording (self, recording) -> bool:
 		recording = Record (recording, "").filename
