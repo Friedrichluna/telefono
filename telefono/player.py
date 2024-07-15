@@ -12,6 +12,7 @@ from .CONSTANTS import RING_FILE
 
 from .CONSTANTS import SOX_DIAL
 from .CONSTANTS import SOX_BUSY
+from .CONSTANTS import SOX_RELEASE
 from .CONSTANTS import SOX_SIT
 
 from .CONSTANTS import SOX_NUMBER_1
@@ -33,6 +34,9 @@ from .CONSTANTS import SOX_NUMBER_D
 
 from .CONSTANTS import NO_NUMBER_DELAY
 from .CONSTANTS import NO_NUMBER_TIMEOUT
+
+from .CONSTANTS import BUSY_DELAY
+from .CONSTANTS import BUSY_TIMEOUT
 
 from . import Record
 
@@ -125,10 +129,26 @@ class Player ():
 	def play_busy_tone (self):
 		self.start_busy_tone ()
 
+		timer = 0
+		while timer < BUSY_TIMEOUT:
+			if not self.__off_hook ():
+				self.stop_tone ()
+				return False
+
+			time.sleep (BUSY_DELAY)
+			timer += 1
+
+		self.start_release_tone ()
+
 		while self.__off_hook ():
 			pass
 
 		self.stop_tone ()
+		return
+
+	def start_release_tone (self):
+		self.stop_tone ()
+		self.__process = subprocess.Popen (SOX_RELEASE)
 		return
 
 	def start_sit_tone (self):
