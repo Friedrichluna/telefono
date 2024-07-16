@@ -14,6 +14,7 @@ class IPC_MESSAGE (enum.IntEnum):
 	GET_DESCRIPTION = 3,
 	SET_DESCRIPTION = 4,
 	LIST = 5,
+	FREE = 6,
 
 IPC_INT_SIZE = 4
 
@@ -115,6 +116,9 @@ class IPC:
 		elif IPC_MESSAGE.LIST == message_type:
 			payload = self.__deserialize_record_list (message[1:])
 
+		elif IPC_MESSAGE.FREE == message_type:
+			payload = self.__deserialize_free (message[1:])
+
 		if payload is None:
 			return (IPC_MESSAGE.ERROR, None)
 
@@ -162,6 +166,15 @@ class IPC:
 
 	def __deserialize_record_list (self, message:bytes):
 		return b""
+
+	def _serialize_free (self, number:int):
+		data = bytearray ()
+		data.append (IPC_MESSAGE.FREE)
+		data.extend (self.__serialize_int (number))
+		return data
+
+	def __deserialize_free (self, message:bytes) -> int:
+		return self.__deserialize_int (message)
 
 	def _serialize_answer (self, answer:IPC_ANSWER,
 	                       payload:bytes=b"") -> bytearray:
@@ -291,6 +304,17 @@ class IPC_Client (IPC):
 
 		return records
 
+	def is_free (self, number):
+		data = self._serialize_free (number)
+		self._send (data)
+
+		data = self._recv (IPC_ANSWER_SIZE)
+		answer, _ = self._deserialize_answer (data)
+
+		if IPC_ANSWER.OK == answer:
+			return False
+		return True
+
 	def queue_call (self, call_id:int):
 		data = self._serialize_call (call_id)
 		self._send (data)
@@ -393,6 +417,16 @@ class IPC_Server (IPC):
 			data = self._serialize_answer (IPC_ANSWER.LIST,
 			                               data)
 
+			self._send (data)
+			return
+
+		elif IPC_MESSAGE.FREE == message_type:
+			if payload in records:
+				answer = IPC_ANSWER.OK
+			else:
+				answer = IPC_ANSWER.ERROR
+
+			data = self._serialize_answer (answer)
 			self._send (data)
 			return
 

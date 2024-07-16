@@ -112,10 +112,11 @@ class TelefonoWebApp (Flask):
 
 		requested_number = int(requested_number)
 
-		if requested_number in self.records:
+		if not self.ipc.is_free (requested_number):
 			return render_template("upload.html",
 				message="Nummer %d existiert bereits!" % requested_number,
 				message_type="error")
+
 		if not uploaded_file.filename.endswith(".wav"):
 			return render_template("upload.html",
 				message="Bitte nur .wav hochladen!",
