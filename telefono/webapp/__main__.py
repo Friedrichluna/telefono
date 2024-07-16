@@ -9,7 +9,7 @@ from ..CONSTANTS import FLASK_PORT
 
 from ..CONSTANTS import UPLOAD_DIR
 
-from ..records import Records
+from .records import Records
 from ..ipc import IPC_Client
 
 from .webapp import TelefonoWebApp
