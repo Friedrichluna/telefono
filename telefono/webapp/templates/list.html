@@ -52,12 +52,12 @@
 		<a href="/upload">Upload</a>
 		<a href="/say">Text ansagen</a>
 	</nav>
-{% for number in records %}
+{% for number, description in records %}
 	<section>
 		<form method="post">
 			<input type="submit" name="selected_value" value="{{ number }}" class="button gray">
 		</form>
-		{{ records[number].description }}
+		{{ description }}
 		<a href="/edit/{{ number }}" class="button blue">&#9998;</a>
 	</section>
 {% endfor %}

@@ -54,6 +54,7 @@ class TelefonoWebApp (Flask):
 	def list(self):
 		self.records.sync_fs ()
 
+		records = self.ipc.get_list ()
 		message, message_type = None, None
 
 		if request.method == "POST":
@@ -67,7 +68,7 @@ class TelefonoWebApp (Flask):
 			recording = int (requested_number)
 			message, message_type = self.ipc.queue_call (recording)
 
-		return render_template("list.html", records=self.records,
+		return render_template("list.html", records=records,
 		                       message=message,
 		                       message_type=message_type)
 
