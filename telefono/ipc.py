@@ -93,20 +93,15 @@ class IPC:
 
 	def _serialize_answer (self, answer:IPC_ANSWER) -> bytearray:
 		data = bytearray ()
-
-		answer_id = answer.to_bytes (IPC_ANSWER_SIZE,
-		                             IPC_BYTEORDER,
-		                             signed=False)
-		data.extend (answer_id)
+		data.append (answer)
 		return data
 
 	def _deserialize_answer (self, message:bytes) -> IPC_ANSWER:
-		if len(message) < IPC_ANSWER_SIZE:
+		if len(message) < 1:
 			return IPC_ANSWER.ERROR
 
-		answer = int.from_bytes (message[:IPC_ANSWER_SIZE],
-		                         IPC_BYTEORDER, signed=False)
-		return IPC_ANSWER (answer)
+		answer = IPC_ANSWER (message[0])
+		return answer
 
 	def _send (self, message):
 		self.__socket.send (message)
