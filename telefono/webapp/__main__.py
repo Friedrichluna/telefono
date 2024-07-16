@@ -24,11 +24,12 @@ def main ():
 		print ("invalid fileno")
 		sys.exit (1)
 
-	records = Records ()
-	records.sync_fs ()
-
 	# setup connection to server
 	ipc = IPC_Client (int(sys.argv[1]))
+
+	records = Records (ipc)
+	records.sync_fs ()
+
 
 	app = TelefonoWebApp (records, ipc)
 	app.run(host=FLASK_IP, port=FLASK_PORT, debug=FLASK_DEBUG)

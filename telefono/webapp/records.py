@@ -64,11 +64,12 @@ class Record ():
 
 
 class Records ():
-	def __init__ (self, filename:str=RECORD_LIST_FILE):
+	def __init__ (self, ipc, filename:str=RECORD_LIST_FILE):
 		self.__data = dict ()
 		self.__prevent_sync = False
 
 		self.__filename = filename
+		self.__ipc = ipc
 
 		# previously crashed while writing
 		# restore backup
@@ -96,7 +97,11 @@ class Records ():
 		return record.exists
 
 	def __getitem__ (self, key):
-		return self.__data.__getitem__ (key)
+		description = self.__ipc.get_description (key)
+		if description is None:
+			raise KeyError ()
+		Record (key, description)
+		return Record (key, description)
 
 	def __setitem__ (self, key, value):
 		if int != type (key):

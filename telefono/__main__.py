@@ -193,7 +193,7 @@ def main ():
 			               ButtonLeft, ButtonMiddle,
 			               tts, led)
 
-		ipc.handle_message (queue)
+		ipc.handle_message (queue, records)
 
 		queue.process (tts, player)
 
