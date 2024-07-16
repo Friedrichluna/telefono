@@ -52,9 +52,6 @@ class TelefonoWebApp (Flask):
 			return render_template("index.html")
 
 	def list(self):
-		self.records.sync_fs ()
-
-		records = self.ipc.get_list ()
 		message, message_type = None, None
 
 		if request.method == "POST":
@@ -68,17 +65,20 @@ class TelefonoWebApp (Flask):
 			recording = int (requested_number)
 			message, message_type = self.ipc.queue_call (recording)
 
-		return render_template("list.html", records=records,
+		return render_template("list.html",
+		                       records=self.ipc.get_list (),
 		                       message=message,
 		                       message_type=message_type)
 
 	def edit_value(self, index):
 		if request.method == "POST":
 			new_value = request.form["new_value"]
-			self.records[index] = new_value
+			self.ipc.set_description (index, new_value)
 
 			return redirect("/list")
-		return render_template("edit.html", index=index, value=self.records[index].description)
+
+		return render_template("edit.html", index=index,
+		                       value=self.ipc.get_description (index))
 
 	def say (self):
 		if request.method == "POST":
@@ -124,7 +124,6 @@ class TelefonoWebApp (Flask):
 		file_path = UPLOAD_DIR + "/" + RECORD_PREFIX + str(requested_number) + RECORD_SUFFIX
 		uploaded_file.save(file_path)
 
-		self.records.sync_fs ()
 		print("test")
 		return render_template("upload.html",
 			message="erfolgreich unter %s gespeichert!" % file_path,
