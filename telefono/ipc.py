@@ -12,7 +12,7 @@ class IPC_MESSAGE (enum.IntEnum):
 	CALL = 1
 	TTS = 2
 
-IPC_CALL_ID_SIZE = 4
+IPC_INT_SIZE = 4
 
 IPC_TTS_MESSAGE_SIZE = IPC_MAX_DATA -1 -1
 
@@ -29,15 +29,38 @@ class IPC:
 		self.__socket = socket
 		return
 
+	def __serialize_int (self, integer:int) -> bytes:
+		return integer.to_bytes (IPC_INT_SIZE,
+		                         IPC_BYTEORDER,
+		                         signed=False)
+
+	def __deserialize_int (self, message:bytes) -> int:
+		if len (message) < IPC_INT_SIZE:
+			return None
+
+		return int.from_bytes (message[:IPC_INT_SIZE],
+		                       IPC_BYTEORDER, signed=False)
+
+	def __serialize_str (self, string:str, max_size:int) -> bytes:
+		if len (string) > max_size:
+			print ("string too long")
+			return b""
+
+		return string.encode () + b"\0"
+
+	def __deserialize_str (self, message:bytes, max_size) -> str:
+		size = 0
+		while size < max_size \
+		and message[size] != 0:
+			size += 1
+
+		return message[:size].decode ()
+
 	def _serialize_call (self, call_id:int) -> bytearray:
 		data = bytearray ()
 
 		data.append (IPC_MESSAGE.CALL)
-
-		call = call_id.to_bytes (IPC_CALL_ID_SIZE,
-		                         IPC_BYTEORDER,
-		                         signed=False)
-		data.extend (call)
+		data.extend (self.__serialize_int (call_id))
 
 		return data
 
@@ -46,14 +69,12 @@ class IPC:
 
 		data.append (IPC_MESSAGE.TTS)
 
-		message = message.encode ()
-
-		if len (message) > IPC_TTS_MESSAGE_SIZE:
-			print ("tts message too long")
+		text = self.__serialize_str (message,
+		                             IPC_TTS_MESSAGE_SIZE)
+		if not text:
 			return bytearray ()
 
-		data.extend (message)
-		data.append (0)
+		data.extend (text)
 		return data
 
 	def _deserialize (self, message:bytes) -> (IPC_MESSAGE, object):
@@ -75,21 +96,11 @@ class IPC:
 		return (message_type, payload)
 
 	def __deserialize_call (self, message:bytes) -> int:
-		if len (message) < IPC_CALL_ID_SIZE:
-			return None
-
-		call_id = int.from_bytes (message[:IPC_CALL_ID_SIZE],
-		                          IPC_BYTEORDER, signed=False)
-
-		return call_id
+		return self.__deserialize_int (message)
 
 	def __deserialize_tts (self, message:bytes) -> str:
-		size = 0
-		while size < IPC_TTS_MESSAGE_SIZE \
-		and message[size] != 0:
-			size += 1
-
-		return message[:size].decode ()
+		return self.__deserialize_str (message,
+		                               IPC_TTS_MESSAGE_SIZE)
 
 	def _serialize_answer (self, answer:IPC_ANSWER) -> bytearray:
 		data = bytearray ()
