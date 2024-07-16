@@ -74,7 +74,7 @@ class TelefonoWebApp (Flask):
 	def edit_value(self, index):
 		if request.method == "POST":
 			new_value = request.form["new_value"]
-			self.records[index].description = new_value
+			self.records[index] = new_value
 
 			return redirect("/list")
 		return render_template("edit.html", index=index, value=self.records[index].description)

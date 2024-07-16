@@ -12,6 +12,7 @@ class IPC_MESSAGE (enum.IntEnum):
 	CALL = 1
 	TTS = 2,
 	GET_DESCRIPTION = 3,
+	SET_DESCRIPTION = 4,
 
 IPC_INT_SIZE = 4
 
@@ -97,6 +98,9 @@ class IPC:
 		elif IPC_MESSAGE.GET_DESCRIPTION == message_type:
 			payload = self.__deserialize_record_get (message[1:])
 
+		elif IPC_MESSAGE.SET_DESCRIPTION == message_type:
+			payload = self.__deserialize_record_set (message[1:])
+
 		if payload is None:
 			return (IPC_MESSAGE.ERROR, None)
 
@@ -119,6 +123,23 @@ class IPC:
 
 	def __deserialize_record_get (self, message:bytes) -> int:
 		return self.__deserialize_int (message)
+
+	def _serialize_record_set (self, call_id:int,
+	                           description:str) -> bytearray:
+		data = bytearray ()
+
+		data.append (IPC_MESSAGE.SET_DESCRIPTION)
+		data.extend (self.__serialize_int (call_id))
+		data.extend (self.__serialize_str (description,
+		                                   IPC_DESCRIPTION_SIZE))
+
+		return data
+
+	def __deserialize_record_set (self, message:bytes) -> (int, str):
+		key = self.__deserialize_int (message)
+		value = self.__deserialize_str (message[IPC_INT_SIZE:],
+		                                IPC_DESCRIPTION_SIZE)
+		return key, value
 
 	def _serialize_answer (self, answer:IPC_ANSWER,
 	                       payload:bytes=b"") -> bytearray:
@@ -185,6 +206,21 @@ class IPC_Client (IPC):
 			return data
 
 		return None
+
+	def set_description (self, call_id:int, description:str):
+		data = self._serialize_record_set (call_id, description)
+		self._send (data)
+
+		data = self._recv (IPC_ANSWER_SIZE)
+		answer, _ = self._deserialize_answer (data)
+
+		if IPC_ANSWER.OK == answer:
+			return "Beschreibung ge&auml;ndert.", "success"
+
+		elif IPC_ANSWER.ERROR == answer:
+			return "Ein Fehler ist aufgetreten.", "error"
+
+		return "Ein Fehler ist aufgetreten.", "error"
 
 	def queue_call (self, call_id:int):
 		data = self._serialize_call (call_id)
@@ -274,6 +310,14 @@ class IPC_Server (IPC):
 				                        data)
 				self._send (data)
 				return
+
+		elif IPC_MESSAGE.SET_DESCRIPTION == message_type:
+			key, value = payload
+			records[key].description = value
+
+			data = self._serialize_answer (IPC_ANSWER.OK)
+			self._send (data)
+			return
 
 		data = self._serialize_answer (IPC_ANSWER.ERROR)
 		self._send (data)

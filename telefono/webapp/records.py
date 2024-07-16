@@ -114,8 +114,7 @@ class Records ():
 			      "Invalid value %s, must be str not %s."
 			      % (repr(value), type (value)))
 
-		self.__data.__setitem__ (key, Record (key, value))
-		self.sync_data ()
+		self.__ipc.set_description (key, value)
 		return
 
 	def __delitem__ (self, key):
