@@ -17,7 +17,6 @@ webappdir = $(pkgpythondir)/webapp
 webapp_PYTHON =
 webapp_PYTHON += telefono/webapp/__init__.py
 webapp_PYTHON += telefono/webapp/__main__.py
-webapp_PYTHON += telefono/webapp/records.py
 webapp_PYTHON += telefono/webapp/webapp.py
 
 nodist_pkgpython_PYTHON =

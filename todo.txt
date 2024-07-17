@@ -1,8 +1,7 @@
 translate README
 
-handle synchronous access to Records
--> send changes over ipc
-- handle larger lists of descriptions
+IPC:
+	- handle larger lists of descriptions
 
 WebApp:
 	- record and call functionality

@@ -19,10 +19,9 @@ def getFreeDiskSpace():
 
 
 class TelefonoWebApp (Flask):
-	def __init__ (self, records, ipc):
+	def __init__ (self, ipc):
 		super ().__init__ (__name__, template_folder=FLASK_TEMPLATES)
 
-		self.records = records
 		self.ipc = ipc
 
 		self.add_url_rule ("/", "home", self.home, methods=["POST", "GET"])

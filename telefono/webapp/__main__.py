@@ -9,7 +9,6 @@ from ..CONSTANTS import FLASK_PORT
 
 from ..CONSTANTS import UPLOAD_DIR
 
-from .records import Records
 from ..ipc import IPC_Client
 
 from .webapp import TelefonoWebApp
@@ -27,11 +26,7 @@ def main ():
 	# setup connection to server
 	ipc = IPC_Client (int(sys.argv[1]))
 
-	records = Records (ipc)
-	records.sync_fs ()
-
-
-	app = TelefonoWebApp (records, ipc)
+	app = TelefonoWebApp (ipc)
 	app.run(host=FLASK_IP, port=FLASK_PORT, debug=FLASK_DEBUG)
 
 if __name__ == "__main__":
