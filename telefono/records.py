@@ -131,7 +131,7 @@ class Records ():
 		return record
 
 	def __contains__ (self, key):
-		record = self.__get (key)
+		record = self.__get (str (key))
 
 		if None is record:
 			return False
@@ -139,7 +139,7 @@ class Records ():
 		return record.exists
 
 	def __getitem__ (self, key):
-		return self.__get (key)
+		return self.__get (str (key))
 
 	def __setitem__ (self, key, value):
 		if int != type (key):
@@ -152,12 +152,12 @@ class Records ():
 			      "Invalid value %s, must be str not %s."
 			      % (repr(value), type (value)))
 
-		self.__set (key, Record (key, value))
+		self.__set (str (key), Record (key, value))
 		self.sync_data ()
 		return
 
 	def __delitem__ (self, key):
-		self.__del (key)
+		self.__del (str (key))
 		self.sync_data ()
 		return
 
@@ -189,7 +189,7 @@ class Records ():
 		return c
 
 	def get (self, key, default=None):
-		return self.__get (key, default)
+		return self.__get (str (key), default)
 
 	def items (self):
 		for key, record in self.__data:
@@ -199,11 +199,10 @@ class Records ():
 	def keys (self):
 		for key, record in self.__data:
 			if record.exists:
-				yield key
-
+				yield int (key)
 
 	def pop (self, number):
-		ret = self.__del (number)
+		ret = self.__del (str (number))
 		self.sync_data ()
 		return ret
 
@@ -218,9 +217,9 @@ class Records ():
 			      "Invalid default %s, must be str not %s."
 			      % (repr(default), type (default)))
 
-		self.__set (key, Record (key, default), keep=True)
+		self.__set (str (key), Record (key, default), keep=True)
 		self.sync_data ()
-		return self.__get (key)
+		return self.__get (str (key))
 
 	def __load (self, _file):
 		fcntl.flock(_file, fcntl.LOCK_SH)
@@ -273,7 +272,7 @@ class Records ():
 
 		_file.truncate ()
 
-		numbers = [number for number, record in self.__data]
+		numbers = [int (number) for number, record in self.__data]
 		numbers.sort ()
 
 		for number in numbers:
@@ -300,7 +299,7 @@ class Records ():
 
 	def __validate (self, number):
 		self.setdefault (number)
-		self.__get (number).exists = True
+		self.__get (str (number)).exists = True
 		return
 
 	def sync_data (self):
@@ -350,7 +349,7 @@ class Records ():
 		if not self.__data:
 			return None
 
-		return random.choice (self.__data) [0]
+		return int (random.choice (self.__data) [0])
 
 	def add_next (self):
 		number = 0
