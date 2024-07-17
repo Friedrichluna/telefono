@@ -3,10 +3,11 @@
 
 import time
 
+from .CONSTANTS import DIAL_SLEEP
+from .CONSTANTS import DIAL_TIMEOUT_DELAY
+from .CONSTANTS import DIAL_TIMEOUT
+from .CONSTANTS import DIAL_AUTO_TIMEOUT
 
-DIAL_TIMEOUT = 200000
-DIAL_TIMEOUT_SLEEP = 0.001
-DIAL_SLEEP = 0.01
 
 class Dial ():
 	def __init__ (self, DialInUse, DialCounter):
@@ -30,15 +31,15 @@ class Dial ():
 	def digit_moved (self):
 		return self.__counter.is_pressed
 
-	def __get_digit (self, abort):
+	def __get_digit (self, abort, timeout):
 		# timeout while idle
 		timeCounter = 0
-		while timeCounter <= DIAL_TIMEOUT \
+		while timeCounter <= timeout \
 		and not abort ():
 			if self.dialing:
 				break
 
-			time.sleep (DIAL_TIMEOUT_SLEEP)
+			time.sleep (DIAL_TIMEOUT_DELAY)
 			timeCounter += 1
 		else:
 			return -1
@@ -76,7 +77,7 @@ class Dial ():
 	def get_digit (self, abort, led, player):
 		led.blink (on_time=0.1, off_time=0.1, n=None, background=True)
 
-		digit = self.__get_digit (abort)
+		digit = self.__get_digit (abort, DIAL_TIMEOUT)
 
 		# timeout
 		if -1 == digit:
@@ -91,21 +92,27 @@ class Dial ():
 
 	def get_number (self, abort, led, player):
 		led.blink (on_time=0.1, off_time=0.1, n=None, background=True)
-		number = 0
+		number = None
 
 		while not abort():
-			digit = self.__get_digit (abort)
+			digit = self.__get_digit (abort, DIAL_AUTO_TIMEOUT)
 
 			# timeout
 			if -1 == digit:
-				break
+				if None is number:
+					continue
+				else:
+					break
 
 			# not dialed
 			if None is digit:
 				continue
 
-			number *= 10
-			number += digit
+			if None is number:
+				number = digit
+			else:
+				number *= 10
+				number += digit
 
 			player.dial_sound (digit)
 
