@@ -26,8 +26,6 @@ FLASK_TEMPLATES = "@templatedir@"
 MIN_HOUR = 15
 MAX_HOUR = 21
 
-MOAN_PROPABILITY = 0.1
-
 SOX_BASE = ("play", "-n")
 SOX_VOL = ("vol", "-20dB")
 SOX_REMIX =  ("remix", "-")

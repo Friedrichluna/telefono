@@ -21,8 +21,6 @@ from .CONSTANTS import SHUTDOWN_FILE
 
 from .CONSTANTS import WEBAPP_EXEC
 
-from .CONSTANTS import MOAN_PROPABILITY
-
 from .ipc import IPC_Server
 from .player import Player
 
@@ -130,10 +128,6 @@ def off_hook_loop (records, player, PickUp, dial, ButtonLeft, ButtonMiddle, tts,
 			break
 	else:
 		player.stop_tone ()
-
-	# moan
-	if random.random () < MOAN_PROPABILITY:
-		tts.say ("Ahhhhh!")
 
 	return
 
