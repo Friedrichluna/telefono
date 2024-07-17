@@ -33,8 +33,7 @@ SOX_REPEAT =  ("repeat", "-")
 
 SOX_DIAL = (*SOX_BASE,
             "synth",
-            "sin", "350",
-            "sin", "440",
+            "sin", "425",
             *SOX_VOL, *SOX_REMIX)
 
 SOX_BUSY = (*SOX_BASE,
