@@ -65,7 +65,7 @@ class Record ():
 
 class Records ():
 	def __init__ (self, filename:str=RECORD_LIST_FILE):
-		self.__data = dict ()
+		self.__data = list ()
 		self.__prevent_sync = False
 
 		self.__filename = filename
@@ -87,8 +87,51 @@ class Records ():
 
 		return None
 
+	def __find (self, number):
+		for index in range (len (self.__data)):
+			if number == self.__data[index][0]:
+				return index, True
+			if number < self.__data[index][0]:
+				return index, False
+		return None, False
+
+	def __get (self, number, default=None):
+		index, exists = self.__find (number)
+
+		if exists:
+			return self.__data[index][1]
+
+		return default
+
+	def __set (self, number, record, keep=False):
+		index, exists = self.__find (number)
+
+		if None is index:
+			self.__data.append ((number, record))
+			return
+
+		if not exists:
+			self.__data.insert (index, (number, record))
+			return
+
+		if keep:
+			return
+
+		self.__data[index][1] = record
+		return
+
+	def __del (self, number):
+		index, exists = self.__find (number)
+
+		if not exists:
+			return None
+
+		record = self.__data[index][1]
+		self.__data.__delitem__ (index)
+		return record
+
 	def __contains__ (self, key):
-		record = self.__data.get (key)
+		record = self.__get (key)
 
 		if None is record:
 			return False
@@ -96,7 +139,7 @@ class Records ():
 		return record.exists
 
 	def __getitem__ (self, key):
-		return self.__data.__getitem__ (key)
+		return self.__get (key)
 
 	def __setitem__ (self, key, value):
 		if int != type (key):
@@ -109,24 +152,24 @@ class Records ():
 			      "Invalid value %s, must be str not %s."
 			      % (repr(value), type (value)))
 
-		self.__data.__setitem__ (key, Record (key, value))
+		self.__set (key, Record (key, value))
 		self.sync_data ()
 		return
 
 	def __delitem__ (self, key):
-		self.__data.__delitem__ (key)
+		self.__del (key)
 		self.sync_data ()
 		return
 
 
 	def __iter__ (self):
-		l = list(self.keys())
-		l.sort()
-		return iter(l)
+		l = list (self.keys ())
+		l.sort ()
+		return iter (l)
 
 	def __len__ (self):
 		length = 0
-		for key, record in self.__data.items ():
+		for key, record in self.__data:
 			if record.exists:
 				length += 1
 		return length
@@ -146,27 +189,21 @@ class Records ():
 		return c
 
 	def get (self, key, default=None):
-		return self.__data.get (key, default)
+		return self.__get (key, default)
 
 	def items (self):
-		for key, record in self.__data.items ():
+		for key, record in self.__data:
 			if record.exists:
 				yield record
 
 	def keys (self):
-		for key, record in self.__data.items ():
+		for key, record in self.__data:
 			if record.exists:
 				yield key
 
-	def pop (self, key, *args, **kwargs):
-		ret = self.__data.pop (key, *args, **kwargs)
 
-		self.sync_data ()
-		return ret
-
-	def popitem (self):
-		ret = self.__data.popitem ()
-
+	def pop (self, number):
+		ret = self.__del (number)
 		self.sync_data ()
 		return ret
 
@@ -181,18 +218,9 @@ class Records ():
 			      "Invalid default %s, must be str not %s."
 			      % (repr(default), type (default)))
 
-		ret = self.__data.setdefault (key, Record (key, default))
-
+		self.__set (key, Record (key, default), keep=True)
 		self.sync_data ()
-		return ret
-
-	def update (self, *args, **kwargs):
-		raise NotImplementedError
-
-	def values (self):
-		for key, record in self.__data.items ():
-			if record.exists:
-				yield record.description
+		return self.__get (key)
 
 	def __load (self, _file):
 		fcntl.flock(_file, fcntl.LOCK_SH)
@@ -245,18 +273,17 @@ class Records ():
 
 		_file.truncate ()
 
-		keys = self.__data.keys ()
-		keys = list (keys)
-		keys.sort ()
+		numbers = [number for number, record in self.__data]
+		numbers.sort ()
 
-		for key in keys:
-			name = self[key].description.strip ()
+		for number in numbers:
+			name = self[number].description.strip ()
 
 			# ignore empty names
 			if not name:
 				continue
 
-			_file.write (str (key))
+			_file.write (str (number))
 			_file.write (": ")
 			_file.write (name)
 			_file.write ("\n")
@@ -267,13 +294,13 @@ class Records ():
 		return
 
 	def __invalidate_fs (self):
-		for record in self.__data.values ():
+		for key, record in self.__data:
 			record.exists = False
 		return
 
-	def __validate (self, key):
-		self.setdefault (key)
-		self.__data[key].exists = True
+	def __validate (self, number):
+		self.setdefault (number)
+		self.__get (number).exists = True
 		return
 
 	def sync_data (self):
@@ -323,7 +350,7 @@ class Records ():
 		if not self.__data:
 			return None
 
-		return random.choice (list (self.__data.keys ()))
+		return random.choice (self.__data) [0]
 
 	def add_next (self):
 		number = 0
