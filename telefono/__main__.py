@@ -69,7 +69,20 @@ def off_hook_loop (records, player, PickUp, dial, ButtonLeft, ButtonMiddle, tts,
 
 			player.stop_tone ()
 
-			record (records, tts, end, abort)
+			record = records.add_next ()
+			tts.say("Aufnahme Nr.: " + str(record.number) + " wird gestartet")
+
+			result = record (records, record.filename, end, abort)
+
+			if RECORDER_RESULT.ABORT == result:
+				tts.say("Aufnahme Nr.: " + str(record.number) + " abgebrochen")
+			elif RECORDER_RESULT.MIN_TIME == result:
+				tts.say ("Aufnahme zu kurz")
+			elif RECORDER_RESULT.MAX_TIME == result:
+				tts.say("Aufnahme Nr.: " + str(record.number) + "wegen overtime beendet.")
+			else:
+				print ("Aufnahme Nr.: " + str(record.number) + " beendet.")
+
 
 			player.play_busy_tone ()
 			break

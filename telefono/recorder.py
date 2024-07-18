@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
+import enum
 import os
 import time
 
@@ -11,6 +12,12 @@ import wave
 from .CONSTANTS import RECORD_DELAY
 from .CONSTANTS import RECORD_TIME_MIN
 from .CONSTANTS import RECORD_TIME_MAX
+
+class RECORDER_RESULT (enum.IntEnum):
+	ABORT = 0
+	END = 1
+	MIN_TIME = 2
+	MAX_TIME = 3
 
 
 CHANNELS = 2
@@ -72,12 +79,9 @@ class Recorder ():
 		return False
 
 
-def record (records, tts, end, abort):
-	record = records.add_next ()
-	tts.say("Aufnahme Nr.: " + str(record.number) + " wird gestartet")
-
+def record (records, filename, end, abort):
 	recordingTime = 0
-	with Recorder (record.filename, led) as recorder:
+	with Recorder (filename, led) as recorder:
 
 		while recordingTime <= RECORD_TIME_MAX \
 		and not end ():
@@ -85,18 +89,15 @@ def record (records, tts, end, abort):
 			recordingTime += 1
 
 			if abort ():
-				tts.say("Aufnahme Nr.: " + str(record.number) + " abgebrochen")
-				return
+				return RECORDER_RESULT.ABORT
 
-		if recordingTime > RECORD_TIME_MIN:
-			recorder.save ()
-			records.sync_fs ()
+		if recordingTime <= RECORD_TIME_MIN:
+			return RECORDER_RESULT.MIN_TIME
+
+		recorder.save ()
+		records.sync_fs ()
 
 	if recordingTime > RECORD_TIME_MAX:
-		tts.say("Aufnahme Nr.: " + str(record.number) + "wegen overtime beendet.")
-	elif recordingTime <= RECORD_TIME_MIN:
-		tts.say ("Aufnahme zu kurz")
-	else:
-		print ("Aufnahme Nr.: " + str(record.number) + " beendet.")
+		return RECORDER_RESULT.MAX_TIME
 
-	return
+	return RECORDER_RESULT.END
