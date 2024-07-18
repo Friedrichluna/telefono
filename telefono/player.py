@@ -33,6 +33,9 @@ from .CONSTANTS import SOX_NUMBER_C
 from .CONSTANTS import SOX_NUMBER_D
 
 from .CONSTANTS import FFPLAY_CMD
+from .CONSTANTS import FFPLAY_START
+
+from .CONSTANTS import WIND_TIME
 
 from .CONSTANTS import NO_NUMBER_DELAY
 from .CONSTANTS import NO_NUMBER_TIMEOUT
@@ -48,12 +51,14 @@ class Player ():
 	__dicePrayers = [201, 202, 203, 204, 205, 206]
 	__pater = [2, 10, 11, 19, 22, 26, 30, 88]
 
-	def __init__ (self, hook, tts, speaker):
+	def __init__ (self, hook, wind_back, wind_forward, tts, speaker):
 		# setup pygame
 		pygame.mixer.init()
 		pygame.init()
 
 		self.__hook = hook
+		self.__wind_back = wind_back
+		self.__wind_forward = wind_forward
 		self.__tts = tts
 		self.__speaker = speaker
 		self.__process = None
@@ -68,7 +73,23 @@ class Player ():
 	def __never (self):
 		return False
 
-	def __play (self, fileName, abort, aloud=False) -> bool:
+	def __back (self):
+		return self.__wind_back.is_released
+
+	def __forward (self):
+		return self.__wind_forward.is_released
+
+	def __ffplay (self, filename, start=0):
+		process = subprocess.Popen ((*FFPLAY_CMD, filename,
+		                            *FFPLAY_START, str (start)),
+		                            stderr=subprocess.PIPE,
+		                            text=True)
+
+		# wait for ffplay to produce output
+		time.sleep (0.5)
+		return process
+
+	def __play (self, fileName, abort, aloud=False, wind=False) -> bool:
 		if abort ():
 			return False
 
@@ -79,12 +100,50 @@ class Player ():
 			time.sleep (2)
 
 		if os.path.exists (fileName):
-			process = subprocess.Popen ((*FFPLAY_CMD, fileName))
+			process = self.__ffplay (fileName)
+
 			while process.poll () is None:
 				time.sleep (0.01)
 				if abort ():
 					process.terminate ()
 					aborted = True
+
+				if wind and self.__back ():
+					process.terminate ()
+					data = process.communicate ()
+					try:
+						data = data[1]
+						data = data.split ('\n')
+						data = data[-2]
+						data = data.strip ()
+						data = data.split (' ')
+						data = data[0]
+						start = float (data)
+						start -= WIND_TIME
+					except:
+						start = 0
+
+					process = self.__ffplay (fileName,
+					                         start)
+
+
+				if wind and self.__forward ():
+					process.terminate ()
+					data = process.communicate ()
+					try:
+						data = data[1]
+						data = data.split ('\n')
+						data = data[-2]
+						data = data.strip ()
+						data = data.split (' ')
+						data = data[0]
+						start = float (data)
+						start += WIND_TIME
+					except:
+						start = 0
+
+					process = self.__ffplay (fileName,
+					                         start)
 		else:
 			self.start_sit_tone ()
 
@@ -160,7 +219,8 @@ class Player ():
 	def play_recording (self, recording) -> bool:
 		recording = Record (recording, "").filename
 
-		return self.__play (recording, abort=self.__on_hook)
+		return self.__play (recording, abort=self.__on_hook,
+		                    wind=True)
 
 	def call (self, call, ring=True) -> bool:
 		if ring:

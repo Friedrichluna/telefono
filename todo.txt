@@ -1,6 +1,8 @@
 translate README
 
-get rid of pygame
+Player:
+	- get rid of pygame
+	- don't wait for ffplay
 
 IPC:
 	- handle larger lists of descriptions

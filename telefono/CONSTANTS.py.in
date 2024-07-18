@@ -113,6 +113,9 @@ SOX_NUMBER_D = SOX_NUMBER (941, 1633)
 
 
 FFPLAY_CMD = ("ffplay", "-nodisp", "-autoexit", "-i")
+FFPLAY_START = ("-ss", )
+
+WIND_TIME = 10
 
 
 NO_NUMBER_DELAY = 0.01

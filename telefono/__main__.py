@@ -42,7 +42,7 @@ def off_hook_loop (records, player, PickUp, dial, ButtonLeft, ButtonMiddle, tts,
 	minRecordingTime = 20
 
 	def dial_number_abort ():
-		return ButtonLeft.is_pressed or not PickUp.is_pressed
+		return ButtonLeft.is_released or not PickUp.is_pressed
 
 	def dial_digit_abort ():
 		return not PickUp.is_pressed
@@ -159,7 +159,7 @@ def main ():
 	speakerThread.start()
 
 	tts = TTS ()
-	player = Player (PickUp, tts, speakerThread)
+	player = Player (PickUp, ButtonLeft, ButtonMiddle, tts, speakerThread)
 
 	# initialize call queue
 	queue = EventQueue (records)
