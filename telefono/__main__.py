@@ -60,9 +60,16 @@ def off_hook_loop (records, player, PickUp, dial, ButtonLeft, ButtonMiddle, tts,
 
 		# recording
 		if ButtonLeft.is_pressed:
+
+			def end ():
+				return ButtonLeft.is_released or not PickUp.is_pressed
+
+			def abort ():
+				return ButtonMiddle.is_released
+
 			player.stop_tone ()
 
-			record (records, tts, PickUp, ButtonLeft, ButtonMiddle)
+			record (records, tts, end, abort)
 
 			player.play_busy_tone ()
 			break

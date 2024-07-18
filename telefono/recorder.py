@@ -72,32 +72,28 @@ class Recorder ():
 		return False
 
 
-def record (records, tts, PickUp, ButtonLeft, ButtonMiddle):
+def record (records, tts, end, abort):
 	record = records.add_next ()
 	tts.say("Aufnahme Nr.: " + str(record.number) + " wird gestartet")
 
-	aborted = False
 	recordingTime = 0
 	with Recorder (record.filename, led) as recorder:
 
 		while recordingTime <= RECORD_TIME_MAX \
-		and PickUp.is_pressed \
-		and not ButtonLeft.is_released \
-		and not aborted:
+		and not end ():
 			time.sleep (RECORD_DELAY)
 			recordingTime += 1
 
-			if ButtonMiddle.is_released:
-				aborted = True
+			if abort ():
+				tts.say("Aufnahme Nr.: " + str(record.number) + " abgebrochen")
+				return
 
-		if recordingTime > RECORD_TIME_MIN and not aborted:
+		if recordingTime > RECORD_TIME_MIN:
 			recorder.save ()
 			records.sync_fs ()
 
 	if recordingTime > RECORD_TIME_MAX:
 		tts.say("Aufnahme Nr.: " + str(record.number) + "wegen overtime beendet.")
-	elif aborted:
-		tts.say("Aufnahme Nr.: " + str(record.number) + " abgebrochen")
 	elif recordingTime <= RECORD_TIME_MIN:
 		tts.say ("Aufnahme zu kurz")
 	else:
