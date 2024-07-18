@@ -1,5 +1,7 @@
 translate README
 
+get rid of pygame
+
 IPC:
 	- handle larger lists of descriptions
 
@@ -9,6 +11,7 @@ WebApp:
 		- style heading
 		- maybe max-width ?
 
+update list on upload
 better time telling
 
 better systemd integration
@@ -22,3 +25,5 @@ don't run sudo on make install
 
 Dial:
 	- is it correct to wait for LOW first ?
+
+add logging

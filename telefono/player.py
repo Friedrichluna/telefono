@@ -32,6 +32,8 @@ from .CONSTANTS import SOX_NUMBER_B
 from .CONSTANTS import SOX_NUMBER_C
 from .CONSTANTS import SOX_NUMBER_D
 
+from .CONSTANTS import FFPLAY_CMD
+
 from .CONSTANTS import NO_NUMBER_DELAY
 from .CONSTANTS import NO_NUMBER_TIMEOUT
 
@@ -77,12 +79,11 @@ class Player ():
 			time.sleep (2)
 
 		if os.path.exists (fileName):
-			pygame.mixer.music.load(fileName)
-			pygame.mixer.music.play()
-			while pygame.mixer.music.get_busy():
+			process = subprocess.Popen ((*FFPLAY_CMD, fileName))
+			while process.poll () is None:
 				time.sleep (0.01)
 				if abort ():
-					pygame.mixer.music.stop()
+					process.terminate ()
 					aborted = True
 		else:
 			self.start_sit_tone ()
