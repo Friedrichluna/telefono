@@ -407,6 +407,7 @@ class IPC_Server (IPC):
 		elif IPC_MESSAGE.SET_DESCRIPTION == message_type:
 			key, value = payload
 			records[key].description = value
+			records.sync_data ()
 
 			data = self._serialize_answer (IPC_ANSWER.OK)
 			self._send (data)
