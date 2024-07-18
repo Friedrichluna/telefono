@@ -38,9 +38,6 @@ def turn_off (button):
 
 def off_hook_loop (records, player, PickUp, dial, ButtonLeft, ButtonMiddle, tts, led):
 
-	maxRecordingTime = 1200     #in 0.1 sek
-	minRecordingTime = 20
-
 	def dial_number_abort ():
 		return ButtonLeft.is_released or not PickUp.is_pressed
 
@@ -65,35 +62,7 @@ def off_hook_loop (records, player, PickUp, dial, ButtonLeft, ButtonMiddle, tts,
 		if ButtonLeft.is_pressed:
 			player.stop_tone ()
 
-			record = records.add_next ()
-			tts.say("Aufnahme Nr.: " + str(record.number) + " wird gestartet")
-
-			aborted = False
-			recordingTime = 0
-			with Recorder (record.filename, led) as recorder:
-
-				while recordingTime <= maxRecordingTime \
-				and PickUp.is_pressed \
-				and not ButtonLeft.is_released \
-				and not aborted:
-					time.sleep (0.1)
-					recordingTime += 1
-
-					if ButtonMiddle.is_released:
-						aborted = True
-
-				if recordingTime > minRecordingTime and not aborted:
-					recorder.save ()
-					records.sync_fs ()
-
-			if recordingTime > maxRecordingTime:
-				tts.say("Aufnahme Nr.: " + str(record.number) + "wegen overtime beendet.")
-			elif aborted:
-				tts.say("Aufnahme Nr.: " + str(record.number) + " abgebrochen")
-			elif recordingTime <= minRecordingTime:
-				tts.say ("Aufnahme zu kurz")
-			else:
-				print ("Aufnahme Nr.: " + str(record.number) + " beendet.")
+			record (records, tts, PickUp, ButtonLeft, ButtonMiddle)
 
 			player.play_busy_tone ()
 			break

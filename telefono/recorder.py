@@ -2,10 +2,15 @@
 # -*- coding: utf-8 -*-
 
 import os
+import time
 
 import linkat
 import pyaudio
 import wave
+
+from .CONSTANTS import RECORD_DELAY
+from .CONSTANTS import RECORD_TIME_MIN
+from .CONSTANTS import RECORD_TIME_MAX
 
 
 CHANNELS = 2
@@ -65,3 +70,37 @@ class Recorder ():
 		self._pa.terminate ()
 		self.wavefile.close ()
 		return False
+
+
+def record (records, tts, PickUp, ButtonLeft, ButtonMiddle):
+	record = records.add_next ()
+	tts.say("Aufnahme Nr.: " + str(record.number) + " wird gestartet")
+
+	aborted = False
+	recordingTime = 0
+	with Recorder (record.filename, led) as recorder:
+
+		while recordingTime <= RECORD_TIME_MAX \
+		and PickUp.is_pressed \
+		and not ButtonLeft.is_released \
+		and not aborted:
+			time.sleep (RECORD_DELAY)
+			recordingTime += 1
+
+			if ButtonMiddle.is_released:
+				aborted = True
+
+		if recordingTime > RECORD_TIME_MIN and not aborted:
+			recorder.save ()
+			records.sync_fs ()
+
+	if recordingTime > RECORD_TIME_MAX:
+		tts.say("Aufnahme Nr.: " + str(record.number) + "wegen overtime beendet.")
+	elif aborted:
+		tts.say("Aufnahme Nr.: " + str(record.number) + " abgebrochen")
+	elif recordingTime <= RECORD_TIME_MIN:
+		tts.say ("Aufnahme zu kurz")
+	else:
+		print ("Aufnahme Nr.: " + str(record.number) + " beendet.")
+
+	return

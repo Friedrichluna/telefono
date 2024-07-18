@@ -4,6 +4,7 @@
 from .button import Button
 from .dial import Dial
 from .recorder import Recorder
+from .recorder import record
 from .speaker import SpeakerThread
 from .tts import TTS
 from .records import Record
@@ -14,6 +15,7 @@ __all__ = [
 	"Button",
 	"Dial",
 	"Recorder",
+	"record",
 	"SpeakerThread",
 	"TTS",
 	"Records",
