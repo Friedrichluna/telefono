@@ -34,6 +34,7 @@ from .CONSTANTS import SOX_NUMBER_D
 
 from .CONSTANTS import FFPLAY_CMD
 from .CONSTANTS import FFPLAY_START
+from .CONSTANTS import FFPLAY_VOLUME
 
 from .CONSTANTS import WIND_TIME
 
@@ -79,9 +80,10 @@ class Player ():
 	def __forward (self):
 		return self.__wind_forward.is_released
 
-	def __ffplay (self, filename, start=0):
+	def __ffplay (self, filename, start=0, volume=100):
 		process = subprocess.Popen ((*FFPLAY_CMD, filename,
-		                            *FFPLAY_START, str (start)),
+		                            *FFPLAY_START, str (start),
+		                            *FFPLAY_VOLUME, str (volume)),
 		                            stderr=subprocess.PIPE,
 		                            text=True)
 
@@ -89,7 +91,8 @@ class Player ():
 		time.sleep (0.5)
 		return process
 
-	def __play (self, fileName, abort, aloud=False, wind=False) -> bool:
+	def __play (self, fileName, abort, volume=100,
+	            aloud=False, wind=False) -> bool:
 		if abort ():
 			return False
 
@@ -100,7 +103,7 @@ class Player ():
 			time.sleep (2)
 
 		if os.path.exists (fileName):
-			process = self.__ffplay (fileName)
+			process = self.__ffplay (fileName, volume=volume)
 
 			while process.poll () is None:
 				time.sleep (0.01)
@@ -124,7 +127,8 @@ class Player ():
 						start = 0
 
 					process = self.__ffplay (fileName,
-					                         start)
+					                         start,
+					                         volume)
 
 
 				if wind and self.__forward ():
@@ -143,7 +147,8 @@ class Player ():
 						start = 0
 
 					process = self.__ffplay (fileName,
-					                         start)
+					                         start,
+					                         volume)
 		else:
 			self.start_sit_tone ()
 
@@ -226,6 +231,7 @@ class Player ():
 		if ring:
 			if self.__play (RING_FILE,
 			                abort=self.__off_hook,
+			                volume=70,
 			                aloud=True):
 
 				# never picked up
