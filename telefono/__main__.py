@@ -3,18 +3,12 @@
 
 import datetime
 import random
-import socket
 import subprocess
-import sys
 import time
 
 import gpiozero
 
 from . import *
-
-from .CONSTANTS import RECORD_DIR
-from .CONSTANTS import RECORD_PREFIX
-from .CONSTANTS import RECORD_SUFFIX
 
 from .CONSTANTS import STARTUP_FILE
 from .CONSTANTS import SHUTDOWN_FILE
