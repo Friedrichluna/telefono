@@ -36,89 +36,94 @@ def turn_off (button):
 
 	return False
 
-def off_hook_loop (records, player, PickUp, dial, ButtonLeft, ButtonMiddle, tts, led):
+def do_dial_call (hook, ButtonLeft, dial, player, led):
+	def abort ():
+		return ButtonLeft.is_released or not hook.is_pressed
 
-	def dial_number_abort ():
-		return ButtonLeft.is_released or not PickUp.is_pressed
+	number = dial.get_number (abort, led, player)
+	if player.play_recording (number):
+		# still off-hook
+		player.play_busy_tone ()
+	return
 
-	def dial_digit_abort ():
-		return not PickUp.is_pressed
+def do_recording (hook, ButtonLeft, ButtonMiddle, records, player, tts, led):
 
+	def end ():
+		return ButtonLeft.is_released or not hook.is_pressed
+
+	def abort ():
+		return ButtonMiddle.is_released
+
+	record = records.add_next ()
+	tts.say("Aufnahme Nr.: " + str(record.number) + " wird gestartet")
+
+	result = Recorder (record.filename,
+	                   records, led).record (end, abort)
+
+	if RECORDER_RESULT.ABORT == result:
+		tts.say("Aufnahme Nr.: " + str(record.number) + " abgebrochen")
+	elif RECORDER_RESULT.MIN_TIME == result:
+		tts.say ("Aufnahme zu kurz")
+	elif RECORDER_RESULT.MAX_TIME == result:
+		tts.say("Aufnahme Nr.: " + str(record.number) + "wegen overtime beendet.")
+	else:
+		print ("Aufnahme Nr.: " + str(record.number) + " beendet.")
+
+	player.play_busy_tone ()
+	return
+
+def do_menu (hook, dial, player, tts, led):
+
+	def abort ():
+		return not hook.is_pressed
+
+	tts.say("Menü wird geöffnet.")
+	option = dial.get_digit (abort, led, player)
+	# aborted
+	if option is None:
+		pass
+	elif option == 0:
+		tts.say_time ()
+	elif option == 1:
+		if not player.random_prayer ():
+			# hang up
+			return
+	elif option == 2:
+		if not player.random_dice_prayer ():
+			# hang up
+			return
+	elif option == 3:
+		if not player.random_pater ():
+			# hang up
+			return
+	else:
+		tts.say("Das habe ich nicht verstanden. Auf wiederhören")
+
+	player.play_busy_tone ()
+	return
+
+def off_hook_loop (records, player, hook, dial, ButtonLeft, ButtonMiddle, tts, led):
 
 	player.start_dial_tone ()
 
-	while PickUp.is_pressed:
-		# dialing
+	while hook.is_pressed:
+
 		if dial.is_used ():
 			player.stop_tone ()
+			return do_dial_call (hook, ButtonLeft,
+			                     dial, player, led)
 
-			dialedNumber = dial.get_number (dial_number_abort, led, player)
-			if player.play_recording (dialedNumber):
-				# still off-hook
-				player.play_busy_tone ()
-			break
-
-		# recording
 		if ButtonLeft.is_pressed:
-
-			def end ():
-				return ButtonLeft.is_released or not PickUp.is_pressed
-
-			def abort ():
-				return ButtonMiddle.is_released
-
 			player.stop_tone ()
+			return do_recording (hook,
+			                     ButtonLeft, ButtonMiddle,
+			                     records, player, tts, led)
 
-			record = records.add_next ()
-			tts.say("Aufnahme Nr.: " + str(record.number) + " wird gestartet")
-
-			result = Recorder (record.filename,
-			                   records, led).record (end, abort)
-
-			if RECORDER_RESULT.ABORT == result:
-				tts.say("Aufnahme Nr.: " + str(record.number) + " abgebrochen")
-			elif RECORDER_RESULT.MIN_TIME == result:
-				tts.say ("Aufnahme zu kurz")
-			elif RECORDER_RESULT.MAX_TIME == result:
-				tts.say("Aufnahme Nr.: " + str(record.number) + "wegen overtime beendet.")
-			else:
-				print ("Aufnahme Nr.: " + str(record.number) + " beendet.")
-
-
-			player.play_busy_tone ()
-			break
-
-		# open Menu
 		if ButtonMiddle.is_pressed:
 			player.stop_tone ()
+			return do_menu (hook, dial, player, tts, led)
 
-			tts.say("Menü wird geöffnet.")
-			dialedOption = dial.get_digit (dial_digit_abort, led, player)
-			# aborted
-			if dialedOption is None:
-				pass
-			if dialedOption == 0:
-				tts.say_time ()
-			elif dialedOption == 1:
-				if not player.random_prayer ():
-					# hang up
-					break
-			elif dialedOption == 2:
-				if not player.random_dice_prayer ():
-					# hang up
-					break
-			elif dialedOption == 3:
-				if not player.random_pater ():
-					# hang up
-					break
-			else:
-				tts.say("Das habe ich nicht verstanden. Auf wiederhören")
-
-			player.play_busy_tone ()
-			break
-	else:
-		player.stop_tone ()
-
+	player.stop_tone ()
 	return
 
 def run_webapp (fd):
