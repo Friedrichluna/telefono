@@ -72,7 +72,8 @@ def off_hook_loop (records, player, PickUp, dial, ButtonLeft, ButtonMiddle, tts,
 			record = records.add_next ()
 			tts.say("Aufnahme Nr.: " + str(record.number) + " wird gestartet")
 
-			result = record (records, record.filename, end, abort)
+			result = Recorder (record.filename,
+			                   records, led).record (end, abort)
 
 			if RECORDER_RESULT.ABORT == result:
 				tts.say("Aufnahme Nr.: " + str(record.number) + " abgebrochen")

@@ -25,11 +25,12 @@ RATE = 44100
 FRAME_PER_BUFFER = 512
 
 class Recorder ():
-	def __init__ (self, fname, indicator,
+	def __init__ (self, fname, records, indicator,
 	              channels=CHANNELS, rate=RATE,
 	              frames_per_buffer=FRAME_PER_BUFFER):
 
 		self.fname = fname
+		self.records = records
 		self.indicator = indicator
 		self._pa = pyaudio.PyAudio ()
 
@@ -61,6 +62,9 @@ class Recorder ():
 		linkat.link_at (linkat.AT_FDCWD, b"/proc/self/fd/%d" % self.fd,
 		                linkat.AT_FDCWD, self.fname.encode(),
 		                linkat.AT_SYMLINK_FOLLOW)
+
+		# detect created file
+		self.records.sync_fs ()
 		return
 
 	def __enter__ (self):
@@ -79,25 +83,24 @@ class Recorder ():
 		return False
 
 
-def record (records, filename, end, abort):
-	recordingTime = 0
-	with Recorder (filename, led) as recorder:
+	def record (self, end, abort):
+		timer = 0
 
-		while recordingTime <= RECORD_TIME_MAX \
-		and not end ():
-			time.sleep (RECORD_DELAY)
-			recordingTime += 1
+		with self:
+			while timer <= RECORD_TIME_MAX and not end ():
+				# tick
+				time.sleep (RECORD_DELAY)
+				timer += 1
 
-			if abort ():
-				return RECORDER_RESULT.ABORT
+				if abort ():
+					return RECORDER_RESULT.ABORT
 
-		if recordingTime <= RECORD_TIME_MIN:
-			return RECORDER_RESULT.MIN_TIME
+			if timer <= RECORD_TIME_MIN:
+				return RECORDER_RESULT.MIN_TIME
 
-		recorder.save ()
-		records.sync_fs ()
+			self.save ()
 
-	if recordingTime > RECORD_TIME_MAX:
-		return RECORDER_RESULT.MAX_TIME
+		if timer > RECORD_TIME_MAX:
+			return RECORDER_RESULT.MAX_TIME
 
-	return RECORDER_RESULT.END
+		return RECORDER_RESULT.END
