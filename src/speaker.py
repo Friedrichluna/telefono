@@ -71,8 +71,10 @@ class SpeakerThread (threading.Thread):
 	def activate (self):
 		logging.debug ("Speaker: activate request")
 		self.__event.set ()
-		self.__set_on ()
-		time.sleep (SPEAKER_POWERON_DELAY)
+
+		if self.__set_on ():
+			# only wait, if the state has actually changed
+			time.sleep (SPEAKER_POWERON_DELAY)
 		return
 
 	def deactivate (self):
