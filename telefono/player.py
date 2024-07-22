@@ -193,6 +193,15 @@ class Player ():
 			self.__process = None
 		return
 
+	def play_tone (self, command):
+		self.start_tone (command)
+
+		while self.__process.poll () is None:
+			pass
+
+		self.stop_tone ()
+		return
+
 	def start_dial_tone (self):
 		logging.debug ("starting dial tone")
 		self.start_tone (SOX_DIAL)
@@ -320,7 +329,7 @@ class Player ():
 
 		logging.debug ("Player: make dial sound %s", number)
 
-		self.start_tone (command)
+		self.play_tone (command)
 		return
 
 	def __play_random (self, files) -> bool:
