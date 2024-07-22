@@ -44,8 +44,6 @@ better systemd integration
 
 run under separate user
 
-Dial:
-	- is it correct to wait for LOW first ?
 
 Upload:
 	- multiple files
