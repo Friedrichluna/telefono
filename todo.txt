@@ -1,7 +1,5 @@
 translate README
 
-- time format constant
-
 - consistent hook naming
 - off-hook predicate
 - fix variable shadowing
@@ -42,7 +40,6 @@ Records:
 	- auto sync when changing a single record
 
 update list on upload
-better time telling
 
 better systemd integration
 - run as user unit

@@ -7,6 +7,8 @@ import random
 
 import pyttsx3
 
+from .CONSTANTS import TIME_FORMAT
+
 
 class TTS():
 	def __init__ (self):
@@ -27,8 +29,7 @@ class TTS():
 	def say_time (self):
 		logging.info ("TTS: saying time")
 
-		FORMAT = "Es ist %H Uhr %M am %d.%m.%Y."
 		now = datetime.datetime.now()
-		timeInWords = now.strftime (FORMAT)
+		timeInWords = now.strftime (TIME_FORMAT)
 
 		self.say(timeInWords)
