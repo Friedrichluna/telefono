@@ -180,6 +180,12 @@ class Player ():
 		return self.__play (fileName,
 		                    abort=self.__never, aloud=True)
 
+	def start_tone (self, command):
+		self.stop_tone ()
+		self.__process = subprocess.Popen (command,
+		                                   stderr=subprocess.DEVNULL)
+		return
+
 	def stop_tone (self):
 		if self.__process is not None:
 			logging.debug ("aborting tone")
@@ -189,14 +195,12 @@ class Player ():
 
 	def start_dial_tone (self):
 		logging.debug ("starting dial tone")
-		self.stop_tone ()
-		self.__process = subprocess.Popen (SOX_DIAL)
+		self.start_tone (SOX_DIAL)
 		return
 
 	def start_busy_tone (self):
 		logging.debug ("starting busy tone")
-		self.stop_tone ()
-		self.__process = subprocess.Popen (SOX_BUSY)
+		self.start_tone (SOX_BUSY)
 		return
 
 	def play_busy_tone (self):
@@ -215,8 +219,7 @@ class Player ():
 
 	def start_release_tone (self):
 		logging.debug ("starting release tone")
-		self.stop_tone ()
-		self.__process = subprocess.Popen (SOX_RELEASE)
+		self.start_tone (SOX_RELEASE)
 		return
 
 	def play_release_tone (self):
@@ -230,8 +233,7 @@ class Player ():
 
 	def start_sit_tone (self):
 		logging.debug ("starting SIT tone")
-		self.stop_tone ()
-		self.__process = subprocess.Popen (SOX_SIT)
+		self.start_tone (SOX_SIT)
 		return
 
 	def play_sit_tone (self, abort):
@@ -318,8 +320,7 @@ class Player ():
 
 		logging.debug ("Player: make dial sound %s", number)
 
-		self.stop_tone ()
-		self.__process = subprocess.Popen (command)
+		self.start_tone (command)
 		return
 
 	def __play_random (self, files) -> bool:
