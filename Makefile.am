@@ -89,3 +89,13 @@ EXTRA_DIST += telefono.service
 ACLOCAL_AMFLAGS = --install -I build-macro
 
 AM_DISTCHECK_CONFIGURE_FLAGS = --with-systemddir=$$dc_install_base$(systemddir) --disable-service
+
+
+run: install
+	systemctl restart telefono
+
+status: run
+	sleep 3
+	systemctl status telefono --full
+
+.PHONY: run status
