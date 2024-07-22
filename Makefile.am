@@ -22,12 +22,15 @@ webapp_PYTHON += telefono/webapp/webapp.py
 nodist_pkgpython_PYTHON =
 nodist_pkgpython_PYTHON += telefono/CONSTANTS.py
 
-EXTRA_DIST =
-EXTRA_DIST += telefono/CONSTANTS.py.in
+noinst_PYTHON =
+noinst_PYTHON += telefono/CONSTANTS.py.in
+
 
 edit = sed -e 's|@pkgdatadir[@]|$(pkgdatadir)|g' \
            -e 's|@pkglocalstatedir[@]|$(pkglocalstatedir)|g' \
            -e 's|@templatedir[@]|$(templatedir)|g'
+
+all: telefono/CONSTANTS.py
 
 telefono/CONSTANTS.py: Makefile
 	$(MKDIR_P) telefono
@@ -67,6 +70,8 @@ dist_doc_DATA =
 dist_doc_DATA += README.md
 dist_doc_DATA += todo.txt
 dist_doc_DATA += docs/circuit_diagram.png
+
+EXTRA_DIST =
 
 
 if HAVE_SYSTEMD
