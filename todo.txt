@@ -46,7 +46,6 @@ update list on upload
 better time telling
 
 better systemd integration
-- listen to SIGTERM
 - run as user unit
 
 run under separate user

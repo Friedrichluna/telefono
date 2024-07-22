@@ -4,6 +4,7 @@
 import datetime
 import logging
 import random
+import signal
 import subprocess
 import time
 
@@ -130,7 +131,8 @@ def off_hook_loop (records, player, hook, dial, ButtonLeft, ButtonMiddle, tts, l
 
 	player.start_dial_tone ()
 
-	while hook.is_pressed:
+	global running
+	while running and hook.is_pressed:
 
 		if dial.is_used ():
 			player.stop_tone ()
@@ -157,6 +159,11 @@ def run_webapp (fd):
 	logging.debug ("webapp invocation: %s", repr (command))
 
 	return subprocess.Popen (command, pass_fds=(fd, ))
+
+def signal_handler (signo, frame):
+	global running
+	running = False
+	return
 
 def main ():
 	if DEBUG:
@@ -209,10 +216,16 @@ def main ():
 	# start webapp
 	webAppProcess = run_webapp (ipc.get_client_fd ())
 
+	global running
+	running = True
+
+	signal.signal (signal.SIGINT, signal_handler)
+	signal.signal (signal.SIGTERM, signal_handler)
+
 	player.play_aloud (STARTUP_FILE)
 
 	logging.info ("startup finished")
-	while not turn_off (ButtonMiddle):
+	while running and not turn_off (ButtonMiddle):
 
 		if PickUp.is_pressed:
 			off_hook_loop (records, player, PickUp, dial,
