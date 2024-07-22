@@ -281,8 +281,6 @@ class Player ():
 				# never picked up
 				return False
 
-			time.sleep (1) #test
-
 		recording = Record (call, "").filename
 		return self.__play (recording, abort=self.__on_hook,
 		                    aloud=(not ring))
