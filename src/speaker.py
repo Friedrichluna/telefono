@@ -55,11 +55,15 @@ class SpeakerThread (threading.Thread):
 
 	def run (self):
 		while not self.__stop.is_set ():
-			if self.__event.is_set () \
-			or self.__switch.is_pressed:
+			# block while event
+			while self.__event.is_set ():
+				time.sleep (SPEAKER_DELAY)
+
+			if self.__switch.is_pressed:
 				self.__set_on ()
 			else:
 				self.__set_off ()
+
 			time.sleep (SPEAKER_DELAY)
 
 		return
@@ -67,11 +71,13 @@ class SpeakerThread (threading.Thread):
 	def activate (self):
 		logging.debug ("Speaker: activate request")
 		self.__event.set ()
+		self.__set_on ()
 		time.sleep (SPEAKER_POWERON_DELAY)
 		return
 
 	def deactivate (self):
 		logging.debug ("Speaker: deactivate request")
+		self.__set_off ()
 		self.__event.clear ()
 		return
 
