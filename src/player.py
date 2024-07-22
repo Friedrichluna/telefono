@@ -348,11 +348,15 @@ class Player ():
 		return self.__play_random (self.__pater)
 
 
-	def say (self, text):
-		return self.__tts.say (text)
+	def say (self, text, interruptible=True):
+		if not interruptible:
+			self.__tts.say (text, abort=self.__never)
+			return not self.__on_hook ()
 
-	def say_time (self):
-		return self.__tts.say_time ()
+		return self.__tts.say (text, abort=self.__on_hook)
+
+	def say_time (self) -> bool:
+		return self.__tts.say_time (abort=self.__on_hook)
 
 
 	def quit (self):

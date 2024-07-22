@@ -68,24 +68,28 @@ def do_recording (off_hook, ButtonLeft, ButtonMiddle, records, player, led):
 	record = records.add_next ()
 
 	logging.info ("start recording %d", record.number)
-	player.say ("Aufnahme Nr.: %d wird gestartet" % record.number)
+	if not player.say ("Aufnahme Nr.: %d wird gestartet"
+	                   % record.number):
+		# hang up
+		return
 
 	result = Recorder (record.filename,
 	                   records, led).record (end, abort)
 
 	if RECORDER_RESULT.ABORT == result:
 		logging.info ("recording %d aborted", record.number)
-		player.say ("Aufnahme Nr.: %d abgebrochen" % record.number)
+		player.say ("Aufnahme Nr.: %d abgebrochen" % record.number,
+		            interruptible=False)
 
 	elif RECORDER_RESULT.MIN_TIME == result:
 		logging.info ("recording %d to short", record.number)
-		player.say ("Aufnahme zu kurz")
+		player.say ("Aufnahme zu kurz", interruptible=False)
 
 	elif RECORDER_RESULT.MAX_TIME == result:
 		logging.info ("recording %d terminated after max. time",
 		              record.number)
 		player.say ("Aufnahme Nr.: %d wegen overtime beendet."
-		            % record.number)
+		            % record.number, interruptible=False)
 	else:
 		logging.info ("finished recording %d", record.number)
 
@@ -98,7 +102,10 @@ def do_menu (off_hook, dial, player, led):
 	def abort ():
 		return not off_hook ()
 
-	player.say ("Menü wird geöffnet.")
+	if not player.say ("Menü wird geöffnet."):
+		# hang up
+		return
+
 	option = dial.get_digit (abort, led, player)
 	# aborted
 	if option is None:
@@ -106,7 +113,9 @@ def do_menu (off_hook, dial, player, led):
 		pass
 	elif option == 0:
 		logging.info ("menu: selected 0")
-		player.say_time ()
+		if not player.say_time ():
+			# hang up
+			return
 	elif option == 1:
 		logging.info ("menu: selected 1")
 		if not player.random_prayer ():
@@ -124,7 +133,8 @@ def do_menu (off_hook, dial, player, led):
 			return
 	else:
 		logging.info ("error in menu selection")
-		player.say ("Das habe ich nicht verstanden. Auf wiederhören")
+		player.say ("Das habe ich nicht verstanden. Auf Wiederhörn!",
+		            interruptible=False)
 
 	player.play_busy_tone ()
 	return

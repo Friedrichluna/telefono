@@ -19,17 +19,17 @@ class TTS():
 
 		return
 
-	def say (self, text):
+	def say (self, text, abort) -> bool:
 		logging.debug ("TTS: saying text \"%s\"", text)
 
-		self.__engine.say(text)
-		#self.__engine.startLoop(False)
-		self.__engine.runAndWait()
+		self.__engine.say (text)
+		self.__engine.runAndWait ()
+		return not abort ()
 
-	def say_time (self):
+	def say_time (self, abort) -> bool:
 		logging.info ("TTS: saying time")
 
 		now = datetime.datetime.now()
 		timeInWords = now.strftime (TIME_FORMAT)
 
-		self.say(timeInWords)
+		return self.say (timeInWords, abort)

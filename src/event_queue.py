@@ -165,9 +165,9 @@ class EventQueue:
 		return
 
 	def __process_text (self, text, player):
-		player.say (text)
-		# still off-hook
-		player.play_busy_tone ()
+		if player.say (text, interruptible=False):
+			# still off-hook
+			player.play_busy_tone ()
 		return
 
 	def __process_shout (self, call, player):
