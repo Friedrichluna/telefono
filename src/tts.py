@@ -1,13 +1,9 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
-import datetime
 import logging
-import random
 
 import pyttsx3
-
-from .CONSTANTS import TIME_FORMAT
 
 
 class TTS():
@@ -25,11 +21,3 @@ class TTS():
 		self.__engine.say (text)
 		self.__engine.runAndWait ()
 		return not abort ()
-
-	def say_time (self, abort) -> bool:
-		logging.info ("TTS: saying time")
-
-		now = datetime.datetime.now()
-		timeInWords = now.strftime (TIME_FORMAT)
-
-		return self.say (timeInWords, abort)

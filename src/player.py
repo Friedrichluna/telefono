@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
+import datetime
 import logging
 import os
 import random
@@ -46,6 +47,8 @@ from .CONSTANTS import NO_NUMBER_TIMEOUT
 
 from .CONSTANTS import BUSY_DELAY
 from .CONSTANTS import BUSY_TIMEOUT
+
+from .CONSTANTS import TIME_FORMAT
 
 from . import Record
 from . import TTS
@@ -356,7 +359,12 @@ class Player ():
 		return self.__tts.say (text, abort=self.__on_hook)
 
 	def say_time (self) -> bool:
-		return self.__tts.say_time (abort=self.__on_hook)
+		logging.info ("Player: saying time")
+
+		now = datetime.datetime.now ()
+		time_string = now.strftime (TIME_FORMAT)
+
+		return self.say (time_string)
 
 
 	def quit (self):
