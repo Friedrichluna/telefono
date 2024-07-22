@@ -192,17 +192,20 @@ class Player ():
 			time.sleep (BUSY_DELAY)
 			timer += 1
 
+		return self.play_release_tone ()
+
+	def start_release_tone (self):
+		self.stop_tone ()
+		self.__process = subprocess.Popen (SOX_RELEASE)
+		return
+
+	def play_release_tone (self):
 		self.start_release_tone ()
 
 		while self.__off_hook ():
 			pass
 
 		self.stop_tone ()
-		return
-
-	def start_release_tone (self):
-		self.stop_tone ()
-		self.__process = subprocess.Popen (SOX_RELEASE)
 		return
 
 	def start_sit_tone (self):
@@ -224,6 +227,7 @@ class Player ():
 
 		self.stop_tone ()
 		return True
+
 
 	def play_recording (self, recording) -> bool:
 		recording = Record (recording, "").filename
