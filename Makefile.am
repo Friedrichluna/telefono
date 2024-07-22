@@ -79,7 +79,7 @@ systemd_DATA = telefono.service
 
 if INSTALL_SYSTEMD_SERVICE
 install-data-hook:
-	-sudo systemctl enable telefono
+	systemctl enable telefono
 endif
 endif
 
