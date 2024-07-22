@@ -188,7 +188,7 @@ def main ():
 
 	DialCounter = Button(2) #Zähler für die gewählte Zahl (rot)
 	DialInUse = Button(26) #Wählscheibe wird benutzt (grau)(weiß im Tel)
-	PickUp = Button(18) #wenn der Hörer aufgenommen ist (Orange, mit Blauem Kabel aus dem Telefon)
+	Hook = Button(18) #wenn der Hörer aufgenommen ist (Orange, mit Blauem Kabel aus dem Telefon)
 	ButtonLeft = Button(3) #Linker knopf (violett)red = Button(2) #Zähler für die gewählte Zahl (rot)(grün Gestr.)
 	ButtonMiddle = Button(27) #Mittlerer Knopf
 	SpeakerSwich = Button(17) #Rechter Kippschalter (grüner Anschluss)
@@ -200,7 +200,7 @@ def main ():
 	speakerThread.start()
 
 	tts = TTS ()
-	player = Player (PickUp, ButtonLeft, ButtonMiddle, tts, speakerThread)
+	player = Player (Hook, ButtonLeft, ButtonMiddle, tts, speakerThread)
 
 	# initialize call queue
 	queue = EventQueue (records)
@@ -228,7 +228,7 @@ def main ():
 	player.play_aloud (STARTUP_FILE)
 
 	def off_hook ():
-		return PickUp.is_pressed
+		return Hook.is_pressed
 
 	logging.info ("startup finished")
 	while running and not turn_off (ButtonMiddle):
@@ -253,7 +253,7 @@ def main ():
 
 	DialCounter.close ()
 	DialInUse.close ()
-	PickUp.close ()
+	Hook.close ()
 	ButtonLeft.close ()
 	ButtonMiddle.close ()
 	SpeakerSwich.close ()
