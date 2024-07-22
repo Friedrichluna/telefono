@@ -57,7 +57,7 @@ def do_dial_call (off_hook, ButtonLeft, dial, player, led):
 		player.play_busy_tone ()
 	return
 
-def do_recording (off_hook, ButtonLeft, ButtonMiddle, records, player, tts, led):
+def do_recording (off_hook, ButtonLeft, ButtonMiddle, records, player, led):
 
 	def end ():
 		return ButtonLeft.is_released or not off_hook ()
@@ -68,37 +68,37 @@ def do_recording (off_hook, ButtonLeft, ButtonMiddle, records, player, tts, led)
 	record = records.add_next ()
 
 	logging.info ("start recording %d", record.number)
-	tts.say ("Aufnahme Nr.: %d wird gestartet" % record.number)
+	player.say ("Aufnahme Nr.: %d wird gestartet" % record.number)
 
 	result = Recorder (record.filename,
 	                   records, led).record (end, abort)
 
 	if RECORDER_RESULT.ABORT == result:
 		logging.info ("recording %d aborted", record.number)
-		tts.say ("Aufnahme Nr.: %d abgebrochen" % record.number)
+		player.say ("Aufnahme Nr.: %d abgebrochen" % record.number)
 
 	elif RECORDER_RESULT.MIN_TIME == result:
 		logging.info ("recording %d to short", record.number)
-		tts.say ("Aufnahme zu kurz")
+		player.say ("Aufnahme zu kurz")
 
 	elif RECORDER_RESULT.MAX_TIME == result:
 		logging.info ("recording %d terminated after max. time",
 		              record.number)
-		tts.say ("Aufnahme Nr.: %d wegen overtime beendet."
-		         % record.number)
+		player.say ("Aufnahme Nr.: %d wegen overtime beendet."
+		            % record.number)
 	else:
 		logging.info ("finished recording %d", record.number)
 
 	player.play_busy_tone ()
 	return
 
-def do_menu (off_hook, dial, player, tts, led):
+def do_menu (off_hook, dial, player, led):
 	logging.debug ("opening menu")
 
 	def abort ():
 		return not off_hook ()
 
-	tts.say("Menü wird geöffnet.")
+	player.say ("Menü wird geöffnet.")
 	option = dial.get_digit (abort, led, player)
 	# aborted
 	if option is None:
@@ -106,7 +106,7 @@ def do_menu (off_hook, dial, player, tts, led):
 		pass
 	elif option == 0:
 		logging.info ("menu: selected 0")
-		tts.say_time ()
+		player.say_time ()
 	elif option == 1:
 		logging.info ("menu: selected 1")
 		if not player.random_prayer ():
@@ -124,12 +124,12 @@ def do_menu (off_hook, dial, player, tts, led):
 			return
 	else:
 		logging.info ("error in menu selection")
-		tts.say("Das habe ich nicht verstanden. Auf wiederhören")
+		player.say ("Das habe ich nicht verstanden. Auf wiederhören")
 
 	player.play_busy_tone ()
 	return
 
-def off_hook_loop (records, player, off_hook, dial, ButtonLeft, ButtonMiddle, tts, led):
+def off_hook_loop (records, player, off_hook, dial, ButtonLeft, ButtonMiddle, led):
 	logging.debug ("entering off-hook loop")
 
 	player.start_dial_tone ()
@@ -146,11 +146,11 @@ def off_hook_loop (records, player, off_hook, dial, ButtonLeft, ButtonMiddle, tt
 			player.stop_tone ()
 			return do_recording (off_hook,
 			                     ButtonLeft, ButtonMiddle,
-			                     records, player, tts, led)
+			                     records, player, led)
 
 		if ButtonMiddle.is_pressed:
 			player.stop_tone ()
-			return do_menu (off_hook, dial, player, tts, led)
+			return do_menu (off_hook, dial, player, led)
 
 	player.stop_tone ()
 	return
@@ -199,8 +199,7 @@ def main ():
 	speakerThread = SpeakerThread (SpeakerSwich)
 	speakerThread.start()
 
-	tts = TTS ()
-	player = Player (Hook, ButtonLeft, ButtonMiddle, tts, speakerThread)
+	player = Player (Hook, ButtonLeft, ButtonMiddle, speakerThread)
 
 	# initialize call queue
 	queue = EventQueue (records)
@@ -235,13 +234,12 @@ def main ():
 
 		if off_hook ():
 			off_hook_loop (records, player, off_hook, dial,
-			               ButtonLeft, ButtonMiddle,
-			               tts, led)
+			               ButtonLeft, ButtonMiddle, led)
 			logging.debug ("leaving off-hook loop")
 
 		ipc.handle_message (queue, records)
 
-		queue.process (tts, player)
+		queue.process (player)
 
 		time.sleep (MAINLOOP_DELAY)
 

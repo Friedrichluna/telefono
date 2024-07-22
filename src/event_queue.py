@@ -111,7 +111,7 @@ class EventQueue:
 		return time.strftime (DEBUG_TIME_FORMAT,
 		                      time.localtime (timestamp))
 
-	def process (self, tts, player):
+	def process (self, player):
 		if 0 == len (self.__events):
 			return
 
@@ -129,7 +129,7 @@ class EventQueue:
 				logging.info ("EventQueue: process text %s at %s",
 				              event[1],
 				              self.__get_debug_time (_time))
-				self.__process_text (event[1], tts, player)
+				self.__process_text (event[1], player)
 
 			elif EVENT_TYPE.DAILY_RANDOM == event[0]:
 				logging.info ("EventQueue: process random call %d at %s",
@@ -164,8 +164,8 @@ class EventQueue:
 			player.play_busy_tone ()
 		return
 
-	def __process_text (self, text, tts, player):
-		tts.say (text)
+	def __process_text (self, text, player):
+		player.say (text)
 		# still off-hook
 		player.play_busy_tone ()
 		return

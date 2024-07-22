@@ -18,11 +18,14 @@ Logging:
 Player:
 	- get rid of pygame
 	- don't wait for ffplay
-	- incorporate TTS
 	- fix indent in Player.__play
+	- notify methods
 
 Speaker:
 	- get rid of activation delay
+
+TTS:
+	- don't block
 
 IPC:
 	- handle larger lists of descriptions

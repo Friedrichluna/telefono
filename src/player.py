@@ -48,6 +48,7 @@ from .CONSTANTS import BUSY_DELAY
 from .CONSTANTS import BUSY_TIMEOUT
 
 from . import Record
+from . import TTS
 
 
 class Player ():
@@ -55,7 +56,7 @@ class Player ():
 	__dicePrayers = [201, 202, 203, 204, 205, 206]
 	__pater = [2, 10, 11, 19, 22, 26, 30, 88]
 
-	def __init__ (self, hook, wind_back, wind_forward, tts, speaker):
+	def __init__ (self, hook, wind_back, wind_forward, speaker):
 		# setup pygame
 		pygame.mixer.init()
 		pygame.init()
@@ -63,9 +64,10 @@ class Player ():
 		self.__hook = hook
 		self.__wind_back = wind_back
 		self.__wind_forward = wind_forward
-		self.__tts = tts
 		self.__speaker = speaker
 		self.__process = None
+
+		self.__tts = TTS ()
 		return
 
 	def __on_hook (self):
@@ -344,6 +346,14 @@ class Player ():
 
 	def random_pater (self) -> bool:
 		return self.__play_random (self.__pater)
+
+
+	def say (self, text):
+		return self.__tts.say (text)
+
+	def say_time (self):
+		return self.__tts.say_time ()
+
 
 	def quit (self):
 		return pygame.quit ()
