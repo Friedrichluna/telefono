@@ -1,6 +1,5 @@
 translate README
 
-- delay constants
 - time format constant
 
 - consistent hook naming

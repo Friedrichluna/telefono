@@ -19,6 +19,9 @@ from .CONSTANTS import SHUTDOWN_FILE
 
 from .CONSTANTS import WEBAPP_EXEC
 
+from .CONSTANTS import MAINLOOP_DELAY
+from .CONSTANTS import SHUTDOWN_BUTTON_DELAY
+
 from .ipc import IPC_Server
 from .player import Player
 
@@ -32,7 +35,7 @@ def turn_off (button):
 		if 0 == time_pressed:
 			logging.debug ("started shutdown press")
 
-		time.sleep (0.5)
+		time.sleep (SHUTDOWN_BUTTON_DELAY)
 		time_pressed += 1
 
 	if time_pressed >= 10:
@@ -237,7 +240,7 @@ def main ():
 
 		queue.process (tts, player)
 
-		time.sleep (0.5)
+		time.sleep (MAINLOOP_DELAY)
 
 	logging.info ("shutting down")
 	player.play_aloud (SHUTDOWN_FILE)

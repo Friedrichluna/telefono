@@ -36,6 +36,8 @@ from .CONSTANTS import SOX_NUMBER_D
 from .CONSTANTS import FFPLAY_CMD
 from .CONSTANTS import FFPLAY_START
 from .CONSTANTS import FFPLAY_VOLUME
+from .CONSTANTS import FFPLAY_STARTUP_TIME
+from .CONSTANTS import FFPLAY_POLL_DELAY
 
 from .CONSTANTS import WIND_TIME
 
@@ -93,7 +95,7 @@ class Player ():
 		                            text=True)
 
 		# wait for ffplay to produce output
-		time.sleep (0.5)
+		time.sleep (FFPLAY_STARTUP_TIME)
 		return process
 
 	def __play (self, fileName, abort, volume=100,
@@ -116,7 +118,7 @@ class Player ():
 			process = self.__ffplay (fileName, volume=volume)
 
 			while process.poll () is None:
-				time.sleep (0.01)
+				time.sleep (FFPLAY_POLL_DELAY)
 				if abort ():
 					process.terminate ()
 					aborted = True

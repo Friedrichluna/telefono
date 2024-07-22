@@ -4,6 +4,7 @@
 import logging
 import time
 
+from .CONSTANTS import DIAL_IN_USE_DELAY
 from .CONSTANTS import DIAL_SLEEP
 from .CONSTANTS import DIAL_TIMEOUT_DELAY
 from .CONSTANTS import DIAL_TIMEOUT
@@ -20,7 +21,7 @@ class Dial ():
 		if not self.dialing:
 			return False
 
-		time.sleep (0.1)
+		time.sleep (DIAL_IN_USE_DELAY)
 
 		return self.dialing
 
