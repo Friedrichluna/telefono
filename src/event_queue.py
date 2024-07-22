@@ -107,9 +107,6 @@ class EventQueue:
 
 		return self.__add_event (time, event)
 
-	def __get_time (self):
-		return time.time ()
-
 	def __get_debug_time (self, timestamp):
 		return time.strftime (DEBUG_TIME_FORMAT,
 		                      time.localtime (timestamp))
@@ -119,7 +116,7 @@ class EventQueue:
 			return
 
 		_time = self.__events[0][0]
-		if _time < self.__get_time ():
+		if _time < time.time ():
 			event = self.__events.pop (0)[1]
 
 			if EVENT_TYPE.CALL == event[0]:

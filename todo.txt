@@ -5,7 +5,6 @@ translate README
 - hardware class
 
 - better name for shout
-- directly call time.time ()
 
 Logging:
 	- prettier log messages
