@@ -52,7 +52,7 @@ def do_dial_call (hook, ButtonLeft, dial, player, led):
 		return ButtonLeft.is_released or not hook.is_pressed
 
 	number = dial.get_number (abort, led, player)
-	if player.play_recording (number):
+	if None is number or player.play_recording (number):
 		# still off-hook
 		player.play_busy_tone ()
 	return
