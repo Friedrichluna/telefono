@@ -79,7 +79,12 @@ systemd_DATA = telefono.service
 
 if INSTALL_SYSTEMD_SERVICE
 install-data-hook:
+	systemctl daemon-reload
 	systemctl enable telefono
+
+uninstall-hook:
+	systemctl daemon-reload
+	systemctl disable telefono
 endif
 endif
 
