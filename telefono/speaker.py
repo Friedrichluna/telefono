@@ -6,6 +6,8 @@ import threading
 
 import RPi.GPIO as GPIO
 
+from .CONSTANTS import SPEAKER_POWERON_DELAY
+
 RELAIS_1_GPIO = 4
 
 class SpeakerThread (threading.Thread):
@@ -33,6 +35,8 @@ class SpeakerThread (threading.Thread):
 
 	def activate (self):
 		self.__event.set ()
+		time.sleep (SPEAKER_POWERON_DELAY)
+		return
 
 	def deactivate (self):
 		self.__event.clear ()

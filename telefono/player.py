@@ -100,7 +100,6 @@ class Player ():
 
 		if aloud:
 			self.__speaker.activate ()
-			time.sleep (2)
 
 		if os.path.exists (fileName):
 			process = self.__ffplay (fileName, volume=volume)

@@ -4,6 +4,9 @@ Player:
 	- get rid of pygame
 	- don't wait for ffplay
 
+Speaker:
+	- get rid of activation delay
+
 IPC:
 	- handle larger lists of descriptions
 
