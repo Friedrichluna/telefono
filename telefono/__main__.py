@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import datetime
+import logging
 import random
 import subprocess
 import time
@@ -9,6 +10,8 @@ import time
 import gpiozero
 
 from . import *
+
+from .CONSTANTS import DEBUG
 
 from .CONSTANTS import STARTUP_FILE
 from .CONSTANTS import SHUTDOWN_FILE
@@ -20,17 +23,27 @@ from .player import Player
 
 
 def turn_off (button):
+	if not button.is_pressed:
+		return False
+
 	time_pressed = 0
 	while button.is_pressed and time_pressed < 10:
+		if 0 == time_pressed:
+			logging.debug ("started shutdown press")
+
 		time.sleep (0.5)
 		time_pressed += 1
 
 	if time_pressed >= 10:
+		logging.debug ("shutdown press")
 		return True
 
+	logging.debug ("released shutdown press prematurely")
 	return False
 
 def do_dial_call (hook, ButtonLeft, dial, player, led):
+	logging.debug ("start dialing")
+
 	def abort ():
 		return ButtonLeft.is_released or not hook.is_pressed
 
@@ -49,24 +62,34 @@ def do_recording (hook, ButtonLeft, ButtonMiddle, records, player, tts, led):
 		return ButtonMiddle.is_released
 
 	record = records.add_next ()
-	tts.say("Aufnahme Nr.: " + str(record.number) + " wird gestartet")
+
+	logging.info ("start recording %d", record.number)
+	tts.say ("Aufnahme Nr.: %d wird gestartet" % record.number)
 
 	result = Recorder (record.filename,
 	                   records, led).record (end, abort)
 
 	if RECORDER_RESULT.ABORT == result:
-		tts.say("Aufnahme Nr.: " + str(record.number) + " abgebrochen")
+		logging.info ("recording %d aborted", record.number)
+		tts.say ("Aufnahme Nr.: %d abgebrochen" % record.number)
+
 	elif RECORDER_RESULT.MIN_TIME == result:
+		logging.info ("recording %d to short", record.number)
 		tts.say ("Aufnahme zu kurz")
+
 	elif RECORDER_RESULT.MAX_TIME == result:
-		tts.say("Aufnahme Nr.: " + str(record.number) + "wegen overtime beendet.")
+		logging.info ("recording %d terminated after max. time",
+		              record.number)
+		tts.say ("Aufnahme Nr.: %d wegen overtime beendet."
+		         % record.number)
 	else:
-		print ("Aufnahme Nr.: " + str(record.number) + " beendet.")
+		logging.info ("finished recording %d", record.number)
 
 	player.play_busy_tone ()
 	return
 
 def do_menu (hook, dial, player, tts, led):
+	logging.debug ("opening menu")
 
 	def abort ():
 		return not hook.is_pressed
@@ -75,28 +98,35 @@ def do_menu (hook, dial, player, tts, led):
 	option = dial.get_digit (abort, led, player)
 	# aborted
 	if option is None:
+		logging.info ("aborted menu selection")
 		pass
 	elif option == 0:
+		logging.info ("menu: selected 0")
 		tts.say_time ()
 	elif option == 1:
+		logging.info ("menu: selected 1")
 		if not player.random_prayer ():
 			# hang up
 			return
 	elif option == 2:
+		logging.info ("menu: selected 2")
 		if not player.random_dice_prayer ():
 			# hang up
 			return
 	elif option == 3:
+		logging.info ("menu: selected 3")
 		if not player.random_pater ():
 			# hang up
 			return
 	else:
+		logging.info ("error in menu selection")
 		tts.say("Das habe ich nicht verstanden. Auf wiederhören")
 
 	player.play_busy_tone ()
 	return
 
 def off_hook_loop (records, player, hook, dial, ButtonLeft, ButtonMiddle, tts, led):
+	logging.debug ("entering off-hook loop")
 
 	player.start_dial_tone ()
 
@@ -121,10 +151,22 @@ def off_hook_loop (records, player, hook, dial, ButtonLeft, ButtonMiddle, tts, l
 	return
 
 def run_webapp (fd):
-	return subprocess.Popen ([*WEBAPP_EXEC, str (fd)],
-	                         pass_fds=(fd, ))
+	logging.info ("starting webapp")
+
+	command = ([*WEBAPP_EXEC, str (fd)])
+	logging.debug ("webapp invocation: %s", repr (command))
+
+	return subprocess.Popen (command, pass_fds=(fd, ))
 
 def main ():
+	if DEBUG:
+		log_level = logging.DEBUG
+	else:
+		log_level = logging.INFO
+
+	logging.basicConfig (level=log_level)
+	logging.info ("started telefono")
+
 	# initialize random module
 	random.seed ()
 
@@ -169,12 +211,14 @@ def main ():
 
 	player.play_aloud (STARTUP_FILE)
 
+	logging.info ("startup finished")
 	while not turn_off (ButtonMiddle):
 
 		if PickUp.is_pressed:
 			off_hook_loop (records, player, PickUp, dial,
 			               ButtonLeft, ButtonMiddle,
 			               tts, led)
+			logging.debug ("leaving off-hook loop")
 
 		ipc.handle_message (queue, records)
 
@@ -182,6 +226,7 @@ def main ():
 
 		time.sleep (0.5)
 
+	logging.info ("shutting down")
 	player.play_aloud (SHUTDOWN_FILE)
 
 	webAppProcess.terminate ()
@@ -195,6 +240,7 @@ def main ():
 	SpeakerSwich.close ()
 	led.close ()
 
+	logging.info ("bye.")
 	return 0
 
 

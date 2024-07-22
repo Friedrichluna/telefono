@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
+import logging
 import os
 import random
 import subprocess
@@ -81,9 +82,13 @@ class Player ():
 		return self.__wind_forward.is_released
 
 	def __ffplay (self, filename, start=0, volume=100):
-		process = subprocess.Popen ((*FFPLAY_CMD, filename,
-		                            *FFPLAY_START, str (start),
-		                            *FFPLAY_VOLUME, str (volume)),
+		command = (*FFPLAY_CMD, filename,
+		           *FFPLAY_START, str (start),
+		           *FFPLAY_VOLUME, str (volume))
+
+		logging.debug ("invoking ffplay: %s", repr (command))
+
+		process = subprocess.Popen (command,
 		                            stderr=subprocess.PIPE,
 		                            text=True)
 
@@ -93,6 +98,12 @@ class Player ():
 
 	def __play (self, fileName, abort, volume=100,
 	            aloud=False, wind=False) -> bool:
+
+		logging.debug ("Player: play file %s, abort=%s, "
+		               "volume=%d, aloud=%s, wind=%s",
+		               fileName, repr (abort),
+		               volume, repr (aloud), repr (wind))
+
 		if abort ():
 			return False
 
@@ -124,6 +135,9 @@ class Player ():
 						start -= WIND_TIME
 					except:
 						start = 0
+						logging.error ("Player: failed to parse ffplay output")
+
+					logging.debug ("Player: wind back to %d", start)
 
 					process = self.__ffplay (fileName,
 					                         start,
@@ -144,7 +158,9 @@ class Player ():
 						start += WIND_TIME
 					except:
 						start = 0
+						logging.error ("Player: failed to parse ffplay output")
 
+					logging.debug ("Player: wind forward to %d", start)
 					process = self.__ffplay (fileName,
 					                         start,
 					                         volume)
@@ -166,16 +182,19 @@ class Player ():
 
 	def stop_tone (self):
 		if self.__process is not None:
+			logging.debug ("aborting tone")
 			self.__process.terminate ()
 			self.__process = None
 		return
 
 	def start_dial_tone (self):
+		logging.debug ("starting dial tone")
 		self.stop_tone ()
 		self.__process = subprocess.Popen (SOX_DIAL)
 		return
 
 	def start_busy_tone (self):
+		logging.debug ("starting busy tone")
 		self.stop_tone ()
 		self.__process = subprocess.Popen (SOX_BUSY)
 		return
@@ -195,6 +214,7 @@ class Player ():
 		return self.play_release_tone ()
 
 	def start_release_tone (self):
+		logging.debug ("starting release tone")
 		self.stop_tone ()
 		self.__process = subprocess.Popen (SOX_RELEASE)
 		return
@@ -209,6 +229,7 @@ class Player ():
 		return
 
 	def start_sit_tone (self):
+		logging.debug ("starting SIT tone")
 		self.stop_tone ()
 		self.__process = subprocess.Popen (SOX_SIT)
 		return
@@ -229,13 +250,17 @@ class Player ():
 		return True
 
 
-	def play_recording (self, recording) -> bool:
+	def play_recording (self, recording:int) -> bool:
+		logging.info ("Player: play %d", recording)
+
 		recording = Record (recording, "").filename
 
 		return self.__play (recording, abort=self.__on_hook,
 		                    wind=True)
 
-	def call (self, call, ring=True) -> bool:
+	def call (self, call:int, ring=True) -> bool:
+		logging.info ("Player: call %d", call)
+
 		if ring:
 			if self.__play (RING_FILE,
 			                abort=self.__off_hook,
@@ -286,8 +311,12 @@ class Player ():
 		elif "D" == number:
 			command = SOX_NUMBER_D
 		else:
-			print ("dialed unknown number %s", str(number))
+			logging.error ("Player: can't make dial sound "
+			               "for unknown number %s",
+			               repr (number))
 			return
+
+		logging.debug ("Player: make dial sound %s", number)
 
 		self.stop_tone ()
 		self.__process = subprocess.Popen (command)
@@ -295,7 +324,6 @@ class Player ():
 
 	def __play_random (self, files) -> bool:
 		recording = random.choice (files)
-		print("playing: %d" % recording)
 		return self.play_recording (recording)
 
 	def random_prayer (self) -> bool:

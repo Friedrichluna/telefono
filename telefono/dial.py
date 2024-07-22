@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
+import logging
 import time
 
 from .CONSTANTS import DIAL_SLEEP
@@ -42,6 +43,7 @@ class Dial ():
 			time.sleep (DIAL_TIMEOUT_DELAY)
 			timeCounter += 1
 		else:
+			logging.debug ("dial: aborted dialing")
 			return -1
 
 
@@ -66,15 +68,19 @@ class Dial ():
 
 		# not dialed
 		if digit == 0:
+			logging.debug ("dial: dialing failure")
 			return None
 
 		# 0 dialed
 		elif digit > 9:
+			logging.debug ("dial: dailed 0")
 			return 0
 
+		logging.debug ("dial: dailed %d", digit)
 		return digit
 
 	def get_digit (self, abort, led, player):
+		logging.debug ("dial: started dialing single digit")
 		led.blink (on_time=0.1, off_time=0.1, n=None, background=True)
 
 		digit = self.__get_digit (abort, DIAL_TIMEOUT)
@@ -85,12 +91,13 @@ class Dial ():
 
 		if digit is not None:
 			player.dial_sound (digit)
-			print(digit)
+			logging.debug ("dial: dialed digit %d", digit)
 
 		led.off ()
 		return digit
 
 	def get_number (self, abort, led, player):
+		logging.debug ("dial: started dialing number")
 		led.blink (on_time=0.1, off_time=0.1, n=None, background=True)
 		number = None
 
@@ -116,5 +123,6 @@ class Dial ():
 
 			player.dial_sound (digit)
 
+		logging.info ("dial: dialed number %d", number)
 		led.off ()
 		return number

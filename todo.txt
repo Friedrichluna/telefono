@@ -1,8 +1,31 @@
 translate README
 
+- delay constants
+- time format constant
+
+- consistent hook naming
+- off-hook predicate
+- fix variable shadowing
+- correct variable naming (typos)
+- hardware class
+
+- better name for shout
+- directly call time.time ()
+
+Logging:
+	- prettier log messages
+		- less colons
+		- file, line
+
+	- log hardware events
+	- log IPC
+	- log from Records
+
 Player:
 	- get rid of pygame
 	- don't wait for ffplay
+	- incorporate TTS
+	- fix indent in Player.__play
 
 Speaker:
 	- get rid of activation delay
@@ -30,8 +53,13 @@ run under separate user
 
 mention running sudo on make install in README
 don't run sudo on make install
+make CONSTANTS.py on make all
 
 Dial:
 	- is it correct to wait for LOW first ?
 
-add logging
+Upload:
+	- multiple files
+	- keep uploaded files with wrong numbers
+	- edit description
+	- chrome bug

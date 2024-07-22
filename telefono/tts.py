@@ -2,8 +2,11 @@
 # -*- coding: utf-8 -*-
 
 import datetime
-import pyttsx3
+import logging
 import random
+
+import pyttsx3
+
 
 class TTS():
 	def __init__ (self):
@@ -15,13 +18,14 @@ class TTS():
 		return
 
 	def say (self, text):
-		print(text)
+		logging.debug ("TTS: saying text \"%s\"", text)
+
 		self.__engine.say(text)
 		#self.__engine.startLoop(False)
 		self.__engine.runAndWait()
 
 	def say_time (self):
-		print("uhrzeit ansagen")
+		logging.info ("TTS: saying time")
 
 		FORMAT = "Es ist %H Uhr %M am %d.%m.%Y."
 		now = datetime.datetime.now()

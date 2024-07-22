@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
+import logging
 import time
 import threading
 
@@ -37,6 +38,7 @@ class SpeakerThread (threading.Thread):
 			return
 
 		GPIO.output (self.__gpio, GPIO.LOW)
+		logging.debug ("Speaker activated")
 
 		self.__is_on = True
 		return
@@ -46,6 +48,7 @@ class SpeakerThread (threading.Thread):
 			return
 
 		GPIO.output (self.__gpio, GPIO.HIGH)
+		logging.debug ("Speaker deactivated")
 
 		self.__is_on = False
 		return
@@ -62,13 +65,19 @@ class SpeakerThread (threading.Thread):
 		return
 
 	def activate (self):
+		logging.debug ("Speaker: activate request")
 		self.__event.set ()
 		time.sleep (SPEAKER_POWERON_DELAY)
 		return
 
 	def deactivate (self):
+		logging.debug ("Speaker: deactivate request")
 		self.__event.clear ()
+		return
 
 	def join (self, timeout=None):
+		logging.debug ("shutting down speaker thread with timeout %s",
+		               repr (timeout))
+
 		self.__stop.set ()
-		super ().join (timeout)
+		return super ().join (timeout)

@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import enum
+import logging
 import os
 import time
 
@@ -58,6 +59,8 @@ class Recorder ():
 		return None, pyaudio.paContinue
 
 	def save (self):
+		logging.debug ("Recorder: linking file %s", self.fname)
+
 		# atomically link file
 		linkat.link_at (linkat.AT_FDCWD, b"/proc/self/fd/%d" % self.fd,
 		                linkat.AT_FDCWD, self.fname.encode(),

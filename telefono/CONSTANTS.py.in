@@ -1,6 +1,8 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
+DEBUG = False
+
 DATA_DIR = "@pkgdatadir@"
 
 RECORD_DIR = "@pkglocalstatedir@"
@@ -22,6 +24,8 @@ FLASK_DEBUG = True
 FLASK_IP = "0.0.0.0"
 FLASK_PORT = 5000
 FLASK_TEMPLATES = "@templatedir@"
+
+DEBUG_TIME_FORMAT = "%F %T %Z(%z) (%s)"
 
 MIN_HOUR = 15
 MAX_HOUR = 21
