@@ -19,6 +19,10 @@ AM_PATH_PYTHON(3)
 
 PKG_PROG_PKG_CONFIG()
 
+AC_ARG_ENABLE([service],
+[AS_HELP_STRING([--disable-service],
+                [don't automatically enable systemd service])])
+
 AC_ARG_WITH([systemddir],
      [AS_HELP_STRING([--with-systemddir=DIR], [Directory for systemd service files])],,
      [with_systemddir=auto])
@@ -34,6 +38,7 @@ AS_IF([test "x$with_systemddir" = "xyes" -o "x$with_systemddir" = "xauto"], [
 AC_SUBST([systemddir], [$systemddir])
 
 AM_CONDITIONAL([HAVE_SYSTEMD], [test "x$with_systemddir" != "xno"])
+AM_CONDITIONAL([INSTALL_SYSTEMD_SERVICE], [test "x$enable_service" != "xno"])
 
 # Checks for libraries.
 

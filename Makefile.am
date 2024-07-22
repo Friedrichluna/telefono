@@ -77,12 +77,14 @@ EXTRA_DIST =
 if HAVE_SYSTEMD
 systemd_DATA = telefono.service
 
+if INSTALL_SYSTEMD_SERVICE
 install-data-hook:
 	-sudo systemctl enable telefono
+endif
 endif
 
 EXTRA_DIST += telefono.service
 
 ACLOCAL_AMFLAGS = --install -I build-macro
 
-AM_DISTCHECK_CONFIGURE_FLAGS = --with-systemddir=$$dc_install_base/$(systemddir)
+AM_DISTCHECK_CONFIGURE_FLAGS = --with-systemddir=$$dc_install_base$(systemddir) --disable-service
