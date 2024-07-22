@@ -1,7 +1,6 @@
 translate README
 
 - consistent hook naming
-- off-hook predicate
 - fix variable shadowing
 - correct variable naming (typos)
 - hardware class

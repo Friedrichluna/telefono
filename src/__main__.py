@@ -45,11 +45,11 @@ def turn_off (button):
 	logging.debug ("released shutdown press prematurely")
 	return False
 
-def do_dial_call (hook, ButtonLeft, dial, player, led):
+def do_dial_call (off_hook, ButtonLeft, dial, player, led):
 	logging.debug ("start dialing")
 
 	def abort ():
-		return ButtonLeft.is_released or not hook.is_pressed
+		return ButtonLeft.is_released or not off_hook ()
 
 	number = dial.get_number (abort, led, player)
 	if None is number or player.play_recording (number):
@@ -57,10 +57,10 @@ def do_dial_call (hook, ButtonLeft, dial, player, led):
 		player.play_busy_tone ()
 	return
 
-def do_recording (hook, ButtonLeft, ButtonMiddle, records, player, tts, led):
+def do_recording (off_hook, ButtonLeft, ButtonMiddle, records, player, tts, led):
 
 	def end ():
-		return ButtonLeft.is_released or not hook.is_pressed
+		return ButtonLeft.is_released or not off_hook ()
 
 	def abort ():
 		return ButtonMiddle.is_released
@@ -92,11 +92,11 @@ def do_recording (hook, ButtonLeft, ButtonMiddle, records, player, tts, led):
 	player.play_busy_tone ()
 	return
 
-def do_menu (hook, dial, player, tts, led):
+def do_menu (off_hook, dial, player, tts, led):
 	logging.debug ("opening menu")
 
 	def abort ():
-		return not hook.is_pressed
+		return not off_hook ()
 
 	tts.say("Menü wird geöffnet.")
 	option = dial.get_digit (abort, led, player)
@@ -129,28 +129,28 @@ def do_menu (hook, dial, player, tts, led):
 	player.play_busy_tone ()
 	return
 
-def off_hook_loop (records, player, hook, dial, ButtonLeft, ButtonMiddle, tts, led):
+def off_hook_loop (records, player, off_hook, dial, ButtonLeft, ButtonMiddle, tts, led):
 	logging.debug ("entering off-hook loop")
 
 	player.start_dial_tone ()
 
 	global running
-	while running and hook.is_pressed:
+	while running and off_hook ():
 
 		if dial.is_used ():
 			player.stop_tone ()
-			return do_dial_call (hook, ButtonLeft,
+			return do_dial_call (off_hook, ButtonLeft,
 			                     dial, player, led)
 
 		if ButtonLeft.is_pressed:
 			player.stop_tone ()
-			return do_recording (hook,
+			return do_recording (off_hook,
 			                     ButtonLeft, ButtonMiddle,
 			                     records, player, tts, led)
 
 		if ButtonMiddle.is_pressed:
 			player.stop_tone ()
-			return do_menu (hook, dial, player, tts, led)
+			return do_menu (off_hook, dial, player, tts, led)
 
 	player.stop_tone ()
 	return
@@ -227,11 +227,14 @@ def main ():
 
 	player.play_aloud (STARTUP_FILE)
 
+	def off_hook ():
+		return PickUp.is_pressed
+
 	logging.info ("startup finished")
 	while running and not turn_off (ButtonMiddle):
 
-		if PickUp.is_pressed:
-			off_hook_loop (records, player, PickUp, dial,
+		if off_hook ():
+			off_hook_loop (records, player, off_hook, dial,
 			               ButtonLeft, ButtonMiddle,
 			               tts, led)
 			logging.debug ("leaving off-hook loop")
