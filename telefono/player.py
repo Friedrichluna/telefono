@@ -150,18 +150,8 @@ class Player ():
 					                         start,
 					                         volume)
 		else:
-			self.start_sit_tone ()
-
-			timer = 0
-			while timer < NO_NUMBER_TIMEOUT:
-				if abort ():
-					self.stop_tone ()
-					return False
-
-				time.sleep (NO_NUMBER_DELAY)
-				timer += 1
-
-			self.stop_tone ()
+			if not self.play_sit_tone (abort):
+				aborted = True
 
 		if aloud:
 			self.__speaker.deactivate ()
@@ -220,6 +210,21 @@ class Player ():
 		self.stop_tone ()
 		self.__process = subprocess.Popen (SOX_SIT)
 		return
+
+	def play_sit_tone (self, abort):
+		self.start_sit_tone ()
+
+		timer = 0
+		while timer < NO_NUMBER_TIMEOUT:
+			if abort ():
+				self.stop_tone ()
+				return False
+
+			time.sleep (NO_NUMBER_DELAY)
+			timer += 1
+
+		self.stop_tone ()
+		return True
 
 	def play_recording (self, recording) -> bool:
 		recording = Record (recording, "").filename
