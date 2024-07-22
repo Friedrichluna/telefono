@@ -35,23 +35,23 @@ class SpeakerThread (threading.Thread):
 
 	def __set_on (self):
 		if self.__is_on:
-			return
+			return False
 
 		GPIO.output (self.__gpio, GPIO.LOW)
 		logging.debug ("Speaker activated")
 
 		self.__is_on = True
-		return
+		return True
 
 	def __set_off (self):
 		if not self.__is_on:
-			return
+			return False
 
 		GPIO.output (self.__gpio, GPIO.HIGH)
 		logging.debug ("Speaker deactivated")
 
 		self.__is_on = False
-		return
+		return True
 
 	def run (self):
 		while not self.__stop.is_set ():
