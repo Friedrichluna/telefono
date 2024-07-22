@@ -79,7 +79,6 @@ class SpeakerThread (threading.Thread):
 
 	def deactivate (self):
 		logging.debug ("Speaker: deactivate request")
-		self.__set_off ()
 		self.__event.clear ()
 		return
 
