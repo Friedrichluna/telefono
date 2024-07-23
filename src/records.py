@@ -330,10 +330,11 @@ class Records ():
 		return
 
 	def get_random (self):
-		if not self.__subscribers:
+		numbers = list (self.numbers ())
+		if not numbers:
 			return None
 
-		return random.choice (self.__subscribers)
+		return self[int (random.choice (numbers))]
 
 	def find_assignable (self):
 		number = 0
