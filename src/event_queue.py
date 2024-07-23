@@ -12,7 +12,7 @@ from .CONSTANTS import DEBUG_TIME_FORMAT
 from .CONSTANTS import MIN_HOUR
 from .CONSTANTS import MAX_HOUR
 
-from . import Record
+from .records import Number
 
 
 class EVENT_TYPE (enum.IntEnum):
@@ -44,7 +44,7 @@ class EventQueue:
 		self.__events.insert (index, (time, event))
 		return
 
-	def add_call (self, call:Record, time=0):
+	def add_call (self, call:Number, time=0):
 		self.log.info ("schedule call %d for %s",
 		               call.number, self.__get_debug_time (time))
 		self.__add_event (time, (EVENT_TYPE.CALL, call))
@@ -56,7 +56,7 @@ class EventQueue:
 		self.__add_event (time, (EVENT_TYPE.TEXT, text))
 		return
 
-	def add_shout (self, call:Record, filter, time:datetime.time):
+	def add_shout (self, call:Number, filter, time:datetime.time):
 		day = datetime.date.today ()
 
 		# don't schedule for the past

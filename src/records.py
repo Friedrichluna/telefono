@@ -16,12 +16,12 @@ from .CONSTANTS import RECORD_LIST_FILE
 from .CONSTANTS import BACKUP_EXT
 
 
-class RecordType:
+class NumberType:
 	UNASSIGNED = 0
 	RECORDING = 1
 
-class Record ():
-	def __init__ (self, records, number:int, type:RecordType,
+class Number ():
+	def __init__ (self, records, number:int, type:NumberType,
 	              description:str="",
 	              exists:bool=False):
 
@@ -74,7 +74,7 @@ class Record ():
 
 	def is_assignable (self) -> bool:
 
-		if RecordType.UNASSIGNED == self.__type:
+		if NumberType.UNASSIGNED == self.__type:
 			return True
 
 		return False
@@ -112,44 +112,44 @@ class Records ():
 				return index, False
 		return None, False
 
-	def __get (self, number:str) -> Record:
+	def __get (self, number:str) -> Number:
 		index, exists = self.__find (number)
 
 		if None is index:
 			index = len (self.__data)
 
 		if not exists:
-			record = Record (records=self,
+			record = Number (records=self,
 			                 number=int (number),
-			                 type=RecordType.UNASSIGNED)
+			                 type=NumberType.UNASSIGNED)
 			self.__data.insert (index, record)
 			return record
 
 		return self.__data[index]
 
-	def __set (self, record:Record):
-		index, exists = self.__find (str (record.number))
+	def __set (self, number:Number):
+		index, exists = self.__find (str (number.number))
 
 		if None is index:
-			self.__data.append (record)
+			self.__data.append (number)
 			return
 
 		if not exists:
-			self.__data.insert (index, record)
+			self.__data.insert (index, number)
 			return
 
-		self.__data[index] = record
+		self.__data[index] = number
 		return
 
-	def __del (self, number:str) -> Record:
+	def __del (self, number:str) -> Number:
 		index, exists = self.__find (number)
 
 		if not exists:
 			return None
 
-		record = self.__data[index]
+		number = self.__data[index]
 		self.__data.__delitem__ (index)
-		return record
+		return number
 
 	def __contains__ (self, number:int):
 		index, exists = self.__find (str (number))
@@ -169,22 +169,22 @@ class Records ():
 
 
 	def __iter__ (self):
-		l = list (self.keys ())
+		l = list (self.numbers ())
 		l.sort ()
 		return iter (l)
 
 	def __len__ (self):
 		length = 0
-		for record in self.__data:
-			if record.exists:
+		for number in self.__data:
+			if number.exists:
 				length += 1
 		return length
 
 
-	def keys (self):
-		for record in self.__data:
-			if record.exists:
-				yield record.number
+	def numbers (self):
+		for number in self.__data:
+			if number.exists:
+				yield number.number
 
 	def pop (self, number):
 		ret = self.__del (str (number))
@@ -242,7 +242,7 @@ class Records ():
 
 		_file.truncate ()
 
-		numbers = [record.number for record in self.__data]
+		numbers = [number.number for number in self.__data]
 		numbers.sort ()
 
 		for number in numbers:
@@ -263,12 +263,8 @@ class Records ():
 		return
 
 	def __invalidate_fs (self):
-		for record in self.__data:
-			record.exists = False
-		return
-
-	def __validate (self, number):
-		self.__get (str (number)).exists = True
+		for number in self.__data:
+			number.exists = False
 		return
 
 	def sync_data (self):
@@ -309,9 +305,9 @@ class Records ():
 			and file.endswith (RECORD_SUFFIX):
 				file = file[len(RECORD_PREFIX) :]
 				file = file[: -len(RECORD_SUFFIX)]
-				record = int (file)
+				number = int (file)
 
-				self.__validate (record)
+				self[number].exists = True
 		return
 
 	def get_random (self):
@@ -325,5 +321,4 @@ class Records ():
 		while not self[number].is_assignable ():
 			number += 1
 
-		# generate new Record
 		return self[number]

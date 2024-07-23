@@ -25,7 +25,7 @@ from .CONSTANTS import SHUTDOWN_BUTTON_DELAY
 
 from .ipc import IPC_Server
 from .player import Player
-from . import Record
+from .records import Number
 
 
 def turn_off (button, log):
