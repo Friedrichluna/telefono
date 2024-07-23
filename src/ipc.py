@@ -441,7 +441,8 @@ class IPC_Server (IPC):
 				self._send (data)
 				return
 
-		elif IPC_MESSAGE.SET_DESCRIPTION == message_type:
+		elif IPC_MESSAGE.SET_DESCRIPTION == message_type \
+		and payload[0] in records:
 			key, value = payload
 			records[key].description = value
 
