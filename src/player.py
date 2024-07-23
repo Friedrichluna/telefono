@@ -281,16 +281,14 @@ class Player ():
 		return True
 
 
-	def play_recording (self, recording:int) -> bool:
-		logging.info ("Player: play %d", recording)
+	def play_recording (self, recording:Record) -> bool:
+		logging.info ("Player: play %d", recording.number)
 
-		recording = Record (recording, "").filename
+		return self.__play (recording.filename,
+		                    abort=self.__on_hook, wind=True)
 
-		return self.__play (recording, abort=self.__on_hook,
-		                    wind=True)
-
-	def call (self, call:int, ring=True) -> bool:
-		logging.info ("Player: call %d", call)
+	def call (self, call:Record, ring=True) -> bool:
+		logging.info ("Player: call %d", call.number)
 
 		if ring:
 			if self.__play (RING_FILE,
@@ -301,8 +299,7 @@ class Player ():
 				# never picked up
 				return False
 
-		recording = Record (call, "").filename
-		return self.__play (recording, abort=self.__on_hook,
+		return self.__play (call.filename, abort=self.__on_hook,
 		                    aloud=(not ring))
 
 	def dial_sound (self, number):
@@ -352,6 +349,7 @@ class Player ():
 
 	def __play_random (self, files) -> bool:
 		recording = random.choice (files)
+		recording = Record (recording, "")
 		return self.play_recording (recording)
 
 	def random_prayer (self) -> bool:

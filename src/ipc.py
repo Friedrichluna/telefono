@@ -380,7 +380,7 @@ class IPC_Server (IPC):
 			return
 
 		elif IPC_MESSAGE.CALL == message_type:
-			queue.add_call (payload)
+			queue.add_call (Record (payload, ""))
 
 			data = self._serialize_answer (IPC_ANSWER.OK)
 			self._send (data)

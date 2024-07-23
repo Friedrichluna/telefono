@@ -6,6 +6,8 @@ translate README
 
 - better name for shout
 
+- handle non existent number
+
 Logging:
 	- prettier log messages
 		- less colons
@@ -14,6 +16,9 @@ Logging:
 	- log hardware events
 	- log IPC
 	- log from Records
+
+Records:
+	- represent special tones
 
 Player:
 	- get rid of pygame

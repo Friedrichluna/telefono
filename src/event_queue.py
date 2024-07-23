@@ -12,6 +12,8 @@ from .CONSTANTS import DEBUG_TIME_FORMAT
 from .CONSTANTS import MIN_HOUR
 from .CONSTANTS import MAX_HOUR
 
+from . import Record
+
 
 class EVENT_TYPE (enum.IntEnum):
 	CALL = 0
@@ -40,9 +42,9 @@ class EventQueue:
 		self.__events.insert (index, (time, event))
 		return
 
-	def add_call (self, call:int, time=0):
+	def add_call (self, call:Record, time=0):
 		logging.info ("EventQueue: schedule call %d for %s",
-		              call, self.__get_debug_time (time))
+		              call.number, self.__get_debug_time (time))
 		self.__add_event (time, (EVENT_TYPE.CALL, call))
 		return
 
@@ -52,7 +54,7 @@ class EventQueue:
 		self.__add_event (time, (EVENT_TYPE.TEXT, text))
 		return
 
-	def add_shout (self, call:int, filter, time:datetime.time):
+	def add_shout (self, call:Record, filter, time:datetime.time):
 		day = datetime.date.today ()
 
 		# don't schedule for the past
@@ -65,7 +67,7 @@ class EventQueue:
 		event = (EVENT_TYPE.DAILY_SHOUT, call, filter)
 
 		logging.info ("EventQueue: schedule shout %d for %s",
-		              call, self.__get_debug_time (time))
+		              call.number, self.__get_debug_time (time))
 
 		self.__add_event (time, event)
 		return
@@ -103,7 +105,7 @@ class EventQueue:
 		time = self.__get_random_call_time (day)
 
 		logging.info ("EventQueue: schedule random call %d for %s",
-		              call, self.__get_debug_time (time))
+		              call.number, self.__get_debug_time (time))
 
 		return self.__add_event (time, event)
 
@@ -121,7 +123,7 @@ class EventQueue:
 
 			if EVENT_TYPE.CALL == event[0]:
 				logging.info ("EventQueue: process call %d at %s",
-				              event[1],
+				              event[1].number,
 				              self.__get_debug_time (_time))
 				self.__process_call (event[1], player)
 
@@ -133,7 +135,7 @@ class EventQueue:
 
 			elif EVENT_TYPE.DAILY_RANDOM == event[0]:
 				logging.info ("EventQueue: process random call %d at %s",
-				              event[1],
+				              event[1].number,
 				              self.__get_debug_time (_time))
 				self.__process_call (event[1], player)
 

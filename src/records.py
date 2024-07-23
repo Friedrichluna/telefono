@@ -149,7 +149,12 @@ class Records ():
 		return record.exists
 
 	def __getitem__ (self, key):
-		return self.__get (str (key))
+		record = self.__get (str (key))
+
+		if None is record:
+			record = Record (key, "")
+
+		return record
 
 	def __setitem__ (self, key, value):
 		if int != type (key):
@@ -360,7 +365,7 @@ class Records ():
 		if not self.__data:
 			return None
 
-		return int (random.choice (self.__data).number)
+		return random.choice (self.__data)
 
 	def add_next (self):
 		number = 0

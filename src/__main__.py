@@ -45,14 +45,14 @@ def turn_off (button):
 	logging.debug ("released shutdown press prematurely")
 	return False
 
-def do_dial_call (off_hook, ButtonLeft, dial, player, led):
+def do_dial_call (off_hook, ButtonLeft, dial, records, player, led):
 	logging.debug ("start dialing")
 
 	def abort ():
 		return ButtonLeft.is_released or not off_hook ()
 
 	number = dial.get_number (abort, led, player)
-	if None is number or player.play_recording (number):
+	if None is number or player.play_recording (records[number]):
 		# still off-hook
 		player.play_busy_tone ()
 	return
@@ -156,7 +156,7 @@ def off_hook_loop (records, player, off_hook, dial, ButtonLeft, ButtonMiddle, le
 		if dial.is_used ():
 			player.stop_tone ()
 			return do_dial_call (off_hook, ButtonLeft,
-			                     dial, player, led)
+			                     dial, records, player, led)
 
 		if ButtonLeft.is_pressed:
 			player.stop_tone ()
@@ -227,9 +227,9 @@ def main ():
 	def every_weekday (_datetime:datetime.datetime):
 		return True
 
-	queue.add_shout (1830, dinner_weekday, datetime.time (18, 30))
-	queue.add_shout (1930, dinner_weekday, datetime.time (19, 30))
-	queue.add_shout (2014, every_weekday, datetime.time (20, 00))
+	queue.add_shout (records[1830], dinner_weekday, datetime.time (18, 30))
+	queue.add_shout (records[1930], dinner_weekday, datetime.time (19, 30))
+	queue.add_shout (records[2014], every_weekday, datetime.time (20, 00))
 
 	# start webapp
 	webAppProcess = run_webapp (ipc.get_client_fd ())
