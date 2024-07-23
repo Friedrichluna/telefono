@@ -23,9 +23,10 @@ IPC_TTS_MESSAGE_SIZE = IPC_MAX_DATA -1 -1
 
 class IPC_ANSWER (enum.IntEnum):
 	OK = 0
-	ERROR = 1,
-	DESCRIPTION = 2,
-	LIST = 3,
+	ERROR = 1
+	NO_NUMBER = 2
+	DESCRIPTION = 3
+	LIST = 4
 
 IPC_DESCRIPTION_SIZE = 128
 
@@ -195,6 +196,9 @@ class IPC:
 		if IPC_ANSWER.ERROR == answer:
 			return answer, None
 
+		if IPC_ANSWER.NO_NUMBER == answer:
+			return answer, None
+
 		if IPC_ANSWER.DESCRIPTION == answer:
 			payload = self.__deserialize_description (message[1:])
 			return answer, payload
@@ -328,6 +332,11 @@ class IPC_Client (IPC):
 		elif IPC_ANSWER.ERROR == answer:
 			return "Ein Fehler ist aufgetreten.", "error"
 
+		elif IPC_ANSWER.NO_NUMBER == answer:
+			return "Die Nummer %d ist nicht vergeben." \
+			           % call_id, \
+			       "error"
+
 		return "Ein Fehler ist aufgetreten.", "error"
 
 	def queue_message (self, message:str):
@@ -380,7 +389,14 @@ class IPC_Server (IPC):
 			return
 
 		elif IPC_MESSAGE.CALL == message_type:
-			queue.add_call (Record (payload, ""))
+			call = records[payload]
+			if call is None:
+				data = self._serialize_answer (
+				                IPC_ANSWER.NO_NUMBER)
+				self._send (data)
+				return
+
+			queue.add_call (call)
 
 			data = self._serialize_answer (IPC_ANSWER.OK)
 			self._send (data)

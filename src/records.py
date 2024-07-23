@@ -149,12 +149,7 @@ class Records ():
 		return record.exists
 
 	def __getitem__ (self, key):
-		record = self.__get (str (key))
-
-		if None is record:
-			record = Record (key, "")
-
-		return record
+		return self.__get (str (key))
 
 	def __setitem__ (self, key, value):
 		if int != type (key):
