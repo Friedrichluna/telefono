@@ -120,7 +120,7 @@ class Records ():
 
 		return self.__data[index]
 
-	def __set (self, record, keep=False):
+	def __set (self, record):
 		index, exists = self.__find (str (record.number))
 
 		if None is index:
@@ -129,9 +129,6 @@ class Records ():
 
 		if not exists:
 			self.__data.insert (index, record)
-			return
-
-		if keep:
 			return
 
 		self.__data[index] = record
@@ -205,17 +202,6 @@ class Records ():
 		ret = self.__del (str (number))
 		self.sync_data ()
 		return ret
-
-	def setdefault (self, key):
-		if int != type (key):
-			raise TypeError (
-			      "Invalid key %s, must be int not %s."
-			      % (repr(key), type (key)))
-
-		self.__set (Record (records=self, number=key,
-		                    type=RecordType.RECORDING), keep=True)
-		self.sync_data ()
-		return self.__get (str (key))
 
 	def __load (self, _file):
 		fcntl.flock(_file, fcntl.LOCK_SH)
@@ -294,7 +280,6 @@ class Records ():
 		return
 
 	def __validate (self, number):
-		self.setdefault (number)
 		self.__get (str (number)).exists = True
 		return
 
@@ -353,4 +338,4 @@ class Records ():
 			number += 1
 
 		# generate new Record
-		return self.setdefault (number)
+		return self[number]
