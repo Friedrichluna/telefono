@@ -60,7 +60,7 @@ from .CONSTANTS import BUSY_TIMEOUT
 
 from .CONSTANTS import TIME_FORMAT
 
-from .records import Number
+from .records import Subscriber
 
 
 class Player ():
@@ -283,13 +283,13 @@ class Player ():
 		return True
 
 
-	def play_recording (self, recording:Number) -> bool:
+	def play_recording (self, recording:Subscriber) -> bool:
 		self.log.info ("play %s", recording.number)
 
 		return self.__play (recording.filename,
 		                    abort=self.__on_hook, wind=True)
 
-	def call (self, call:Number, ring=True) -> bool:
+	def call (self, call:Subscriber, ring=True) -> bool:
 		self.log.info ("call %s", call.number)
 
 		if ring:

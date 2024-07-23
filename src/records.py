@@ -16,16 +16,16 @@ from .CONSTANTS import RECORD_LIST_FILE
 from .CONSTANTS import BACKUP_EXT
 
 
-class NumberType:
+class SubscriberType:
 	UNASSIGNED = 0
 	RECORDING = 1
 
-class Number ():
+class Subscriber ():
 	def __init__ (self, records, number:str):
 
 		self.__records = records
 		self.__number = number
-		self.__type = NumberType.UNASSIGNED
+		self.__type = SubscriberType.UNASSIGNED
 
 		self.__description = str ()
 		self.__exists = False
@@ -39,13 +39,13 @@ class Number ():
 			return self.__description
 
 		if 'exists' == name:
-			if NumberType.RECORDING == self.__type:
+			if SubscriberType.RECORDING == self.__type:
 				return self.__exists
 
 			return False
 
 		if 'filename' == name:
-			if NumberType.RECORDING == self.__type:
+			if SubscriberType.RECORDING == self.__type:
 				filename = ""
 				filename += RECORD_DIR
 				filename += "/"
@@ -78,10 +78,10 @@ class Number ():
 				    "exists must be bool not %r" %
 				    type (value))
 
-			if NumberType.UNASSIGNED == self.__type and value:
-				self.__type = NumberType.RECORDING
+			if SubscriberType.UNASSIGNED == self.__type and value:
+				self.__type = SubscriberType.RECORDING
 
-			if NumberType.RECORDING == self.__type:
+			if SubscriberType.RECORDING == self.__type:
 				self.__exists = value
 			return
 
@@ -92,7 +92,7 @@ class Number ():
 
 	def is_assignable (self) -> bool:
 
-		if NumberType.UNASSIGNED == self.__type:
+		if SubscriberType.UNASSIGNED == self.__type:
 			return True
 
 		return False
@@ -100,7 +100,7 @@ class Number ():
 
 class Records ():
 	def __init__ (self, filename:str=RECORD_LIST_FILE):
-		self.__data = list ()
+		self.__subscribers = list ()
 		self.__prevent_sync = False
 
 		self.__filename = filename
@@ -123,49 +123,49 @@ class Records ():
 		return None
 
 	def __find (self, number:str) -> (int, bool):
-		for index in range (len (self.__data)):
-			if number == self.__data[index].number:
+		for index in range (len (self.__subscribers)):
+			if number == self.__subscribers[index].number:
 				return index, True
-			if number < self.__data[index].number:
+			if number < self.__subscribers[index].number:
 				return index, False
 		return None, False
 
-	def __get (self, number:str) -> Number:
+	def __get (self, number:str) -> Subscriber:
 		index, exists = self.__find (number)
 
 		if None is index:
-			index = len (self.__data)
+			index = len (self.__subscribers)
 
 		if not exists:
-			record = Number (records=self, number=number)
-			self.__data.insert (index, record)
-			return record
+			subscriber = Subscriber (self, number)
+			self.__subscribers.insert (index, subscriber)
+			return subscriber
 
-		return self.__data[index]
+		return self.__subscribers[index]
 
-	def __set (self, number:Number):
-		index, exists = self.__find (number.number)
+	def __set (self, subscriber:Subscriber):
+		index, exists = self.__find (subscriber.number)
 
 		if None is index:
-			self.__data.append (number)
+			self.__subscribers.append (subscriber)
 			return
 
 		if not exists:
-			self.__data.insert (index, number)
+			self.__subscribers.insert (index, subscriber)
 			return
 
-		self.__data[index] = number
+		self.__subscribers[index] = subscriber
 		return
 
-	def __del (self, number:str) -> Number:
+	def __del (self, number:str) -> Subscriber:
 		index, exists = self.__find (number)
 
 		if not exists:
 			return None
 
-		number = self.__data[index]
-		self.__data.__delitem__ (index)
-		return number
+		subscriber = self.__subscribers[index]
+		self.__subscribers.__delitem__ (index)
+		return subscriber
 
 	def __contains__ (self, number:str):
 		index, exists = self.__find (number)
@@ -173,7 +173,7 @@ class Records ():
 		if not exists:
 			return False
 
-		return self.__data[index].exists
+		return self.__subscribers[index].exists
 
 	def __getitem__ (self, key:int):
 		return self.__get (str (key))
@@ -191,18 +191,18 @@ class Records ():
 
 	def __len__ (self):
 		length = 0
-		for number in self.__data:
-			if number.exists:
+		for subscriber in self.__subscribers:
+			if subscriber.exists:
 				length += 1
 		return length
 
 
 	def numbers (self):
-		for number in self.__data:
-			if number.exists:
-				yield number.number
+		for subscriber in self.__subscribers:
+			if subscriber.exists:
+				yield subscriber.number
 
-	def pop (self, number):
+	def pop (self, number:int):
 		ret = self.__del (str (number))
 		self.sync_data ()
 		return ret
@@ -258,7 +258,8 @@ class Records ():
 
 		_file.truncate ()
 
-		numbers = [int (number.number) for number in self.__data]
+		numbers = [int (subscriber.number)
+		           for subscriber in self.__subscribers]
 		numbers.sort ()
 
 		for number in numbers:
@@ -279,8 +280,8 @@ class Records ():
 		return
 
 	def __invalidate_fs (self):
-		for number in self.__data:
-			number.exists = False
+		for subscriber in self.__subscribers:
+			subscriber.exists = False
 		return
 
 	def sync_data (self):
@@ -328,18 +329,18 @@ class Records ():
 
 	def compact (self):
 		# remove useless entries
-		for number in self.__data:
-			if NumberType.UNASSIGNED == number.__type \
-			and "" == number.description:
-				self.__data.remove (number)
+		for subscriber in self.__subscribers:
+			if SubscriberType.UNASSIGNED == subscriber.__type \
+			and "" == subscriber.description:
+				self.__subscribers.remove (subscriber)
 
 		return
 
 	def get_random (self):
-		if not self.__data:
+		if not self.__subscribers:
 			return None
 
-		return random.choice (self.__data)
+		return random.choice (self.__subscribers)
 
 	def find_assignable (self):
 		number = 0
