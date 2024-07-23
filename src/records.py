@@ -21,36 +21,40 @@ class NumberType:
 	RECORDING = 1
 
 class Number ():
-	def __init__ (self, records, number:int, type:NumberType,
-	              description:str="",
-	              exists:bool=False):
+	def __init__ (self, records, number:int, type:NumberType):
 
 		self.__records = records
 		self.__number = number
 		self.__type = type
 
-		self.__description = description
-		self.__exists = exists
+		self.__description = str ()
+		self.__exists = False
 		return
 
 	def __getattribute__ (self, name):
 		if 'number' == name:
 			return self.__number
 
-		if 'exists' == name:
-			return self.__exists
-
 		if 'description' == name:
 			return self.__description
 
+		if 'exists' == name:
+			if NumberType.RECORDING == self.__type:
+				return self.__exists
+
+			return False
+
 		if 'filename' == name:
-			filename = ""
-			filename += RECORD_DIR
-			filename += "/"
-			filename += RECORD_PREFIX
-			filename += str(self.__number)
-			filename += RECORD_SUFFIX
-			return filename
+			if NumberType.RECORDING == self.__type:
+				filename = ""
+				filename += RECORD_DIR
+				filename += "/"
+				filename += RECORD_PREFIX
+				filename += str(self.__number)
+				filename += RECORD_SUFFIX
+				return filename
+
+			return str ()
 
 		return super ().__getattribute__ (name)
 
@@ -58,13 +62,17 @@ class Number ():
 		if 'number' == name:
 			raise AttributeError ("read-only attribute")
 
-		if 'exists' == name:
-			self.__exists = value
-			return
-
 		if 'description' == name:
 			self.__description = value
 			self.__records.sync_data ()
+			return
+
+		if 'exists' == name:
+			if NumberType.UNASSIGNED == self.__type and value:
+				self.__type = NumberType.RECORDING
+
+			if NumberType.RECORDING == self.__type:
+				self.__exists = value
 			return
 
 		if 'filename' == name:
