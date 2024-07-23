@@ -124,6 +124,8 @@ class TelefonoWebApp (Flask):
 		file_path = UPLOAD_DIR + "/" + RECORD_PREFIX + str(requested_number) + RECORD_SUFFIX
 		uploaded_file.save(file_path)
 
+		self.ipc.upload ()
+
 		print("test")
 		return render_template("upload.html",
 			message="erfolgreich unter %s gespeichert!" % file_path,
