@@ -24,6 +24,8 @@ class EVENT_TYPE (enum.IntEnum):
 
 class EventQueue:
 	def __init__ (self, records):
+		self.log = logging.getLogger ("EventQueue")
+
 		self.__events = list ()
 
 		self.__records = records
@@ -43,14 +45,14 @@ class EventQueue:
 		return
 
 	def add_call (self, call:Record, time=0):
-		logging.info ("EventQueue: schedule call %d for %s",
-		              call.number, self.__get_debug_time (time))
+		self.log.info ("schedule call %d for %s",
+		               call.number, self.__get_debug_time (time))
 		self.__add_event (time, (EVENT_TYPE.CALL, call))
 		return
 
 	def add_text (self, text:str, time=0):
-		logging.info ("EventQueue: schedule text %s for %s",
-		              text, self.__get_debug_time (time))
+		self.log.info ("schedule text %s for %s",
+		               text, self.__get_debug_time (time))
 		self.__add_event (time, (EVENT_TYPE.TEXT, text))
 		return
 
@@ -66,8 +68,8 @@ class EventQueue:
 
 		event = (EVENT_TYPE.DAILY_SHOUT, call, filter)
 
-		logging.info ("EventQueue: schedule shout %d for %s",
-		              call.number, self.__get_debug_time (time))
+		self.log.info ("schedule shout %d for %s",
+		               call.number, self.__get_debug_time (time))
 
 		self.__add_event (time, event)
 		return
@@ -97,15 +99,15 @@ class EventQueue:
 	def __add_random_call (self, day:datetime.date):
 		call = self.__records.get_random ()
 		if call is None:
-			logging.error ("failed to schedule random call, "
-			               "due to no calls being available")
+			self.log.error ("failed to schedule random call, "
+			                "due to no calls being available")
 			return
 
 		event = (EVENT_TYPE.DAILY_RANDOM, call)
 		time = self.__get_random_call_time (day)
 
-		logging.info ("EventQueue: schedule random call %d for %s",
-		              call.number, self.__get_debug_time (time))
+		self.log.info ("schedule random call %d for %s",
+		               call.number, self.__get_debug_time (time))
 
 		return self.__add_event (time, event)
 
@@ -122,21 +124,21 @@ class EventQueue:
 			event = self.__events.pop (0)[1]
 
 			if EVENT_TYPE.CALL == event[0]:
-				logging.info ("EventQueue: process call %d at %s",
-				              event[1].number,
-				              self.__get_debug_time (_time))
+				self.log.info ("process call %d at %s",
+				               event[1].number,
+				               self.__get_debug_time (_time))
 				self.__process_call (event[1], player)
 
 			elif EVENT_TYPE.TEXT == event[0]:
-				logging.info ("EventQueue: process text %s at %s",
-				              event[1],
-				              self.__get_debug_time (_time))
+				self.log.info ("process text %s at %s",
+				               event[1],
+				               self.__get_debug_time (_time))
 				self.__process_text (event[1], player)
 
 			elif EVENT_TYPE.DAILY_RANDOM == event[0]:
-				logging.info ("EventQueue: process random call %d at %s",
-				              event[1].number,
-				              self.__get_debug_time (_time))
+				self.log.info ("process random call %d at %s",
+				               event[1].number,
+				               self.__get_debug_time (_time))
 				self.__process_call (event[1], player)
 
 				tomorrow = datetime.date.today ()
@@ -144,19 +146,19 @@ class EventQueue:
 				self.__add_random_call (tomorrow)
 
 			elif EVENT_TYPE.DAILY_SHOUT == event[0]:
-				logging.info ("EventQueue: process shout %s at %s",
-				              event[1],
-				              self.__get_debug_time (_time))
+				self.log.info ("process shout %s at %s",
+				               event[1],
+				               self.__get_debug_time (_time))
 				date = datetime.datetime.fromtimestamp (_time)
 				if event[2] (date):
 					self.__process_shout (event[1], player)
 				else:
-					logging.info ("EventQueue: suppress shout due to filter")
+					self.log.info ("suppress shout due to filter")
 
 				self.add_shout (event[1], event[2],
 				                date.time ())
 			else:
-				logging.error ("EventQueue: failed to handle unknown event type %s", event[0])
+				self.log.error ("failed to handle unknown event type %s", event[0])
 
 		return
 

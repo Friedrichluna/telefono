@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 DEBUG = False
+LOG_FORMAT = "%(filename)15s:%(lineno)4d (%(levelname)s) %(name)s: %(message)s"
 
 DATA_DIR = "@pkgdatadir@"
 

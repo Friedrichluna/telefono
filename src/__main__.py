@@ -13,6 +13,7 @@ import gpiozero
 from . import *
 
 from .CONSTANTS import DEBUG
+from .CONSTANTS import LOG_FORMAT
 
 from .CONSTANTS import STARTUP_FILE
 from .CONSTANTS import SHUTDOWN_FILE
@@ -27,27 +28,27 @@ from .player import Player
 from . import Record
 
 
-def turn_off (button):
+def turn_off (button, log):
 	if not button.is_pressed:
 		return False
 
 	time_pressed = 0
 	while button.is_pressed and time_pressed < 10:
 		if 0 == time_pressed:
-			logging.debug ("started shutdown press")
+			log.debug ("started shutdown press")
 
 		time.sleep (SHUTDOWN_BUTTON_DELAY)
 		time_pressed += 1
 
 	if time_pressed >= 10:
-		logging.debug ("shutdown press")
+		log.debug ("shutdown press")
 		return True
 
-	logging.debug ("released shutdown press prematurely")
+	log.debug ("released shutdown press prematurely")
 	return False
 
-def do_dial_call (off_hook, ButtonLeft, dial, records, player, led):
-	logging.debug ("start dialing")
+def do_dial_call (off_hook, ButtonLeft, dial, records, player, led, log):
+	log.debug ("start dialing")
 
 	def abort ():
 		return ButtonLeft.is_released or not off_hook ()
@@ -59,7 +60,7 @@ def do_dial_call (off_hook, ButtonLeft, dial, records, player, led):
 		player.play_busy_tone ()
 	return
 
-def do_recording (off_hook, ButtonLeft, ButtonMiddle, records, player, led):
+def do_recording (off_hook, ButtonLeft, ButtonMiddle, records, player, led, log):
 
 	def end ():
 		return ButtonLeft.is_released or not off_hook ()
@@ -69,7 +70,7 @@ def do_recording (off_hook, ButtonLeft, ButtonMiddle, records, player, led):
 
 	record = records.add_next ()
 
-	logging.info ("start recording %d", record.number)
+	log.info ("start recording %d", record.number)
 	if not player.say ("Aufnahme Nr.: %d wird gestartet"
 	                   % record.number):
 		# hang up
@@ -79,27 +80,27 @@ def do_recording (off_hook, ButtonLeft, ButtonMiddle, records, player, led):
 	                   records, led).record (end, abort)
 
 	if RECORDER_RESULT.ABORT == result:
-		logging.info ("recording %d aborted", record.number)
+		log.info ("recording %d aborted", record.number)
 		player.say ("Aufnahme Nr.: %d abgebrochen" % record.number,
 		            interruptible=False)
 
 	elif RECORDER_RESULT.MIN_TIME == result:
-		logging.info ("recording %d to short", record.number)
+		log.info ("recording %d to short", record.number)
 		player.say ("Aufnahme zu kurz", interruptible=False)
 
 	elif RECORDER_RESULT.MAX_TIME == result:
-		logging.info ("recording %d terminated after max. time",
+		log.info ("recording %d terminated after max. time",
 		              record.number)
 		player.say ("Aufnahme Nr.: %d wegen overtime beendet."
 		            % record.number, interruptible=False)
 	else:
-		logging.info ("finished recording %d", record.number)
+		log.info ("finished recording %d", record.number)
 
 	player.play_busy_tone ()
 	return
 
-def do_menu (off_hook, dial, player, led):
-	logging.debug ("opening menu")
+def do_menu (off_hook, dial, player, led, log):
+	log.debug ("opening menu")
 
 	def abort ():
 		return not off_hook ()
@@ -117,38 +118,38 @@ def do_menu (off_hook, dial, player, led):
 	option = dial.get_digit (abort, led, player)
 	# aborted
 	if option is None:
-		logging.info ("aborted menu selection")
+		log.info ("aborted menu selection")
 		pass
 	elif option == 0:
-		logging.info ("menu: selected 0")
+		log.info ("menu: selected 0")
 		if not player.say_time ():
 			# hang up
 			return
 	elif option == 1:
-		logging.info ("menu: selected 1")
+		log.info ("menu: selected 1")
 		if not player.random_prayer ():
 			# hang up
 			return
 	elif option == 2:
-		logging.info ("menu: selected 2")
+		log.info ("menu: selected 2")
 		if not player.random_dice_prayer ():
 			# hang up
 			return
 	elif option == 3:
-		logging.info ("menu: selected 3")
+		log.info ("menu: selected 3")
 		if not player.random_pater ():
 			# hang up
 			return
 	else:
-		logging.info ("error in menu selection")
+		log.info ("error in menu selection")
 		player.say ("Das habe ich nicht verstanden. Auf Wiederhörn!",
 		            interruptible=False)
 
 	player.play_busy_tone ()
 	return
 
-def off_hook_loop (records, player, off_hook, dial, ButtonLeft, ButtonMiddle, led):
-	logging.debug ("entering off-hook loop")
+def off_hook_loop (records, player, off_hook, dial, ButtonLeft, ButtonMiddle, led, log):
+	log.debug ("entering off-hook loop")
 
 	player.start_dial_tone ()
 
@@ -158,26 +159,27 @@ def off_hook_loop (records, player, off_hook, dial, ButtonLeft, ButtonMiddle, le
 		if dial.is_used ():
 			player.stop_tone ()
 			return do_dial_call (off_hook, ButtonLeft,
-			                     dial, records, player, led)
+			                     dial, records, player, led,
+			                     log)
 
 		if ButtonLeft.is_pressed:
 			player.stop_tone ()
 			return do_recording (off_hook,
 			                     ButtonLeft, ButtonMiddle,
-			                     records, player, led)
+			                     records, player, led, log)
 
 		if ButtonMiddle.is_pressed:
 			player.stop_tone ()
-			return do_menu (off_hook, dial, player, led)
+			return do_menu (off_hook, dial, player, led, log)
 
 	player.stop_tone ()
 	return
 
-def run_webapp (fd):
-	logging.info ("starting webapp")
+def run_webapp (fd, log):
+	log.info ("starting webapp")
 
 	command = ([*WEBAPP_EXEC, str (fd)])
-	logging.debug ("webapp invocation: %s", repr (command))
+	log.debug ("webapp invocation: %s", repr (command))
 
 	return subprocess.Popen (command, pass_fds=(fd, ))
 
@@ -192,8 +194,10 @@ def main ():
 	else:
 		log_level = logging.INFO
 
-	logging.basicConfig (level=log_level)
-	logging.info ("started telefono")
+	logging.basicConfig (level=log_level, format=LOG_FORMAT)
+
+	log = logging.getLogger (__name__)
+	log.info ("started telefono")
 
 	# initialize random module
 	random.seed ()
@@ -234,7 +238,7 @@ def main ():
 	queue.add_shout (records[2014], every_weekday, datetime.time (20, 00))
 
 	# start webapp
-	webAppProcess = run_webapp (ipc.get_client_fd ())
+	webAppProcess = run_webapp (ipc.get_client_fd (), log)
 
 	global running
 	running = True
@@ -247,13 +251,14 @@ def main ():
 	def off_hook ():
 		return Hook.is_pressed
 
-	logging.info ("startup finished")
-	while running and not turn_off (ButtonMiddle):
+	log.info ("startup finished")
+	while running and not turn_off (ButtonMiddle, log):
 
 		if off_hook ():
 			off_hook_loop (records, player, off_hook, dial,
-			               ButtonLeft, ButtonMiddle, led)
-			logging.debug ("leaving off-hook loop")
+			               ButtonLeft, ButtonMiddle, led,
+			               log)
+			log.debug ("leaving off-hook loop")
 
 		ipc.handle_message (queue, records)
 
@@ -261,7 +266,7 @@ def main ():
 
 		time.sleep (MAINLOOP_DELAY)
 
-	logging.info ("shutting down")
+	log.info ("shutting down")
 	player.play_aloud (SHUTDOWN_FILE)
 
 	webAppProcess.terminate ()
@@ -275,7 +280,7 @@ def main ():
 	SpeakerSwich.close ()
 	led.close ()
 
-	logging.info ("bye.")
+	log.info ("bye.")
 	return 0
 
 

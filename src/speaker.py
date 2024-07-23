@@ -16,6 +16,8 @@ class SpeakerThread (threading.Thread):
 	def __init__ (self, switch, gpio=RELAIS_1_GPIO):
 		super ().__init__ ()
 
+		self.log = logging.getLogger ("Speaker")
+
 		self.__switch = switch
 		self.__gpio = gpio
 
@@ -38,7 +40,7 @@ class SpeakerThread (threading.Thread):
 			return False
 
 		GPIO.output (self.__gpio, GPIO.LOW)
-		logging.debug ("Speaker activated")
+		self.log.debug ("activated")
 
 		self.__is_on = True
 		return True
@@ -48,7 +50,7 @@ class SpeakerThread (threading.Thread):
 			return False
 
 		GPIO.output (self.__gpio, GPIO.HIGH)
-		logging.debug ("Speaker deactivated")
+		self.log.debug ("deactivated")
 
 		self.__is_on = False
 		return True
@@ -69,7 +71,7 @@ class SpeakerThread (threading.Thread):
 		return
 
 	def activate (self):
-		logging.debug ("Speaker: activate request")
+		self.log.debug ("activate request")
 		self.__event.set ()
 
 		if self.__set_on ():
@@ -78,13 +80,13 @@ class SpeakerThread (threading.Thread):
 		return
 
 	def deactivate (self):
-		logging.debug ("Speaker: deactivate request")
+		self.log.debug ("deactivate request")
 		self.__event.clear ()
 		return
 
 	def join (self, timeout=None):
-		logging.debug ("shutting down speaker thread with timeout %s",
-		               repr (timeout))
+		self.log.debug ("shutting down with timeout %s",
+		                repr (timeout))
 
 		self.__stop.set ()
 		return super ().join (timeout)

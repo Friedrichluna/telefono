@@ -9,10 +9,6 @@ translate README
 - handle non existent number
 
 Logging:
-	- prettier log messages
-		- less colons
-		- file, line
-
 	- log hardware events
 	- log IPC
 	- log from Records
