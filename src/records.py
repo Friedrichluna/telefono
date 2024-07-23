@@ -21,11 +21,11 @@ class NumberType:
 	RECORDING = 1
 
 class Number ():
-	def __init__ (self, records, number:str, type:NumberType):
+	def __init__ (self, records, number:str):
 
 		self.__records = records
 		self.__number = number
-		self.__type = type
+		self.__type = NumberType.UNASSIGNED
 
 		self.__description = str ()
 		self.__exists = False
@@ -137,9 +137,7 @@ class Records ():
 			index = len (self.__data)
 
 		if not exists:
-			record = Number (records=self,
-			                 number=number,
-			                 type=NumberType.UNASSIGNED)
+			record = Number (records=self, number=number)
 			self.__data.insert (index, record)
 			return record
 
