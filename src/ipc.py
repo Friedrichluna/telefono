@@ -411,7 +411,7 @@ class IPC_Server (IPC):
 
 		elif IPC_MESSAGE.CALL == message_type:
 			call = records[payload]
-			if call is None:
+			if not call.exists:
 				data = self._serialize_answer (
 				                IPC_ANSWER.NO_NUMBER)
 				self._send (data)

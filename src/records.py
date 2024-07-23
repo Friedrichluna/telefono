@@ -17,19 +17,22 @@ from .CONSTANTS import BACKUP_EXT
 
 
 class RecordType:
-	RECORDING = 0
+	UNASSIGNED = 0
+	RECORDING = 1
 
 class Record ():
-	def __init__ (self, number:int, description:str="",
-	              exists:bool=False,
+	def __init__ (self, number:int,
 	              type:RecordType=RecordType.RECORDING,
+	              description:str="",
+	              exists:bool=False,
 	              records=None):
 
 		self.__records = records
 		self.__number = number
+		self.__type = type
+
 		self.__description = description
 		self.__exists = exists
-		self.__type = type
 		return
 
 	def __getattribute__ (self, name):
@@ -105,13 +108,20 @@ class Records ():
 				return index, False
 		return None, False
 
-	def __get (self, number, default=None):
+	def __get (self, number):
 		index, exists = self.__find (number)
 
-		if exists:
-			return self.__data[index]
+		if None is index:
+			index = len (self.__data)
 
-		return default
+		if not exists:
+			record = Record (number=int (number),
+			                 records=self
+			                 type=RecordType.UNASSIGNED)
+			self.__data.insert (index, record)
+			return record
+
+		return self.__data[index]
 
 	def __set (self, record, keep=False):
 		index, exists = self.__find (str (record.number))
@@ -140,13 +150,14 @@ class Records ():
 		self.__data.__delitem__ (index)
 		return record
 
-	def __contains__ (self, key):
-		record = self.__get (str (key))
+	def __contains__ (self, number:int):
+		index, exists = self.__find (str (number))
 
-		if None is record:
+		if not exists:
 			return False
 
-		return record.exists
+		return self.__data[index].exists
+
 
 	def __getitem__ (self, key):
 		return self.__get (str (key))
@@ -197,9 +208,6 @@ class Records ():
 		c = Records ()
 		c.__data = self.__data.copy ()
 		return c
-
-	def get (self, key, default=None):
-		return self.__get (str (key), default)
 
 	def items (self):
 		for record in self.__data:
