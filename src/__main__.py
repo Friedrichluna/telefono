@@ -106,6 +106,12 @@ def do_menu (off_hook, dial, player, led):
 		# hang up
 		return
 
+	player.start_secondary_dial_tone ()
+
+	while not dial.is_used ():
+		pass
+
+	player.stop_tone ()
 	option = dial.get_digit (abort, led, player)
 	# aborted
 	if option is None:

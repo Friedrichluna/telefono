@@ -15,6 +15,7 @@ from .CONSTANTS import RING_FILE
 from .CONSTANTS import SOX_DIAL
 from .CONSTANTS import SOX_BUSY
 from .CONSTANTS import SOX_RELEASE
+from .CONSTANTS import SOX_DIAL_SECONDARY
 from .CONSTANTS import SOX_SIT
 
 from .CONSTANTS import SOX_NUMBER_1
@@ -252,6 +253,11 @@ class Player ():
 			pass
 
 		self.stop_tone ()
+		return
+
+	def start_secondary_dial_tone (self):
+		logging.debug ("starting secondary dial tone")
+		self.start_tone (SOX_DIAL_SECONDARY)
 		return
 
 	def start_sit_tone (self):
