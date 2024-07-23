@@ -97,7 +97,7 @@ class Records ():
 
 		return None
 
-	def __find (self, number):
+	def __find (self, number:str) -> (int, bool):
 		for index in range (len (self.__data)):
 			if number == str (self.__data[index].number):
 				return index, True
@@ -105,7 +105,7 @@ class Records ():
 				return index, False
 		return None, False
 
-	def __get (self, number):
+	def __get (self, number:str) -> Record:
 		index, exists = self.__find (number)
 
 		if None is index:
@@ -120,7 +120,7 @@ class Records ():
 
 		return self.__data[index]
 
-	def __set (self, record):
+	def __set (self, record:Record):
 		index, exists = self.__find (str (record.number))
 
 		if None is index:
@@ -134,7 +134,7 @@ class Records ():
 		self.__data[index] = record
 		return
 
-	def __del (self, number):
+	def __del (self, number:str) -> Record:
 		index, exists = self.__find (number)
 
 		if not exists:
@@ -152,11 +152,10 @@ class Records ():
 
 		return self.__data[index].exists
 
-
-	def __getitem__ (self, key):
+	def __getitem__ (self, key:int):
 		return self.__get (str (key))
 
-	def __delitem__ (self, key):
+	def __delitem__ (self, key:int):
 		self.__del (str (key))
 		self.sync_data ()
 		return
@@ -173,9 +172,6 @@ class Records ():
 			if record.exists:
 				length += 1
 		return length
-
-	def __reversed__ (self):
-		raise NotImplementedError
 
 
 	def clear (self):
