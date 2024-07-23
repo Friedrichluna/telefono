@@ -181,21 +181,6 @@ class Records ():
 		return length
 
 
-	def clear (self):
-		self.__data.clear ()
-		self.sync_data ()
-		return
-
-	def copy (self):
-		c = Records ()
-		c.__data = self.__data.copy ()
-		return c
-
-	def items (self):
-		for record in self.__data:
-			if record.exists:
-				yield record
-
 	def keys (self):
 		for record in self.__data:
 			if record.exists:

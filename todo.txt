@@ -16,7 +16,6 @@ Logging:
 Records:
 	- represent special tones
 	- clear empty records
-	- fix copy
 
 Player:
 	- get rid of pygame
