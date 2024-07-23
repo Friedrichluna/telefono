@@ -24,9 +24,6 @@ Player:
 Speaker:
 	- get rid of activation delay
 
-TTS:
-	- don't block
-
 IPC:
 	- handle larger lists of descriptions
 

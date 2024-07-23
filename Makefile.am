@@ -11,7 +11,6 @@ pkgpython_PYTHON += src/player.py
 pkgpython_PYTHON += src/recorder.py
 pkgpython_PYTHON += src/records.py
 pkgpython_PYTHON += src/speaker.py
-pkgpython_PYTHON += src/tts.py
 
 webappdir = $(pkgpythondir)/webapp
 webapp_PYTHON =

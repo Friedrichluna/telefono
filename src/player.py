@@ -40,6 +40,15 @@ from .CONSTANTS import FFPLAY_VOLUME
 from .CONSTANTS import FFPLAY_STARTUP_TIME
 from .CONSTANTS import FFPLAY_POLL_DELAY
 
+from .CONSTANTS import ESPEAK_CMD
+from .CONSTANTS import ESPEAK_SPEED
+from .CONSTANTS import ESPEAK_AMPLITUDE
+from .CONSTANTS import ESPEAK_VOICE
+
+from .CONSTANTS import TTS_SPEED
+from .CONSTANTS import TTS_AMPLITUDE
+from .CONSTANTS import TTS_VOICE
+
 from .CONSTANTS import WIND_TIME
 
 from .CONSTANTS import NO_NUMBER_DELAY
@@ -51,7 +60,6 @@ from .CONSTANTS import BUSY_TIMEOUT
 from .CONSTANTS import TIME_FORMAT
 
 from . import Record
-from . import TTS
 
 
 class Player ():
@@ -70,7 +78,6 @@ class Player ():
 		self.__speaker = speaker
 		self.__process = None
 
-		self.__tts = TTS ()
 		return
 
 	def __on_hook (self):
@@ -351,12 +358,39 @@ class Player ():
 		return self.__play_random (self.__pater)
 
 
+	def start_say (self, text:str,
+	               speed:int, amplitude:int, voice:str):
+		command = (*ESPEAK_CMD,
+		           *ESPEAK_SPEED, str(speed),
+		           *ESPEAK_AMPLITUDE, str (amplitude),
+		           *ESPEAK_VOICE, voice,
+		           text)
+
+		logging.debug ("invoking espeak: %s", repr (command))
+
+		self.start_tone (command)
+		return
+
+	def play_say (self, text, abort,
+	              speed=TTS_SPEED,
+	              amplitude=TTS_AMPLITUDE,
+	              voice=TTS_VOICE) -> bool:
+		self.start_say (text, speed, amplitude, voice)
+
+		while self.__process.poll () is None:
+			if abort ():
+				self.stop_tone ()
+				return False
+
+		self.stop_tone ()
+		return True
+
 	def say (self, text, interruptible=True):
 		if not interruptible:
-			self.__tts.say (text, abort=self.__never)
+			self.play_say (text, abort=self.__never)
 			return not self.__on_hook ()
 
-		return self.__tts.say (text, abort=self.__on_hook)
+		return self.play_say (text, abort=self.__on_hook)
 
 	def say_time (self) -> bool:
 		logging.info ("Player: saying time")

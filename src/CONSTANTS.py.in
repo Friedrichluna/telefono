@@ -127,6 +127,17 @@ FFPLAY_VOLUME = ("-volume", )
 FFPLAY_STARTUP_TIME = 0.5
 FFPLAY_POLL_DELAY = 0.01
 
+
+ESPEAK_CMD = ("espeak", )
+ESPEAK_SPEED = ("-s", )
+ESPEAK_AMPLITUDE = ("-a", )
+ESPEAK_VOICE = ("-v", )
+
+TTS_SPEED = 140
+TTS_AMPLITUDE = 100
+TTS_VOICE = "de+f2"
+
+
 WIND_TIME = 10
 
 
