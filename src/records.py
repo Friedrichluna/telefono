@@ -113,8 +113,8 @@ class Records ():
 
 		return default
 
-	def __set (self, number, record, keep=False):
-		index, exists = self.__find (number)
+	def __set (self, record, keep=False):
+		index, exists = self.__find (str (record.number))
 
 		if None is index:
 			self.__data.append (record)
@@ -162,7 +162,7 @@ class Records ():
 			      "Invalid value %s, must be str not %s."
 			      % (repr(value), type (value)))
 
-		self.__set (str (key), Record (key, value, records=self))
+		self.__set (Record (key, value, records=self))
 		self.sync_data ()
 		return
 
@@ -227,7 +227,7 @@ class Records ():
 			      "Invalid default %s, must be str not %s."
 			      % (repr(default), type (default)))
 
-		self.__set (str (key), Record (key, default, records=self),
+		self.__set (Record (key, default, records=self),
 		            keep=True)
 		self.sync_data ()
 		return self.__get (str (key))
