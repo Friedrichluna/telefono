@@ -128,13 +128,10 @@ class Records ():
 				return index, True
 			if number < self.__subscribers[index].number:
 				return index, False
-		return None, False
+		return len (self.__subscribers), False
 
 	def __get (self, number:str) -> Subscriber:
 		index, exists = self.__find (number)
-
-		if None is index:
-			index = len (self.__subscribers)
 
 		if not exists:
 			subscriber = Subscriber (self, number)
@@ -145,10 +142,6 @@ class Records ():
 
 	def __set (self, subscriber:Subscriber):
 		index, exists = self.__find (subscriber.number)
-
-		if None is index:
-			self.__subscribers.append (subscriber)
-			return
 
 		if not exists:
 			self.__subscribers.insert (index, subscriber)
