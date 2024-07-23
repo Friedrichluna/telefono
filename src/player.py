@@ -349,19 +349,19 @@ class Player ():
 		self.play_tone (command)
 		return
 
-	def __play_random (self, files) -> bool:
-		recording = random.choice (files)
-		recording = Record (recording, "")
+	def __play_random (self, numbers, records) -> bool:
+		number = random.choice (numbers)
+		recording = records[number]
 		return self.play_recording (recording)
 
-	def random_prayer (self) -> bool:
-		return self.__play_random (self.__supperPrayers)
+	def random_prayer (self, records) -> bool:
+		return self.__play_random (self.__supperPrayers, records)
 
-	def random_dice_prayer (self) -> bool:
-		return self.__play_random (self.__dicePrayers)
+	def random_dice_prayer (self, records) -> bool:
+		return self.__play_random (self.__dicePrayers, records)
 
-	def random_pater (self) -> bool:
-		return self.__play_random (self.__pater)
+	def random_pater (self, records) -> bool:
+		return self.__play_random (self.__pater, records)
 
 
 	def start_say (self, text:str,

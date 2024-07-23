@@ -99,7 +99,7 @@ def do_recording (off_hook, ButtonLeft, ButtonMiddle, records, player, led, log)
 	player.play_busy_tone ()
 	return
 
-def do_menu (off_hook, dial, player, led, log):
+def do_menu (off_hook, dial, records, player, led, log):
 	log.debug ("opening menu")
 
 	def abort ():
@@ -127,17 +127,17 @@ def do_menu (off_hook, dial, player, led, log):
 			return
 	elif option == 1:
 		log.info ("menu: selected 1")
-		if not player.random_prayer ():
+		if not player.random_prayer (records):
 			# hang up
 			return
 	elif option == 2:
 		log.info ("menu: selected 2")
-		if not player.random_dice_prayer ():
+		if not player.random_dice_prayer (records):
 			# hang up
 			return
 	elif option == 3:
 		log.info ("menu: selected 3")
-		if not player.random_pater ():
+		if not player.random_pater (records):
 			# hang up
 			return
 	else:
@@ -170,7 +170,8 @@ def off_hook_loop (records, player, off_hook, dial, ButtonLeft, ButtonMiddle, le
 
 		if ButtonMiddle.is_pressed:
 			player.stop_tone ()
-			return do_menu (off_hook, dial, player, led, log)
+			return do_menu (off_hook, dial, records, player,
+			                led, log)
 
 	player.stop_tone ()
 	return
