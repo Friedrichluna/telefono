@@ -63,11 +63,21 @@ class Number ():
 			raise AttributeError ("read-only attribute")
 
 		if 'description' == name:
+			if not isinstance (value, str):
+				raise TypeError (
+				    "description must be str not %r" %
+				    type (value))
+
 			self.__description = value
 			self.__records.sync_data ()
 			return
 
 		if 'exists' == name:
+			if not isinstance (value, bool):
+				raise TypeError (
+				    "exists must be bool not %r" %
+				    type (value))
+
 			if NumberType.UNASSIGNED == self.__type and value:
 				self.__type = NumberType.RECORDING
 
