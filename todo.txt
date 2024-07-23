@@ -16,6 +16,7 @@ Logging:
 Records:
 	- represent special tones
 	- clear empty records
+	- use str for __getitem__
 
 Player:
 	- get rid of pygame

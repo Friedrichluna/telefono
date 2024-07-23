@@ -21,7 +21,7 @@ class NumberType:
 	RECORDING = 1
 
 class Number ():
-	def __init__ (self, records, number:int, type:NumberType):
+	def __init__ (self, records, number:str, type:NumberType):
 
 		self.__records = records
 		self.__number = number
@@ -124,9 +124,9 @@ class Records ():
 
 	def __find (self, number:str) -> (int, bool):
 		for index in range (len (self.__data)):
-			if number == str (self.__data[index].number):
+			if number == self.__data[index].number:
 				return index, True
-			if number < str (self.__data[index].number):
+			if number < self.__data[index].number:
 				return index, False
 		return None, False
 
@@ -138,7 +138,7 @@ class Records ():
 
 		if not exists:
 			record = Number (records=self,
-			                 number=int (number),
+			                 number=number,
 			                 type=NumberType.UNASSIGNED)
 			self.__data.insert (index, record)
 			return record
@@ -146,7 +146,7 @@ class Records ():
 		return self.__data[index]
 
 	def __set (self, number:Number):
-		index, exists = self.__find (str (number.number))
+		index, exists = self.__find (number.number)
 
 		if None is index:
 			self.__data.append (number)
@@ -169,8 +169,8 @@ class Records ():
 		self.__data.__delitem__ (index)
 		return number
 
-	def __contains__ (self, number:int):
-		index, exists = self.__find (str (number))
+	def __contains__ (self, number:str):
+		index, exists = self.__find (number)
 
 		if not exists:
 			return False
@@ -260,7 +260,7 @@ class Records ():
 
 		_file.truncate ()
 
-		numbers = [number.number for number in self.__data]
+		numbers = [int (number.number) for number in self.__data]
 		numbers.sort ()
 
 		for number in numbers:

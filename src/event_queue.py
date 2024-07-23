@@ -45,7 +45,7 @@ class EventQueue:
 		return
 
 	def add_call (self, call:Number, time=0):
-		self.log.info ("schedule call %d for %s",
+		self.log.info ("schedule call %s for %s",
 		               call.number, self.__get_debug_time (time))
 		self.__add_event (time, (EVENT_TYPE.CALL, call))
 		return
@@ -68,7 +68,7 @@ class EventQueue:
 
 		event = (EVENT_TYPE.DAILY_SHOUT, call, filter)
 
-		self.log.info ("schedule shout %d for %s",
+		self.log.info ("schedule shout %s for %s",
 		               call.number, self.__get_debug_time (time))
 
 		self.__add_event (time, event)
@@ -106,7 +106,7 @@ class EventQueue:
 		event = (EVENT_TYPE.DAILY_RANDOM, call)
 		time = self.__get_random_call_time (day)
 
-		self.log.info ("schedule random call %d for %s",
+		self.log.info ("schedule random call %s for %s",
 		               call.number, self.__get_debug_time (time))
 
 		return self.__add_event (time, event)
@@ -124,7 +124,7 @@ class EventQueue:
 			event = self.__events.pop (0)[1]
 
 			if EVENT_TYPE.CALL == event[0]:
-				self.log.info ("process call %d at %s",
+				self.log.info ("process call %s at %s",
 				               event[1].number,
 				               self.__get_debug_time (_time))
 				self.__process_call (event[1], player)
@@ -136,7 +136,7 @@ class EventQueue:
 				self.__process_text (event[1], player)
 
 			elif EVENT_TYPE.DAILY_RANDOM == event[0]:
-				self.log.info ("process random call %d at %s",
+				self.log.info ("process random call %s at %s",
 				               event[1].number,
 				               self.__get_debug_time (_time))
 				self.__process_call (event[1], player)

@@ -234,7 +234,7 @@ class IPC:
 		data.extend (self.__serialize_int (len (records)))
 
 		for key in records:
-			data.extend (self.__serialize_int (key))
+			data.extend (self.__serialize_int (int (key)))
 			value = self.__serialize_str (
 			                        records[key].description,
 			                        IPC_DESCRIPTION_SIZE)
@@ -431,7 +431,7 @@ class IPC_Server (IPC):
 			return
 
 		elif IPC_MESSAGE.GET_DESCRIPTION == message_type \
-		and payload in records:
+		and str (payload) in records:
 			description = records[payload].description
 			data = self._serialize_description (description)
 			if data:
@@ -442,7 +442,7 @@ class IPC_Server (IPC):
 				return
 
 		elif IPC_MESSAGE.SET_DESCRIPTION == message_type \
-		and payload[0] in records:
+		and str (payload[0]) in records:
 			key, value = payload
 			records[key].description = value
 

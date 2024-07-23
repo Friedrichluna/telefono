@@ -284,13 +284,13 @@ class Player ():
 
 
 	def play_recording (self, recording:Number) -> bool:
-		self.log.info ("play %d", recording.number)
+		self.log.info ("play %s", recording.number)
 
 		return self.__play (recording.filename,
 		                    abort=self.__on_hook, wind=True)
 
 	def call (self, call:Number, ring=True) -> bool:
-		self.log.info ("call %d", call.number)
+		self.log.info ("call %s", call.number)
 
 		if ring:
 			if self.__play (RING_FILE,

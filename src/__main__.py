@@ -69,8 +69,8 @@ def do_recording (off_hook, ButtonLeft, ButtonMiddle, records, player, led, log)
 
 	record = records.find_assignable ()
 
-	log.info ("start recording %d", record.number)
-	if not player.say ("Aufnahme Nr.: %d wird gestartet"
+	log.info ("start recording %s", record.number)
+	if not player.say ("Aufnahme Nr.: %s wird gestartet"
 	                   % record.number):
 		# hang up
 		return
@@ -79,21 +79,21 @@ def do_recording (off_hook, ButtonLeft, ButtonMiddle, records, player, led, log)
 	                   records, led).record (end, abort)
 
 	if RECORDER_RESULT.ABORT == result:
-		log.info ("recording %d aborted", record.number)
-		player.say ("Aufnahme Nr.: %d abgebrochen" % record.number,
+		log.info ("recording %s aborted", record.number)
+		player.say ("Aufnahme Nr.: %s abgebrochen" % record.number,
 		            interruptible=False)
 
 	elif RECORDER_RESULT.MIN_TIME == result:
-		log.info ("recording %d to short", record.number)
+		log.info ("recording %s to short", record.number)
 		player.say ("Aufnahme zu kurz", interruptible=False)
 
 	elif RECORDER_RESULT.MAX_TIME == result:
-		log.info ("recording %d terminated after max. time",
+		log.info ("recording %s terminated after max. time",
 		              record.number)
-		player.say ("Aufnahme Nr.: %d wegen overtime beendet."
+		player.say ("Aufnahme Nr.: %s wegen overtime beendet."
 		            % record.number, interruptible=False)
 	else:
-		log.info ("finished recording %d", record.number)
+		log.info ("finished recording %s", record.number)
 
 	player.play_busy_tone ()
 	return
