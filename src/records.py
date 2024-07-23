@@ -20,7 +20,7 @@ class RecordType:
 	RECORDING = 0
 
 class Record ():
-	def __init__ (self, number:int, description:str,
+	def __init__ (self, number:int, description:str="",
 	              exists:bool=False,
 	              type:RecordType=RecordType.RECORDING,
 	              records=None):
@@ -216,19 +216,13 @@ class Records ():
 		self.sync_data ()
 		return ret
 
-	def setdefault (self, key, default=""):
+	def setdefault (self, key):
 		if int != type (key):
 			raise TypeError (
 			      "Invalid key %s, must be int not %s."
 			      % (repr(key), type (key)))
 
-		if str != type (default):
-			raise TypeError (
-			      "Invalid default %s, must be str not %s."
-			      % (repr(default), type (default)))
-
-		self.__set (Record (key, default, records=self),
-		            keep=True)
+		self.__set (Record (key, records=self), keep=True)
 		self.sync_data ()
 		return self.__get (str (key))
 
