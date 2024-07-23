@@ -33,9 +33,6 @@ WebApp:
 		- style heading
 		- maybe max-width ?
 
-Records:
-	- auto sync when changing a single record
-
 update list on upload
 
 better systemd integration

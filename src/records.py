@@ -22,8 +22,10 @@ class RecordType:
 class Record ():
 	def __init__ (self, number:int, description:str,
 	              exists:bool=False,
-	              type:RecordType=RecordType.RECORDING):
+	              type:RecordType=RecordType.RECORDING,
+	              records=None):
 
+		self.__records = records
 		self.__number = number
 		self.__description = description
 		self.__exists = exists
@@ -61,6 +63,8 @@ class Record ():
 
 		if 'description' == name:
 			self.__description = value
+			if None is not self.__records:
+				self.__records.sync_data ()
 			return
 
 		if 'filename' == name:
@@ -158,7 +162,7 @@ class Records ():
 			      "Invalid value %s, must be str not %s."
 			      % (repr(value), type (value)))
 
-		self.__set (str (key), Record (key, value))
+		self.__set (str (key), Record (key, value, records=self))
 		self.sync_data ()
 		return
 
@@ -223,7 +227,8 @@ class Records ():
 			      "Invalid default %s, must be str not %s."
 			      % (repr(default), type (default)))
 
-		self.__set (str (key), Record (key, default), keep=True)
+		self.__set (str (key), Record (key, default, records=self),
+		            keep=True)
 		self.sync_data ()
 		return self.__get (str (key))
 
