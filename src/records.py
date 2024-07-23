@@ -27,15 +27,14 @@ class Subscriber ():
 		self.__number = number
 		self.__type = SubscriberType.UNASSIGNED
 
-		self.__description = str ()
-		self.__exists = False
 		return
 
 	def __getattribute__ (self, name):
 		if 'number' == name:
 			return self.__number
 
-		if 'description' == name:
+		if 'description' == name \
+		and SubscriberType.RECORDING == self.__type:
 			return self.__description
 
 		if 'exists' == name:
@@ -68,6 +67,10 @@ class Subscriber ():
 				    "description must be str not %r" %
 				    type (value))
 
+			if SubscriberType.UNASSIGNED == self.__type:
+				self.__type = SubscriberType.RECORDING
+				self.__exists = False
+
 			self.__description = value
 			self.__records.sync_data ()
 			return
@@ -80,6 +83,7 @@ class Subscriber ():
 
 			if SubscriberType.UNASSIGNED == self.__type and value:
 				self.__type = SubscriberType.RECORDING
+				self.__description = str ()
 
 			if SubscriberType.RECORDING == self.__type:
 				self.__exists = value
@@ -252,7 +256,8 @@ class Records ():
 		_file.truncate ()
 
 		numbers = [int (subscriber.number)
-		           for subscriber in self.__subscribers]
+		           for subscriber in self.__subscribers
+		           if SubscriberType.RECORDING == subscriber.type]
 		numbers.sort ()
 
 		for number in numbers:
@@ -323,8 +328,7 @@ class Records ():
 	def compact (self):
 		# remove useless entries
 		for subscriber in self.__subscribers:
-			if SubscriberType.UNASSIGNED == subscriber.__type \
-			and "" == subscriber.description:
+			if SubscriberType.UNASSIGNED == subscriber.__type:
 				self.__subscribers.remove (subscriber)
 
 		return

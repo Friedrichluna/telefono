@@ -17,7 +17,6 @@ Logging:
 Records:
 	- represent special tones
 	- use str for __getitem__
-	- only choose assigned for store
 
 Player:
 	- get rid of pygame
