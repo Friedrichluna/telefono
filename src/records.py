@@ -328,6 +328,15 @@ class Records ():
 				self[number].exists = True
 		return
 
+	def compact (self):
+		# remove useless entries
+		for number in self.__data:
+			if NumberType.UNASSIGNED == number.__type \
+			and "" == number.description:
+				self.__data.remove (number)
+
+		return
+
 	def get_random (self):
 		if not self.__data:
 			return None
