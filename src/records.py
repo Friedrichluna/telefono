@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
+import enum
 import fcntl
 import os
 import random
@@ -15,13 +16,18 @@ from .CONSTANTS import RECORD_LIST_FILE
 from .CONSTANTS import BACKUP_EXT
 
 
+class RecordType:
+	RECORDING = 0
+
 class Record ():
 	def __init__ (self, number:int, description:str,
-	              exists:bool=False):
+	              exists:bool=False,
+	              type:RecordType=RecordType.RECORDING):
 
 		self.__number = number
 		self.__description = description
 		self.__exists = exists
+		self.__type = type
 		return
 
 	def __getattribute__ (self, name):
