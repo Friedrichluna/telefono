@@ -95,9 +95,9 @@ class Records ():
 
 	def __find (self, number):
 		for index in range (len (self.__data)):
-			if number == self.__data[index][0]:
+			if number == str (self.__data[index].number):
 				return index, True
-			if number < self.__data[index][0]:
+			if number < str (self.__data[index].number):
 				return index, False
 		return None, False
 
@@ -105,7 +105,7 @@ class Records ():
 		index, exists = self.__find (number)
 
 		if exists:
-			return self.__data[index][1]
+			return self.__data[index]
 
 		return default
 
@@ -113,17 +113,17 @@ class Records ():
 		index, exists = self.__find (number)
 
 		if None is index:
-			self.__data.append ((number, record))
+			self.__data.append (record)
 			return
 
 		if not exists:
-			self.__data.insert (index, (number, record))
+			self.__data.insert (index, record)
 			return
 
 		if keep:
 			return
 
-		self.__data[index][1] = record
+		self.__data[index] = record
 		return
 
 	def __del (self, number):
@@ -132,7 +132,7 @@ class Records ():
 		if not exists:
 			return None
 
-		record = self.__data[index][1]
+		record = self.__data[index]
 		self.__data.__delitem__ (index)
 		return record
 
@@ -175,7 +175,7 @@ class Records ():
 
 	def __len__ (self):
 		length = 0
-		for key, record in self.__data:
+		for record in self.__data:
 			if record.exists:
 				length += 1
 		return length
@@ -198,14 +198,14 @@ class Records ():
 		return self.__get (str (key), default)
 
 	def items (self):
-		for key, record in self.__data:
+		for record in self.__data:
 			if record.exists:
 				yield record
 
 	def keys (self):
-		for key, record in self.__data:
+		for record in self.__data:
 			if record.exists:
-				yield int (key)
+				yield record.number
 
 	def pop (self, number):
 		ret = self.__del (str (number))
@@ -278,7 +278,7 @@ class Records ():
 
 		_file.truncate ()
 
-		numbers = [int (number) for number, record in self.__data]
+		numbers = [record.number for record in self.__data]
 		numbers.sort ()
 
 		for number in numbers:
@@ -299,7 +299,7 @@ class Records ():
 		return
 
 	def __invalidate_fs (self):
-		for key, record in self.__data:
+		for record in self.__data:
 			record.exists = False
 		return
 
@@ -355,7 +355,7 @@ class Records ():
 		if not self.__data:
 			return None
 
-		return int (random.choice (self.__data) [0])
+		return int (random.choice (self.__data).number)
 
 	def add_next (self):
 		number = 0
