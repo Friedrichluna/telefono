@@ -21,11 +21,9 @@ class RecordType:
 	RECORDING = 1
 
 class Record ():
-	def __init__ (self, number:int,
-	              type:RecordType=RecordType.RECORDING,
+	def __init__ (self, records, number:int, type:RecordType,
 	              description:str="",
-	              exists:bool=False,
-	              records=None):
+	              exists:bool=False):
 
 		self.__records = records
 		self.__number = number
@@ -66,8 +64,7 @@ class Record ():
 
 		if 'description' == name:
 			self.__description = value
-			if None is not self.__records:
-				self.__records.sync_data ()
+			self.__records.sync_data ()
 			return
 
 		if 'filename' == name:
@@ -115,8 +112,8 @@ class Records ():
 			index = len (self.__data)
 
 		if not exists:
-			record = Record (number=int (number),
-			                 records=self
+			record = Record (records=self,
+			                 number=int (number),
 			                 type=RecordType.UNASSIGNED)
 			self.__data.insert (index, record)
 			return record
@@ -161,21 +158,6 @@ class Records ():
 
 	def __getitem__ (self, key):
 		return self.__get (str (key))
-
-	def __setitem__ (self, key, value):
-		if int != type (key):
-			raise TypeError (
-			      "Invalid key %s, must be int not %s."
-			      % (repr(key), type (key)))
-
-		if str != type (value):
-			raise TypeError (
-			      "Invalid value %s, must be str not %s."
-			      % (repr(value), type (value)))
-
-		self.__set (Record (key, value, records=self))
-		self.sync_data ()
-		return
 
 	def __delitem__ (self, key):
 		self.__del (str (key))
@@ -230,7 +212,8 @@ class Records ():
 			      "Invalid key %s, must be int not %s."
 			      % (repr(key), type (key)))
 
-		self.__set (Record (key, records=self), keep=True)
+		self.__set (Record (records=self, number=key,
+		                    type=RecordType.RECORDING), keep=True)
 		self.sync_data ()
 		return self.__get (str (key))
 
@@ -273,7 +256,7 @@ class Records ():
 			if not name:
 				continue
 
-			self[number] = name
+			self[number].description = name
 
 		self.__prevent_sync = False
 
