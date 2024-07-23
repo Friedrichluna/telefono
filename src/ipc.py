@@ -458,7 +458,7 @@ class IPC_Server (IPC):
 			return
 
 		elif IPC_MESSAGE.FREE == message_type:
-			if payload in records:
+			if records[payload].is_assignable ():
 				answer = IPC_ANSWER.OK
 			else:
 				answer = IPC_ANSWER.ERROR

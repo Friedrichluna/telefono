@@ -72,6 +72,13 @@ class Record ():
 
 		return super ().__setattr__ (name, value)
 
+	def is_assignable (self) -> bool:
+
+		if RecordType.UNASSIGNED == self.__type:
+			return True
+
+		return False
+
 
 class Records ():
 	def __init__ (self, filename:str=RECORD_LIST_FILE):
@@ -328,9 +335,9 @@ class Records ():
 
 		return random.choice (self.__data)
 
-	def add_next (self):
+	def find_assignable (self):
 		number = 0
-		while number in self:
+		while not self[number].is_assignable ():
 			number += 1
 
 		# generate new Record

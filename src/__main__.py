@@ -67,7 +67,7 @@ def do_recording (off_hook, ButtonLeft, ButtonMiddle, records, player, led, log)
 	def abort ():
 		return ButtonMiddle.is_released
 
-	record = records.add_next ()
+	record = records.find_assignable ()
 
 	log.info ("start recording %d", record.number)
 	if not player.say ("Aufnahme Nr.: %d wird gestartet"
