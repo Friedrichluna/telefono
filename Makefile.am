@@ -7,9 +7,9 @@ pkgpython_PYTHON += src/button.py
 pkgpython_PYTHON += src/dial.py
 pkgpython_PYTHON += src/event_queue.py
 pkgpython_PYTHON += src/ipc.py
+pkgpython_PYTHON += src/network.py
 pkgpython_PYTHON += src/player.py
 pkgpython_PYTHON += src/recorder.py
-pkgpython_PYTHON += src/records.py
 pkgpython_PYTHON += src/speaker.py
 
 webappdir = $(pkgpythondir)/webapp

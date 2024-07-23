@@ -21,9 +21,9 @@ class SubscriberType:
 	RECORDING = 1
 
 class Subscriber ():
-	def __init__ (self, records, number:str):
+	def __init__ (self, network, number:str):
 
-		self.__records = records
+		self.__network = network
 		self.__number = number
 		self.__type = SubscriberType.UNASSIGNED
 
@@ -72,7 +72,7 @@ class Subscriber ():
 				self.__exists = False
 
 			self.__description = value
-			self.__records.sync_data ()
+			self.__network.sync_data ()
 			return
 
 		if 'exists' == name:
@@ -102,7 +102,7 @@ class Subscriber ():
 		return False
 
 
-class Records ():
+class Network ():
 	def __init__ (self, filename:str=RECORD_LIST_FILE):
 		self.__subscribers = list ()
 		self.__prevent_sync = False

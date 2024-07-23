@@ -12,9 +12,9 @@ translate README
 Logging:
 	- log hardware events
 	- log IPC
-	- log from Records
+	- log from Network
 
-Records:
+Network:
 	- represent special tones
 	- use str for __getitem__
 

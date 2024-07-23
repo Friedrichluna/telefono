@@ -25,7 +25,7 @@ from .CONSTANTS import SHUTDOWN_BUTTON_DELAY
 
 from .ipc import IPC_Server
 from .player import Player
-from .records import Subscriber
+from .network import Subscriber
 
 
 def turn_off (button, log):
@@ -47,19 +47,19 @@ def turn_off (button, log):
 	log.debug ("released shutdown press prematurely")
 	return False
 
-def do_dial_call (off_hook, ButtonLeft, dial, records, player, led, log):
+def do_dial_call (off_hook, ButtonLeft, dial, network, player, led, log):
 	log.debug ("start dialing")
 
 	def abort ():
 		return ButtonLeft.is_released or not off_hook ()
 
 	number = dial.get_number (abort, led, player)
-	if None is number or player.play_recording (records[number]):
+	if None is number or player.play_recording (network[number]):
 		# still off-hook
 		player.play_busy_tone ()
 	return
 
-def do_recording (off_hook, ButtonLeft, ButtonMiddle, records, player, led, log):
+def do_recording (off_hook, ButtonLeft, ButtonMiddle, network, player, led, log):
 
 	def end ():
 		return ButtonLeft.is_released or not off_hook ()
@@ -67,7 +67,7 @@ def do_recording (off_hook, ButtonLeft, ButtonMiddle, records, player, led, log)
 	def abort ():
 		return ButtonMiddle.is_released
 
-	record = records.find_assignable ()
+	record = network.find_assignable ()
 
 	log.info ("start recording %s", record.number)
 	if not player.say ("Aufnahme Nr.: %s wird gestartet"
@@ -76,7 +76,7 @@ def do_recording (off_hook, ButtonLeft, ButtonMiddle, records, player, led, log)
 		return
 
 	result = Recorder (record.filename,
-	                   records, led).record (end, abort)
+	                   network, led).record (end, abort)
 
 	if RECORDER_RESULT.ABORT == result:
 		log.info ("recording %s aborted", record.number)
@@ -98,7 +98,7 @@ def do_recording (off_hook, ButtonLeft, ButtonMiddle, records, player, led, log)
 	player.play_busy_tone ()
 	return
 
-def do_menu (off_hook, dial, records, player, led, log):
+def do_menu (off_hook, dial, network, player, led, log):
 	log.debug ("opening menu")
 
 	def abort ():
@@ -126,17 +126,17 @@ def do_menu (off_hook, dial, records, player, led, log):
 			return
 	elif option == 1:
 		log.info ("menu: selected 1")
-		if not player.random_prayer (records):
+		if not player.random_prayer (network):
 			# hang up
 			return
 	elif option == 2:
 		log.info ("menu: selected 2")
-		if not player.random_dice_prayer (records):
+		if not player.random_dice_prayer (network):
 			# hang up
 			return
 	elif option == 3:
 		log.info ("menu: selected 3")
-		if not player.random_pater (records):
+		if not player.random_pater (network):
 			# hang up
 			return
 	else:
@@ -147,7 +147,7 @@ def do_menu (off_hook, dial, records, player, led, log):
 	player.play_busy_tone ()
 	return
 
-def off_hook_loop (records, player, off_hook, dial, ButtonLeft, ButtonMiddle, led, log):
+def off_hook_loop (network, player, off_hook, dial, ButtonLeft, ButtonMiddle, led, log):
 	log.debug ("entering off-hook loop")
 
 	player.start_dial_tone ()
@@ -158,18 +158,18 @@ def off_hook_loop (records, player, off_hook, dial, ButtonLeft, ButtonMiddle, le
 		if dial.is_used ():
 			player.stop_tone ()
 			return do_dial_call (off_hook, ButtonLeft,
-			                     dial, records, player, led,
+			                     dial, network, player, led,
 			                     log)
 
 		if ButtonLeft.is_pressed:
 			player.stop_tone ()
 			return do_recording (off_hook,
 			                     ButtonLeft, ButtonMiddle,
-			                     records, player, led, log)
+			                     network, player, led, log)
 
 		if ButtonMiddle.is_pressed:
 			player.stop_tone ()
-			return do_menu (off_hook, dial, records, player,
+			return do_menu (off_hook, dial, network, player,
 			                led, log)
 
 	player.stop_tone ()
@@ -205,8 +205,8 @@ def main ():
 	ipc = IPC_Server ()
 
 	# initialize recording data
-	records = Records ()
-	records.sync_fs ()
+	network = Network ()
+	network.sync_fs ()
 
 	DialCounter = Button(2) #Zähler für die gewählte Zahl (rot)
 	DialInUse = Button(26) #Wählscheibe wird benutzt (grau)(weiß im Tel)
@@ -224,7 +224,7 @@ def main ():
 	player = Player (Hook, ButtonLeft, ButtonMiddle, speakerThread)
 
 	# initialize call queue
-	queue = EventQueue (records)
+	queue = EventQueue (network)
 
 	def dinner_weekday (_datetime:datetime.datetime):
 		weekday = _datetime.isoweekday () % 7
@@ -233,9 +233,9 @@ def main ():
 	def every_weekday (_datetime:datetime.datetime):
 		return True
 
-	queue.add_shout (records[1830], dinner_weekday, datetime.time (18, 30))
-	queue.add_shout (records[1930], dinner_weekday, datetime.time (19, 30))
-	queue.add_shout (records[2014], every_weekday, datetime.time (20, 00))
+	queue.add_shout (network[1830], dinner_weekday, datetime.time (18, 30))
+	queue.add_shout (network[1930], dinner_weekday, datetime.time (19, 30))
+	queue.add_shout (network[2014], every_weekday, datetime.time (20, 00))
 
 	# start webapp
 	webAppProcess = run_webapp (ipc.get_client_fd (), log)
@@ -255,12 +255,12 @@ def main ():
 	while running and not turn_off (ButtonMiddle, log):
 
 		if off_hook ():
-			off_hook_loop (records, player, off_hook, dial,
+			off_hook_loop (network, player, off_hook, dial,
 			               ButtonLeft, ButtonMiddle, led,
 			               log)
 			log.debug ("leaving off-hook loop")
 
-		ipc.handle_message (queue, records)
+		ipc.handle_message (queue, network)
 
 		queue.process (player)
 

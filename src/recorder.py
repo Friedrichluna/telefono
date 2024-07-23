@@ -26,12 +26,12 @@ RATE = 44100
 FRAME_PER_BUFFER = 512
 
 class Recorder ():
-	def __init__ (self, fname, records, indicator,
+	def __init__ (self, fname, network, indicator,
 	              channels=CHANNELS, rate=RATE,
 	              frames_per_buffer=FRAME_PER_BUFFER):
 
 		self.fname = fname
-		self.records = records
+		self.network = network
 		self.indicator = indicator
 		self._pa = pyaudio.PyAudio ()
 
@@ -67,7 +67,7 @@ class Recorder ():
 		                linkat.AT_SYMLINK_FOLLOW)
 
 		# detect created file
-		self.records.sync_fs ()
+		self.network.sync_fs ()
 		return
 
 	def __enter__ (self):

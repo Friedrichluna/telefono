@@ -52,7 +52,7 @@
 		<a href="/upload">Upload</a>
 		<a href="/say">Text ansagen</a>
 	</nav>
-{% for number, description in records %}
+{% for number, description in network_list %}
 	<section>
 		<form method="post">
 			<input type="submit" name="selected_value" value="{{ number }}" class="button gray">

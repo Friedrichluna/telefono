@@ -6,7 +6,7 @@ from .dial import Dial
 from .recorder import Recorder
 from .recorder import RECORDER_RESULT
 from .speaker import SpeakerThread
-from .records import Records
+from .network import Network
 from .event_queue import EventQueue
 
 __all__ = [
@@ -15,6 +15,6 @@ __all__ = [
 	"Recorder",
 	"RECORDER_RESULT",
 	"SpeakerThread",
-	"Records",
+	"Network",
 	"EventQueue",
 ]

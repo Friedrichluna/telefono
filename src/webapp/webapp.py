@@ -65,7 +65,7 @@ class TelefonoWebApp (Flask):
 			message, message_type = self.ipc.queue_call (recording)
 
 		return render_template("list.html",
-		                       records=self.ipc.get_list (),
+		                       network_list=self.ipc.get_list (),
 		                       message=message,
 		                       message_type=message_type)
 

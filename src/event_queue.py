@@ -12,7 +12,7 @@ from .CONSTANTS import DEBUG_TIME_FORMAT
 from .CONSTANTS import MIN_HOUR
 from .CONSTANTS import MAX_HOUR
 
-from .records import Subscriber
+from .network import Subscriber
 
 
 class EVENT_TYPE (enum.IntEnum):
@@ -23,12 +23,12 @@ class EVENT_TYPE (enum.IntEnum):
 
 
 class EventQueue:
-	def __init__ (self, records):
+	def __init__ (self, network):
 		self.log = logging.getLogger ("EventQueue")
 
 		self.__events = list ()
 
-		self.__records = records
+		self.__network = network
 
 		# schedule daily random call
 		self.__add_random_call (datetime.datetime.today ())
@@ -97,7 +97,7 @@ class EventQueue:
 		return random.randint (min_time, max_time)
 
 	def __add_random_call (self, day:datetime.date):
-		call = self.__records.get_random ()
+		call = self.__network.get_random ()
 		if call is None:
 			self.log.error ("failed to schedule random call, "
 			                "due to no calls being available")

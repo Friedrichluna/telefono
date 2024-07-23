@@ -228,15 +228,15 @@ class IPC:
 		return self.__deserialize_str (message,
 		                               IPC_DESCRIPTION_SIZE)
 
-	def _serialize_list (self, records) -> bytes:
+	def _serialize_list (self, network) -> bytes:
 		data = bytearray ()
 
-		data.extend (self.__serialize_int (len (records)))
+		data.extend (self.__serialize_int (len (network)))
 
-		for key in records:
-			data.extend (self.__serialize_int (int (key)))
+		for number in network:
+			data.extend (self.__serialize_int (int (number)))
 			value = self.__serialize_str (
-			                        records[key].description,
+			                        network[number].description,
 			                        IPC_DESCRIPTION_SIZE)
 			data.extend (value)
 
@@ -317,9 +317,9 @@ class IPC_Client (IPC):
 		self._send (data)
 
 		data = self._recv (IPC_ANSWER_SIZE)
-		_, records = self._deserialize_answer (data)
+		_, network_list = self._deserialize_answer (data)
 
-		return records
+		return network_list
 
 	def is_free (self, number):
 		data = self._serialize_free (number)
@@ -396,7 +396,7 @@ class IPC_Server (IPC):
 	def get_client_fd (self):
 		return self.__client.fileno ()
 
-	def handle_message (self, queue, records):
+	def handle_message (self, queue, network):
 
 		data = self._recv (IPC_MAX_DATA, blocking=False)
 		if b"" == data:
@@ -410,7 +410,7 @@ class IPC_Server (IPC):
 			return
 
 		elif IPC_MESSAGE.CALL == message_type:
-			call = records[payload]
+			call = network[payload]
 			if not call.exists:
 				data = self._serialize_answer (
 				                IPC_ANSWER.NO_NUMBER)
@@ -431,8 +431,8 @@ class IPC_Server (IPC):
 			return
 
 		elif IPC_MESSAGE.GET_DESCRIPTION == message_type \
-		and str (payload) in records:
-			description = records[payload].description
+		and str (payload) in network:
+			description = network[payload].description
 			data = self._serialize_description (description)
 			if data:
 				data = self._serialize_answer (
@@ -442,16 +442,16 @@ class IPC_Server (IPC):
 				return
 
 		elif IPC_MESSAGE.SET_DESCRIPTION == message_type \
-		and str (payload[0]) in records:
+		and str (payload[0]) in network:
 			key, value = payload
-			records[key].description = value
+			network[key].description = value
 
 			data = self._serialize_answer (IPC_ANSWER.OK)
 			self._send (data)
 			return
 
 		elif IPC_MESSAGE.LIST == message_type:
-			data = self._serialize_list (records)
+			data = self._serialize_list (network)
 			data = self._serialize_answer (IPC_ANSWER.LIST,
 			                               data)
 
@@ -459,7 +459,7 @@ class IPC_Server (IPC):
 			return
 
 		elif IPC_MESSAGE.FREE == message_type:
-			if records[payload].is_assignable ():
+			if network[payload].is_assignable ():
 				answer = IPC_ANSWER.OK
 			else:
 				answer = IPC_ANSWER.ERROR
@@ -469,7 +469,7 @@ class IPC_Server (IPC):
 			return
 
 		elif IPC_MESSAGE.UPLOAD == message_type:
-			records.sync_fs ()
+			network.sync_fs ()
 			data = self._serialize_answer (IPC_ANSWER.OK)
 			self._send (data)
 			return

@@ -60,7 +60,7 @@ from .CONSTANTS import BUSY_TIMEOUT
 
 from .CONSTANTS import TIME_FORMAT
 
-from .records import Subscriber
+from .network import Subscriber
 
 
 class Player ():
@@ -349,19 +349,19 @@ class Player ():
 		self.play_tone (command)
 		return
 
-	def __play_random (self, numbers, records) -> bool:
+	def __play_random (self, numbers, network) -> bool:
 		number = random.choice (numbers)
-		recording = records[number]
+		recording = network[number]
 		return self.play_recording (recording)
 
-	def random_prayer (self, records) -> bool:
-		return self.__play_random (self.__supperPrayers, records)
+	def random_prayer (self, network) -> bool:
+		return self.__play_random (self.__supperPrayers, network)
 
-	def random_dice_prayer (self, records) -> bool:
-		return self.__play_random (self.__dicePrayers, records)
+	def random_dice_prayer (self, network) -> bool:
+		return self.__play_random (self.__dicePrayers, network)
 
-	def random_pater (self, records) -> bool:
-		return self.__play_random (self.__pater, records)
+	def random_pater (self, network) -> bool:
+		return self.__play_random (self.__pater, network)
 
 
 	def start_say (self, text:str,
