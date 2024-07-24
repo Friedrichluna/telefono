@@ -54,8 +54,6 @@ class Subscriber ():
 				filename += RECORD_SUFFIX
 				return filename
 
-			return str ()
-
 		if 'list' == name and SubscriberType.LIST:
 			# return immutable tuple
 			return (*self.__list, )
@@ -76,9 +74,10 @@ class Subscriber ():
 				self.__type = SubscriberType.RECORDING
 				self.__exists = False
 
-			self.__description = value
-			self.__network.sync_data ()
-			return
+			if SubscriberType.RECORDING == self.__type:
+				self.__description = value
+				self.__network.sync_data ()
+				return
 
 		if 'exists' == name:
 			if not isinstance (value, bool):
@@ -92,7 +91,7 @@ class Subscriber ():
 
 			if SubscriberType.RECORDING == self.__type:
 				self.__exists = value
-			return
+				return
 
 		if 'filename' == name:
 			raise AttributeError ("read-only attribute")
@@ -412,4 +411,5 @@ class Network ():
 		while not self[number].is_assignable ():
 			number += 1
 
+		self[number].description = ""
 		return self[number]

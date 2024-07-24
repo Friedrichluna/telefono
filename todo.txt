@@ -13,6 +13,9 @@ Logging:
 	- log IPC
 	- log from Network
 
+Recorder:
+	- set exists to True
+
 Subscriber:
 	- return call object on route
 	- allow description for different types
