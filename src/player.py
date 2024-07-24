@@ -191,9 +191,31 @@ class Player ():
 
 		return not aborted
 
-	def play_aloud (self, fileName) -> True:
-		return self.__play (fileName,
+	def play_aloud (self, filename) -> True:
+		return self.__play (filename,
 		                    abort=self.__never, aloud=True)
+
+	def play_recording (self, recording:Subscriber) -> bool:
+		self.log.info ("play %s", recording.number)
+
+		return self.__play (recording.filename,
+		                    abort=self.__on_hook, wind=True)
+
+	def call (self, call:Subscriber, ring=True) -> bool:
+		self.log.info ("call %s", call.number)
+
+		if ring:
+			if self.__play (RING_FILE,
+			                abort=self.__off_hook,
+			                volume=70,
+			                aloud=True):
+
+				# never picked up
+				return False
+
+		return self.__play (call.filename, abort=self.__on_hook,
+		                    aloud=(not ring))
+
 
 	def start_tone (self, command, aloud=False):
 		self.stop_tone ()
@@ -287,28 +309,6 @@ class Player ():
 
 		self.stop_tone (aloud)
 		return True
-
-
-	def play_recording (self, recording:Subscriber) -> bool:
-		self.log.info ("play %s", recording.number)
-
-		return self.__play (recording.filename,
-		                    abort=self.__on_hook, wind=True)
-
-	def call (self, call:Subscriber, ring=True) -> bool:
-		self.log.info ("call %s", call.number)
-
-		if ring:
-			if self.__play (RING_FILE,
-			                abort=self.__off_hook,
-			                volume=70,
-			                aloud=True):
-
-				# never picked up
-				return False
-
-		return self.__play (call.filename, abort=self.__on_hook,
-		                    aloud=(not ring))
 
 	def dial_sound (self, number):
 
