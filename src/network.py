@@ -156,7 +156,8 @@ class Subscriber ():
 			player.play_sit_tone ()
 			return False
 
-		return player.play_recording (number)
+		return player.play_file (number.filename,
+		                         aloud=False, wind=True)
 
 	def inbound_call (self, player, ring=True) -> bool:
 		number = self.route ()
@@ -171,7 +172,8 @@ class Subscriber ():
 			player.play_sit_tone ()
 			return False
 
-		return player.play_recording (number, aloud=(not ring), wind=False)
+		return player.play_file (number.filename,
+		                         aloud=(not ring), wind=False)
 
 
 class Network ():

@@ -59,8 +59,6 @@ from .CONSTANTS import BUSY_TIMEOUT
 
 from .CONSTANTS import TIME_FORMAT
 
-from .network import Subscriber
-
 
 class Player ():
 	def __init__ (self, hook, wind_back, wind_forward, speaker):
@@ -191,7 +189,7 @@ class Player ():
 
 		return not aborted
 
-	def play_system_sound (self, filename) -> True:
+	def play_system_sound (self, filename:str) -> True:
 		return self.__play (filename,
 		                    abort=self.__never, aloud=True)
 
@@ -199,12 +197,8 @@ class Player ():
 		self.__play (RING_FILE, abort=self.__off_hook,
 		             volume=70, aloud=True)
 
-	def play_recording (self, recording:Subscriber,
-	                    aloud=False, wind=True) -> bool:
-		self.log.info ("play %s", recording.number)
-
-		return self.__play (recording.filename,
-		                    abort=self.__on_hook,
+	def play_file (self, filename:str, aloud, wind) -> bool:
+		return self.__play (filename, abort=self.__on_hook,
 		                    aloud=aloud, wind=wind)
 
 
