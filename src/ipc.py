@@ -329,8 +329,8 @@ class IPC_Client (IPC):
 		answer, _ = self._deserialize_answer (data)
 
 		if IPC_ANSWER.OK == answer:
-			return False
-		return True
+			return True
+		return False
 
 	def upload (self):
 		data = self._serialize_upload ()
