@@ -141,11 +141,33 @@ class Subscriber ():
 
 		raise NotImplementedError ("unknown subscriber type")
 
+	def validate_file (self):
+		if self.exists and not os.path.isfile (self.filename):
+			self.exists = False
+
+		return
+
 	def outbound_call (self, player) -> bool:
-		return player.play_recording (self.route ())
+		number = self.route ()
+
+		number.validate_file ()
+
+		if not number.exists:
+			player.play_sit_tone ()
+			return False
+
+		return player.play_recording (number)
 
 	def inbound_call (self, player, ring=True) -> bool:
-		return player.call (self.route (), ring)
+		number = self.route ()
+
+		number.validate_file ()
+
+		if not number.exists:
+			player.play_sit_tone ()
+			return False
+
+		return player.call (number, ring)
 
 
 class Network ():

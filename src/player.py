@@ -108,13 +108,17 @@ class Player ():
 		time.sleep (FFPLAY_STARTUP_TIME)
 		return process
 
-	def __play (self, fileName, abort, volume=100,
+	def __play (self, filename, abort, volume=100,
 	            aloud=False, wind=False) -> bool:
 
 		self.log.debug ("play file %s, abort=%s, "
 		                "volume=%d, aloud=%s, wind=%s",
-		                fileName, repr (abort),
+		                filename, repr (abort),
 		                volume, repr (aloud), repr (wind))
+
+		if not os.path.exists (filename):
+			self.log.error ("file doesn't exist")
+			return True
 
 		if abort ():
 			return False
@@ -124,61 +128,60 @@ class Player ():
 		if aloud:
 			self.__speaker.activate ()
 
-		if os.path.exists (fileName):
-			process = self.__ffplay (fileName, volume=volume)
 
-			while process.poll () is None:
-				time.sleep (FFPLAY_POLL_DELAY)
-				if abort ():
-					process.terminate ()
-					aborted = True
+		process = self.__ffplay (filename, volume=volume)
 
-				if wind and self.__back ():
-					process.terminate ()
-					data = process.communicate ()
-					try:
-						data = data[1]
-						data = data.split ('\n')
-						data = data[-2]
-						data = data.strip ()
-						data = data.split (' ')
-						data = data[0]
-						start = float (data)
-						start -= WIND_TIME
-					except:
-						start = 0
-						self.log.error ("failed to parse ffplay output")
-
-					self.log.debug ("wind back to %d", start)
-
-					process = self.__ffplay (fileName,
-					                         start,
-					                         volume)
-
-
-				if wind and self.__forward ():
-					process.terminate ()
-					data = process.communicate ()
-					try:
-						data = data[1]
-						data = data.split ('\n')
-						data = data[-2]
-						data = data.strip ()
-						data = data.split (' ')
-						data = data[0]
-						start = float (data)
-						start += WIND_TIME
-					except:
-						start = 0
-						self.log.error ("failed to parse ffplay output")
-
-					self.log.debug ("wind forward to %d", start)
-					process = self.__ffplay (fileName,
-					                         start,
-					                         volume)
-		else:
-			if not self.play_sit_tone (abort):
+		while process.poll () is None:
+			time.sleep (FFPLAY_POLL_DELAY)
+			if abort ():
+				process.terminate ()
 				aborted = True
+
+			if wind and self.__back ():
+				process.terminate ()
+				data = process.communicate ()
+				try:
+					data = data[1]
+					data = data.split ('\n')
+					data = data[-2]
+					data = data.strip ()
+					data = data.split (' ')
+					data = data[0]
+					start = float (data)
+					start -= WIND_TIME
+				except:
+					start = 0
+					self.log.error ("failed to parse "
+					                "ffplay output")
+
+				self.log.debug ("wind back to %d", start)
+
+				process = self.__ffplay (filename,
+				                         start,
+				                         volume)
+
+
+			if wind and self.__forward ():
+				process.terminate ()
+				data = process.communicate ()
+				try:
+					data = data[1]
+					data = data.split ('\n')
+					data = data[-2]
+					data = data.strip ()
+					data = data.split (' ')
+					data = data[0]
+					start = float (data)
+					start += WIND_TIME
+				except:
+					start = 0
+					self.log.error ("failed to parse "
+					                "ffplay output")
+
+				self.log.debug ("wind forward to %d", start)
+				process = self.__ffplay (filename,
+				                         start,
+				                         volume)
 
 		if aloud:
 			self.__speaker.deactivate ()
@@ -192,17 +195,25 @@ class Player ():
 		return self.__play (fileName,
 		                    abort=self.__never, aloud=True)
 
-	def start_tone (self, command):
+	def start_tone (self, command, aloud=False):
 		self.stop_tone ()
+
+		if aloud:
+			self.__speaker.activate ()
+
 		self.__process = subprocess.Popen (command,
 		                                   stderr=subprocess.DEVNULL)
 		return
 
-	def stop_tone (self):
+	def stop_tone (self, aloud=False):
 		if self.__process is not None:
 			self.log.debug ("aborting tone")
 			self.__process.terminate ()
 			self.__process = None
+
+		if aloud:
+			self.__speaker.deactivate ()
+
 		return
 
 	def play_tone (self, command):
@@ -257,24 +268,24 @@ class Player ():
 		self.start_tone (SOX_DIAL_SECONDARY)
 		return
 
-	def start_sit_tone (self):
+	def start_sit_tone (self, aloud=False):
 		self.log.debug ("starting SIT tone")
-		self.start_tone (SOX_SIT)
+		self.start_tone (SOX_SIT, aloud)
 		return
 
-	def play_sit_tone (self, abort):
-		self.start_sit_tone ()
+	def play_sit_tone (self, aloud=False):
+		self.start_sit_tone (aloud)
 
 		timer = 0
 		while timer < NO_NUMBER_TIMEOUT:
-			if abort ():
+			if not self.__off_hook ():
 				self.stop_tone ()
 				return False
 
 			time.sleep (NO_NUMBER_DELAY)
 			timer += 1
 
-		self.stop_tone ()
+		self.stop_tone (aloud)
 		return True
 
 

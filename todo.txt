@@ -6,7 +6,6 @@ translate README
 
 - better name for shout
 
-- handle non existent number
 - consistently refer to subscribers
 
 Logging:
@@ -26,7 +25,6 @@ Network:
 Player:
 	- get rid of pygame
 	- don't wait for ffplay
-	- fix indent in Player.__play
 	- notify methods
 
 Speaker:
@@ -36,20 +34,20 @@ IPC:
 	- handle larger lists of descriptions
 
 WebApp:
+	- support other subscriber types
 	- record and call functionality
 	- improve layout
 		- style heading
 		- maybe max-width ?
+
+	Upload:
+		- multiple files
+		- keep uploaded files with wrong numbers
+		- edit description
+		- chrome bug
 
 
 better systemd integration
 - run as user unit
 
 run under separate user
-
-
-Upload:
-	- multiple files
-	- keep uploaded files with wrong numbers
-	- edit description
-	- chrome bug
