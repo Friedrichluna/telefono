@@ -147,33 +147,26 @@ class Subscriber ():
 
 		return
 
-	def outbound_call (self, player) -> bool:
-		number = self.route ()
+	def __call (self, player, aloud, wind) -> bool:
+		self.validate_file ()
 
-		number.validate_file ()
-
-		if not number.exists:
+		if not self.exists:
 			player.play_sit_tone ()
 			return False
 
-		return player.play_file (number.filename,
-		                         aloud=False, wind=True)
+		return player.play_file (self.filename, aloud, wind)
+
+	def outbound_call (self, player) -> bool:
+		number = self.route ()
+		return number.__call (player, aloud=False, wind=True)
 
 	def inbound_call (self, player, ring=True) -> bool:
-		number = self.route ()
-
-		number.validate_file ()
-
 		if ring and player.play_ring ():
 			# never picked up
 			return False
 
-		if not number.exists:
-			player.play_sit_tone ()
-			return False
-
-		return player.play_file (number.filename,
-		                         aloud=(not ring), wind=False)
+		number = self.route ()
+		return number.__call (player, aloud=(not ring), wind=False)
 
 
 class Network ():
