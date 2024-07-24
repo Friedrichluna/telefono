@@ -195,6 +195,10 @@ class Player ():
 		return self.__play (filename,
 		                    abort=self.__never, aloud=True)
 
+	def play_ring (self):
+		self.__play (RING_FILE, abort=self.__off_hook,
+		             volume=70, aloud=True)
+
 	def play_recording (self, recording:Subscriber) -> bool:
 		self.log.info ("play %s", recording.number)
 
@@ -205,11 +209,7 @@ class Player ():
 		self.log.info ("call %s", call.number)
 
 		if ring:
-			if self.__play (RING_FILE,
-			                abort=self.__off_hook,
-			                volume=70,
-			                aloud=True):
-
+			if self.play_ring ():
 				# never picked up
 				return False
 
