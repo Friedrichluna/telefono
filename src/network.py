@@ -21,6 +21,7 @@ class SubscriberType:
 	UNASSIGNED = 0
 	RECORDING = 1
 	LIST = 2
+	CALLBACK = 3
 
 class Subscriber ():
 	def __init__ (self, network, number:str):
@@ -64,6 +65,9 @@ class Subscriber ():
 		if 'list' == name and SubscriberType.LIST:
 			# return immutable tuple
 			return (*self.__list, )
+
+		if 'callback' == name and SubscriberType.CALLBACK:
+			return self.__callback
 
 		return super ().__getattribute__ (name)
 
@@ -147,6 +151,20 @@ class Subscriber ():
 				raise TypeError ("can only add int, str,"
 				                 " Subscriber to list")
 
+		if 'callback' == name and SubscriberType.UNASSIGNED == self.__type:
+			self.log.debug ("changed type "
+			                "UNASSIGNED -> CALLBACK")
+
+			self.__type = SubscriberType.CALLBACK
+
+		if 'callback' == name and SubscriberType.CALLBACK == self.__type:
+			self.__callback = value
+			self.log.debug ("add callback %r", value)
+			return
+
+		if 'callback' == name:
+			raise AttributeError ()
+
 		return super ().__setattr__ (name, value)
 
 	def is_assignable (self) -> bool:
@@ -166,6 +184,9 @@ class Subscriber ():
 		if SubscriberType.LIST == self.__type:
 			return random.choice ([*self.__list]).__route ()
 
+		if SubscriberType.CALLBACK == self.__type:
+			return self
+
 		raise NotImplementedError ("unknown subscriber type")
 
 	def validate_file (self):
@@ -178,6 +199,13 @@ class Subscriber ():
 		return
 
 	def __call (self, player, aloud, wind) -> bool:
+		if SubscriberType.CALLBACK == self.__type:
+			self.log.debug ("invoking callback with "
+			                "player=%r, aloud=%r, wind=%r",
+			                player, aloud, wind)
+
+			return self.__callback (player, aloud, wind)
+
 		self.validate_file ()
 
 		if not self.exists:

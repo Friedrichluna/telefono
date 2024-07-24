@@ -125,7 +125,7 @@ def do_menu (off_hook, dial, network, player, led, log):
 		pass
 	elif option == 0:
 		log.info ("menu: selected 0")
-		if not player.say_time ():
+		if not network[0].outbound_call (player):
 			# hang up
 			return
 	elif option == 1:
@@ -211,6 +211,8 @@ def main ():
 	# initialize recording data
 	network = Network ()
 	network.sync_fs ()
+	# say current time
+	network[0].callback = Player.say_time
 	# supper prayer songs
 	network[100].list = [101, 102, 103, 104, 105, 106]
 	# supper prayers

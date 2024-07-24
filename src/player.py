@@ -375,13 +375,21 @@ class Player ():
 
 		return self.play_say (text, abort=self.__on_hook)
 
-	def say_time (self) -> bool:
-		self.log.info ("saying time")
+	def say_time (self, aloud, *args) -> bool:
+		self.log.info ("saying time aloud=%r", aloud)
+
+		if aloud:
+			self.__speaker.activate ()
 
 		now = datetime.datetime.now ()
 		time_string = now.strftime (TIME_FORMAT)
 
-		return self.say (time_string)
+		ret = self.say (time_string)
+
+		if aloud:
+			self.__speaker.deactivate ()
+
+		return ret
 
 
 	def quit (self):
