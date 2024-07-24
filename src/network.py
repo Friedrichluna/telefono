@@ -33,6 +33,9 @@ class Subscriber ():
 
 		return
 
+	def __str__ (self):
+		return "Subscriber(%s)" % self.__number
+
 	def __getattribute__ (self, name):
 		if 'type' == name:
 			return self.__type
@@ -256,6 +259,8 @@ class Subscriber ():
 
 class Network ():
 	def __init__ (self, filename:str=RECORD_LIST_FILE):
+		self.log = logging.getLogger ("Network")
+
 		self.__subscribers = list ()
 		self.__prevent_sync = False
 
@@ -265,15 +270,17 @@ class Network ():
 		# restore backup
 		if not os.path.exists (self.__filename) \
 		and os.path.exists (self.__filename + BACKUP_EXT):
-			print ("restoring backup file")
+			self.log.info ("restoring backup file")
 			os.rename (self.__filename + BACKUP_EXT,
 			           self.__filename)
 
 		# load file
 		if os.path.exists (self.__filename):
+			self.log.info ("load recording metadata")
 			with open (self.__filename, "rt") as f:
 				self.__load (f)
 		else:
+			self.log.info ("create missing metadata file")
 			os.mknod (self.__filename)
 
 		return None
@@ -292,6 +299,10 @@ class Network ():
 		if not exists:
 			subscriber = Subscriber (self, number)
 			self.__subscribers.insert (index, subscriber)
+
+			self.log.debug ("creating %s on access",
+			                subscriber)
+
 			return subscriber
 
 		return self.__subscribers[index]
@@ -300,10 +311,15 @@ class Network ():
 		index, exists = self.__find (number)
 
 		if not exists:
+			self.log.warning ("failed to deleting "
+			                  "non-existing subscriber %s",
+			                  number)
 			return None
 
 		subscriber = self.__subscribers[index]
 		self.__subscribers.__delitem__ (index)
+
+		self.log.debug ("deleting %s", subscriber)
 		return subscriber
 
 	def __contains__ (self, number:str):
@@ -319,6 +335,7 @@ class Network ():
 
 	def __delitem__ (self, key:int):
 		self.__del (str (key))
+		self.log.debug ("deleting %s", ret)
 		self.sync_data ()
 		return
 
@@ -343,10 +360,13 @@ class Network ():
 
 	def pop (self, number:int):
 		ret = self.__del (str (number))
+		self.log.debug ("deleting %s", ret)
 		self.sync_data ()
 		return ret
 
 	def __load (self, _file):
+		self.log.debug ("reading metadata")
+
 		fcntl.flock(_file, fcntl.LOCK_SH)
 
 		self.__prevent_sync = True
@@ -364,8 +384,8 @@ class Network ():
 
 			index = line.find (":")
 			if (-1 == index):
-				print ("ignoring malformed line %d"
-				       % (lineno+1))
+				self.log.warning ("ignoring malformed "
+				                  "line %d" % (lineno+1))
 				continue
 
 			number = line[:index]
@@ -377,8 +397,8 @@ class Network ():
 			try:
 				number = int (number)
 			except ValueError:
-				print ("Key is not a number!",
-				       "Ignoring line")
+				self.log.error ("Key is not a number! "
+				                "Ignoring line")
 				continue
 
 			# ignore empty names
@@ -393,6 +413,8 @@ class Network ():
 		return
 
 	def __store (self, _file):
+		self.log.debug ("writing metadata")
+
 		fcntl.flock(_file, fcntl.LOCK_EX)
 
 		_file.truncate ()
@@ -419,28 +441,32 @@ class Network ():
 		fcntl.flock(_file, fcntl.LOCK_UN)
 		return
 
-	def __invalidate_fs (self):
-		for subscriber in self.__subscribers:
-			subscriber.exists = False
-		return
 
 	def sync_data (self):
 		if self.__prevent_sync:
 			return
 
+		self.log.info ("store recording metadata")
+
 		# create temporary file
+		self.log.debug ("create temporary file")
 		fd = os.open (os.path.dirname (self.__filename),
 		              os.O_TMPFILE | os.O_WRONLY,
 		              mode=0o600)
 
 		# create backup file
 		if os.path.exists (self.__filename):
+			self.log.debug ("rename existing file %s -> %s",
+			                self.__filename,
+			                self.__filename + BACKUP_EXT)
 			os.rename (self.__filename,
 			           self.__filename + BACKUP_EXT)
 
 		# store into temporary file
 		f = os.fdopen (fd, "wt")
 		self.__store (f)
+
+		self.log.debug ("saving file %s", self.__filename)
 
 		# atomically link file
 		linkat.link_at (linkat.AT_FDCWD, b"/proc/self/fd/%d" % fd,
@@ -452,7 +478,10 @@ class Network ():
 		return
 
 	def sync_fs (self, directory:str=RECORD_DIR):
-		self.__invalidate_fs ()
+		self.log.info ("scan for existing recordings")
+
+		for subscriber in self.__subscribers:
+			subscriber.exists = False
 
 		for file in os.listdir (directory):
 			path = os.path.join (directory, file)
@@ -460,6 +489,8 @@ class Network ():
 			if os.path.isfile (path) \
 			and file.startswith (RECORD_PREFIX) \
 			and file.endswith (RECORD_SUFFIX):
+				self.log.debug ("found %s", path)
+
 				file = file[len(RECORD_PREFIX) :]
 				file = file[: -len(RECORD_SUFFIX)]
 				number = int (file)
@@ -468,9 +499,11 @@ class Network ():
 		return
 
 	def compact (self):
+		self.log.debug ("compact subscriber list")
 		# remove useless entries
 		for subscriber in self.__subscribers:
 			if SubscriberType.UNASSIGNED == subscriber.__type:
+				self.log.debug ("remove %s", subscriber)
 				self.__subscribers.remove (subscriber)
 
 		return
@@ -480,12 +513,18 @@ class Network ():
 		if not numbers:
 			return None
 
-		return self[int (random.choice (numbers))]
+		subscriber = self[int (random.choice (numbers))]
+		self.log.debug ("chose random %s", subscriber)
+
+		return subscriber
 
 	def find_assignable (self):
+		self.log.debug ("find assignable number")
 		number = 0
 		while not self[number].is_assignable ():
 			number += 1
+
+		self.log.debug ("found %d", number)
 
 		self[number].description = ""
 		return self[number]

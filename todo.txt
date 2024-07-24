@@ -11,7 +11,6 @@ translate README
 Logging:
 	- log hardware events
 	- log IPC
-	- log from Network
 
 Recorder:
 	- set exists to True
