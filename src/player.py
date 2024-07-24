@@ -208,11 +208,6 @@ class Player ():
 	def call (self, call:Subscriber, ring=True) -> bool:
 		self.log.info ("call %s", call.number)
 
-		if ring:
-			if self.play_ring ():
-				# never picked up
-				return False
-
 		return self.__play (call.filename, abort=self.__on_hook,
 		                    aloud=(not ring))
 

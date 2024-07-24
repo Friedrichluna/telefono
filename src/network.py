@@ -163,6 +163,10 @@ class Subscriber ():
 
 		number.validate_file ()
 
+		if ring and player.play_ring ():
+			# never picked up
+			return False
+
 		if not number.exists:
 			player.play_sit_tone ()
 			return False
