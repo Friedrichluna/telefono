@@ -256,7 +256,7 @@ def main ():
 	signal.signal (signal.SIGINT, signal_handler)
 	signal.signal (signal.SIGTERM, signal_handler)
 
-	player.play_aloud (STARTUP_FILE)
+	player.play_system_sound (STARTUP_FILE)
 
 	def off_hook ():
 		return Hook.is_pressed
@@ -277,7 +277,7 @@ def main ():
 		time.sleep (MAINLOOP_DELAY)
 
 	log.info ("shutting down")
-	player.play_aloud (SHUTDOWN_FILE)
+	player.play_system_sound (SHUTDOWN_FILE)
 
 	webAppProcess.terminate ()
 	speakerThread.join ()

@@ -191,7 +191,7 @@ class Player ():
 
 		return not aborted
 
-	def play_aloud (self, filename) -> True:
+	def play_system_sound (self, filename) -> True:
 		return self.__play (filename,
 		                    abort=self.__never, aloud=True)
 
