@@ -199,17 +199,13 @@ class Player ():
 		self.__play (RING_FILE, abort=self.__off_hook,
 		             volume=70, aloud=True)
 
-	def play_recording (self, recording:Subscriber) -> bool:
+	def play_recording (self, recording:Subscriber,
+	                    aloud=False, wind=True) -> bool:
 		self.log.info ("play %s", recording.number)
 
 		return self.__play (recording.filename,
-		                    abort=self.__on_hook, wind=True)
-
-	def call (self, call:Subscriber, ring=True) -> bool:
-		self.log.info ("call %s", call.number)
-
-		return self.__play (call.filename, abort=self.__on_hook,
-		                    aloud=(not ring))
+		                    abort=self.__on_hook,
+		                    aloud=aloud, wind=wind)
 
 
 	def start_tone (self, command, aloud=False):

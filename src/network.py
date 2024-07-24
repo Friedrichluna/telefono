@@ -171,7 +171,7 @@ class Subscriber ():
 			player.play_sit_tone ()
 			return False
 
-		return player.call (number, ring)
+		return player.play_recording (number, aloud=(not ring), wind=False)
 
 
 class Network ():
