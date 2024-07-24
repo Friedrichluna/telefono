@@ -141,6 +141,12 @@ class Subscriber ():
 
 		raise NotImplementedError ("unknown subscriber type")
 
+	def outbound_call (self, player) -> bool:
+		return player.play_recording (self.route ())
+
+	def inbound_call (self, player, ring=True) -> bool:
+		return player.call (self.route (), ring)
+
 
 class Network ():
 	def __init__ (self, filename:str=RECORD_LIST_FILE):

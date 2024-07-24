@@ -58,7 +58,7 @@ def do_dial_call (off_hook, ButtonLeft, dial, network, player, led, log):
 		# started dialling, but didn't dial anything
 		return player.play_busy_tone ()
 
-	if player.play_recording (network[number].route ()):
+	if network[number].outbound_call (player):
 		# still off-hook
 		player.play_busy_tone ()
 	return
@@ -130,17 +130,17 @@ def do_menu (off_hook, dial, network, player, led, log):
 			return
 	elif option == 1:
 		log.info ("menu: selected 1")
-		if not player.play_recording (network[100].route ()):
+		if not network[100].outbound_call (player):
 			# hang up
 			return
 	elif option == 2:
 		log.info ("menu: selected 2")
-		if not player.play_recording (network[200].route ()):
+		if not network[200].outbound_call (player):
 			# hang up
 			return
 	elif option == 3:
 		log.info ("menu: selected 3")
-		if not player.play_recording (network[300].route ()):
+		if not network[300].outbound_call (player):
 			# hang up
 			return
 	else:

@@ -162,8 +162,8 @@ class EventQueue:
 
 		return
 
-	def __process_call (self, call, player):
-		if player.call (call):
+	def __process_call (self, number, player):
+		if number.inbound_call (player):
 			# still off-hook
 			player.play_busy_tone ()
 		return
@@ -174,8 +174,8 @@ class EventQueue:
 			player.play_busy_tone ()
 		return
 
-	def __process_shout (self, call, player):
-		if player.call (call, ring=False):
+	def __process_shout (self, number, player):
+		if number.inbound_call (player, ring=False):
 			# still off-hook
 			player.play_busy_tone ()
 		return
