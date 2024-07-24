@@ -129,6 +129,18 @@ class Subscriber ():
 
 		return False
 
+	def route (self):
+		if SubscriberType.UNASSIGNED == self.__type:
+			return self
+
+		if SubscriberType.RECORDING == self.__type:
+			return self
+
+		if SubscriberType.LIST == self.__type:
+			return random.choice ([*self.__list]).route ()
+
+		raise NotImplementedError ("unknown subscriber type")
+
 
 class Network ():
 	def __init__ (self, filename:str=RECORD_LIST_FILE):

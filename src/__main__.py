@@ -54,7 +54,7 @@ def do_dial_call (off_hook, ButtonLeft, dial, network, player, led, log):
 		return ButtonLeft.is_released or not off_hook ()
 
 	number = dial.get_number (abort, led, player)
-	if None is number or player.play_recording (network[number]):
+	if None is number or player.play_recording (network[number].route ()):
 		# still off-hook
 		player.play_busy_tone ()
 	return

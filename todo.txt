@@ -14,6 +14,9 @@ Logging:
 	- log IPC
 	- log from Network
 
+Subscriber:
+	- return call object on route
+
 Network:
 	- represent special tones
 	- use str for __getitem__
