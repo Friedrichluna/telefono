@@ -247,6 +247,7 @@ def main ():
 	queue.add_shout (network[1830], dinner_weekday, datetime.time (18, 30))
 	queue.add_shout (network[1930], dinner_weekday, datetime.time (19, 30))
 	queue.add_shout (network[2014], every_weekday, datetime.time (20, 00))
+	queue.add_shout (network[59], every_weekday, datetime.time (22, 00))
 
 	# start webapp
 	webAppProcess = run_webapp (ipc.get_client_fd (), log)
