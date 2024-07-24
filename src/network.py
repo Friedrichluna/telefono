@@ -19,6 +19,7 @@ from .CONSTANTS import BACKUP_EXT
 class SubscriberType:
 	UNASSIGNED = 0
 	RECORDING = 1
+	LIST = 2
 
 class Subscriber ():
 	def __init__ (self, network, number:str):
@@ -54,6 +55,10 @@ class Subscriber ():
 				return filename
 
 			return str ()
+
+		if 'list' == name and SubscriberType.LIST:
+			# return immutable tuple
+			return (*self.__list, )
 
 		return super ().__getattribute__ (name)
 
@@ -91,6 +96,29 @@ class Subscriber ():
 
 		if 'filename' == name:
 			raise AttributeError ("read-only attribute")
+
+		if 'list' == name and SubscriberType.UNASSIGNED == self.__type:
+			self.__type = SubscriberType.LIST
+			self.__list = set ()
+
+		if 'list' == name and SubscriberType.LIST == self.__type:
+			for subscriber in value:
+				if isinstance (subscriber, str):
+					subscriber = int (subscriber)
+
+				if isinstance (subscriber, int):
+					subscriber = self.__network[subscriber]
+
+				if isinstance (subscriber, Subscriber) \
+				and SubscriberType.RECORDING != subscriber.__type:
+					raise ValueError ("unsupported subscriber")
+
+				if isinstance (subscriber, Subscriber):
+					self.__list.add (subscriber)
+					continue
+
+				raise TypeError ("can only add int, str,"
+				                 " Subscriber to list")
 
 		return super ().__setattr__ (name, value)
 
