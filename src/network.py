@@ -33,6 +33,9 @@ class Subscriber ():
 		return
 
 	def __getattribute__ (self, name):
+		if 'type' == name:
+			return self.__type
+
 		if 'number' == name:
 			return self.__number
 
@@ -65,6 +68,10 @@ class Subscriber ():
 		return super ().__getattribute__ (name)
 
 	def __setattr__ (self, name, value):
+		if 'type' == name:
+			self.log.error ("attempting to change type")
+			raise AttributeError ("read-only attribute")
+
 		if 'number' == name:
 			self.log.error ("attempting to change number")
 			raise AttributeError ("read-only attribute")
