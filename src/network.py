@@ -129,7 +129,7 @@ class Subscriber ():
 
 		return False
 
-	def route (self):
+	def __route (self):
 		if SubscriberType.UNASSIGNED == self.__type:
 			return self
 
@@ -137,7 +137,7 @@ class Subscriber ():
 			return self
 
 		if SubscriberType.LIST == self.__type:
-			return random.choice ([*self.__list]).route ()
+			return random.choice ([*self.__list]).__route ()
 
 		raise NotImplementedError ("unknown subscriber type")
 
@@ -157,7 +157,7 @@ class Subscriber ():
 		return player.play_file (self.filename, aloud, wind)
 
 	def outbound_call (self, player) -> bool:
-		number = self.route ()
+		number = self.__route ()
 		return number.__call (player, aloud=False, wind=True)
 
 	def inbound_call (self, player, ring=True) -> bool:
@@ -165,7 +165,7 @@ class Subscriber ():
 			# never picked up
 			return False
 
-		number = self.route ()
+		number = self.__route ()
 		return number.__call (player, aloud=(not ring), wind=False)
 
 
