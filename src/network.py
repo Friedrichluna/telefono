@@ -195,8 +195,9 @@ class Subscriber ():
 			                  self.filename)
 
 			self.exists = False
+			return False
 
-		return
+		return self.exists
 
 	def __call (self, player, aloud, wind) -> bool:
 		if SubscriberType.CALLBACK == self.__type:
@@ -214,6 +215,15 @@ class Subscriber ():
 			return False
 
 		return player.play_file (self.filename, aloud, wind)
+
+	def is_callable (self) -> bool:
+		if SubscriberType.RECORDING == self.__type:
+			return self.validate_file ()
+
+		if SubscriberType.CALLBACK == self.__type:
+			return True
+
+		return False
 
 	def outbound_call (self, player) -> bool:
 		self.log.info ("outgoing call to %s", self.number)
