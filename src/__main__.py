@@ -126,17 +126,17 @@ def do_menu (off_hook, dial, network, player, led, log):
 			return
 	elif option == 1:
 		log.info ("menu: selected 1")
-		if not player.random_prayer (network):
+		if not player.play_recording (network[100].route ()):
 			# hang up
 			return
 	elif option == 2:
 		log.info ("menu: selected 2")
-		if not player.random_dice_prayer (network):
+		if not player.play_recording (network[200].route ()):
 			# hang up
 			return
 	elif option == 3:
 		log.info ("menu: selected 3")
-		if not player.random_pater (network):
+		if not player.play_recording (network[300].route ()):
 			# hang up
 			return
 	else:
@@ -207,6 +207,12 @@ def main ():
 	# initialize recording data
 	network = Network ()
 	network.sync_fs ()
+	# supper prayer songs
+	network[100].list = [101, 102, 103, 104, 105, 106]
+	# supper prayers
+	network[200].list = [201, 202, 203, 204, 205, 206]
+	# pater quotes
+	network[300].list = [2, 10, 11, 19, 22, 26, 30, 88]
 
 	DialCounter = Button(2) #Zähler für die gewählte Zahl (rot)
 	DialInUse = Button(26) #Wählscheibe wird benutzt (grau)(weiß im Tel)

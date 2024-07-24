@@ -16,6 +16,8 @@ Logging:
 
 Subscriber:
 	- return call object on route
+	- allow description for different types
+	- route subnumbers and branch extension
 
 Network:
 	- represent special tones

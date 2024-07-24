@@ -4,7 +4,6 @@
 import datetime
 import logging
 import os
-import random
 import subprocess
 import time
 
@@ -64,10 +63,6 @@ from .network import Subscriber
 
 
 class Player ():
-	__supperPrayers = [101, 102, 103, 104, 105]
-	__dicePrayers = [201, 202, 203, 204, 205, 206]
-	__pater = [2, 10, 11, 19, 22, 26, 30, 88]
-
 	def __init__ (self, hook, wind_back, wind_forward, speaker):
 		self.log = logging.getLogger ("Player")
 
@@ -348,20 +343,6 @@ class Player ():
 
 		self.play_tone (command)
 		return
-
-	def __play_random (self, numbers, network) -> bool:
-		number = random.choice (numbers)
-		recording = network[number]
-		return self.play_recording (recording)
-
-	def random_prayer (self, network) -> bool:
-		return self.__play_random (self.__supperPrayers, network)
-
-	def random_dice_prayer (self, network) -> bool:
-		return self.__play_random (self.__dicePrayers, network)
-
-	def random_pater (self, network) -> bool:
-		return self.__play_random (self.__pater, network)
 
 
 	def start_say (self, text:str,
