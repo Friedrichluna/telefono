@@ -296,16 +296,6 @@ class Network ():
 
 		return self.__subscribers[index]
 
-	def __set (self, subscriber:Subscriber):
-		index, exists = self.__find (subscriber.number)
-
-		if not exists:
-			self.__subscribers.insert (index, subscriber)
-			return
-
-		self.__subscribers[index] = subscriber
-		return
-
 	def __del (self, number:str) -> Subscriber:
 		index, exists = self.__find (number)
 
