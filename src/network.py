@@ -3,6 +3,7 @@
 
 import enum
 import fcntl
+import logging
 import os
 import random
 
@@ -23,6 +24,7 @@ class SubscriberType:
 
 class Subscriber ():
 	def __init__ (self, network, number:str):
+		self.log = logging.getLogger ("Subscriber(%s)" % number)
 
 		self.__network = network
 		self.__number = number
@@ -46,6 +48,8 @@ class Subscriber ():
 
 		if 'filename' == name:
 			if SubscriberType.RECORDING == self.__type:
+				self.log.debug ("constructing filename")
+
 				filename = ""
 				filename += RECORD_DIR
 				filename += "/"
@@ -62,6 +66,7 @@ class Subscriber ():
 
 	def __setattr__ (self, name, value):
 		if 'number' == name:
+			self.log.error ("attempting to change number")
 			raise AttributeError ("read-only attribute")
 
 		if 'description' == name:
@@ -71,10 +76,16 @@ class Subscriber ():
 				    type (value))
 
 			if SubscriberType.UNASSIGNED == self.__type:
+				self.log.debug ("changed type "
+				                "UNASSIGNED -> RECORDING")
+
 				self.__type = SubscriberType.RECORDING
 				self.__exists = False
 
 			if SubscriberType.RECORDING == self.__type:
+				self.log.debug ("set description to %s",
+				                value)
+
 				self.__description = value
 				self.__network.sync_data ()
 				return
@@ -86,17 +97,25 @@ class Subscriber ():
 				    type (value))
 
 			if SubscriberType.UNASSIGNED == self.__type and value:
+				self.log.debug ("changed type "
+				                "UNASSIGNED -> RECORDING")
+
 				self.__type = SubscriberType.RECORDING
 				self.__description = str ()
 
 			if SubscriberType.RECORDING == self.__type:
+				self.log.debug ("set exists to %r",
+				                value)
 				self.__exists = value
 				return
 
 		if 'filename' == name:
+			self.log.error ("attempting to change filename")
 			raise AttributeError ("read-only attribute")
 
 		if 'list' == name and SubscriberType.UNASSIGNED == self.__type:
+			self.log.debug ("changed type UNASSIGNED -> LIST")
+
 			self.__type = SubscriberType.LIST
 			self.__list = set ()
 
@@ -113,6 +132,8 @@ class Subscriber ():
 					raise ValueError ("unsupported subscriber")
 
 				if isinstance (subscriber, Subscriber):
+					self.log.debug ("add number %s",
+					                subscriber.number)
 					self.__list.add (subscriber)
 					continue
 
@@ -142,6 +163,9 @@ class Subscriber ():
 
 	def validate_file (self):
 		if self.exists and not os.path.isfile (self.filename):
+			self.log.warning ("file %s vanished",
+			                  self.filename)
+
 			self.exists = False
 
 		return
@@ -150,21 +174,31 @@ class Subscriber ():
 		self.validate_file ()
 
 		if not self.exists:
+			self.log.info ("number doesn't exist")
 			player.play_sit_tone ()
 			return False
 
 		return player.play_file (self.filename, aloud, wind)
 
 	def outbound_call (self, player) -> bool:
+		self.log.info ("outgoing call to %s", self.number)
+
 		number = self.__route ()
+		self.log.debug ("route call to %s", number.number)
+
 		return number.__call (player, aloud=False, wind=True)
 
 	def inbound_call (self, player, ring=True) -> bool:
+		self.log.info ("incoming call from %s %s", self.number,
+		               "" if ring else "(silent)")
+
 		if ring and player.play_ring ():
 			# never picked up
 			return False
 
 		number = self.__route ()
+		self.log.debug ("route call to %s", number.number)
+
 		return number.__call (player, aloud=(not ring), wind=False)
 
 
