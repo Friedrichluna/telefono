@@ -220,6 +220,13 @@ class Subscriber ():
 		if SubscriberType.RECORDING == self.__type:
 			return self.validate_file ()
 
+		if SubscriberType.LIST == self.__type:
+			for subscriber in self.__list:
+				if subscriber.is_callable ():
+					return True
+
+			return False
+
 		if SubscriberType.CALLBACK == self.__type:
 			return True
 
