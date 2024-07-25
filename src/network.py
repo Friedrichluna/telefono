@@ -71,7 +71,7 @@ class Subscriber ():
 				filename += RECORD_DIR
 				filename += "/"
 				filename += RECORD_PREFIX
-				filename += str(self.__number)
+				filename += self.__number
 				filename += RECORD_SUFFIX
 				return filename
 
@@ -150,10 +150,10 @@ class Subscriber ():
 
 		if 'list' == name and SubscriberType.LIST == self.__type:
 			for subscriber in value:
-				if isinstance (subscriber, str):
-					subscriber = int (subscriber)
-
 				if isinstance (subscriber, int):
+					subscriber = str (subscriber)
+
+				if isinstance (subscriber, str):
 					subscriber = self.__network[subscriber]
 
 				if isinstance (subscriber, Subscriber) \
@@ -333,11 +333,27 @@ class Network ():
 
 		return self.__subscribers[index].exists
 
-	def __getitem__ (self, key:int):
-		return self.__get (str (key))
+	def __getitem__ (self, number):
+		if isinstance (number, int):
+			number = str (number)
 
-	def __delitem__ (self, key:int):
-		self.__del (str (key))
+		if not isinstance (number, str):
+			raise TypeError (
+			        "subscript must be str or int not %r"
+			        % type (number))
+
+		return self.__get (number)
+
+	def __delitem__ (self, number):
+		if isinstance (number, int):
+			number = str (number)
+
+		if not isinstance (number, str):
+			raise TypeError (
+			        "subscript must be str or int not %r"
+			        % type (number))
+
+		self.__del (number)
 		self.log.debug ("deleting %s", ret)
 		self.sync_data ()
 		return
@@ -361,8 +377,8 @@ class Network ():
 			if subscriber.exists:
 				yield int (subscriber.number)
 
-	def pop (self, number:int):
-		ret = self.__del (str (number))
+	def pop (self, number:str):
+		ret = self.__del (number)
 		self.log.debug ("deleting %s", ret)
 		self.sync_data ()
 		return ret
@@ -516,7 +532,7 @@ class Network ():
 		if not numbers:
 			return None
 
-		subscriber = self[int (random.choice (numbers))]
+		subscriber = self[random.choice (numbers)]
 		self.log.debug ("chose random %s", subscriber)
 
 		return subscriber

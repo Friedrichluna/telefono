@@ -18,7 +18,6 @@ Subscriber:
 
 Network:
 	- represent special tones
-	- use str for __getitem__
 
 Player:
 	- get rid of pygame
