@@ -70,16 +70,16 @@ def do_recording (off_hook, ButtonLeft, ButtonMiddle, network, player, led):
 	def abort ():
 		return ButtonMiddle.is_released
 
-	record = network.find_assignable ()
+	subscriber = network.find_assignable ()
 
-	if not player.notify_recording_start (record.number):
+	if not player.notify_recording_start (subscriber.number):
 		# hang up
 		return
 
 	result = Recorder (subscriber.filename, led) \
 	                   .record (network, end, abort)
 
-	if not player.notify_recording_end (record.number, result):
+	if not player.notify_recording_end (subscriber.number, result):
 		# hang up
 		return
 
@@ -210,12 +210,12 @@ def main ():
 	Hook = Button(18) #wenn der Hörer aufgenommen ist (Orange, mit Blauem Kabel aus dem Telefon)
 	ButtonLeft = Button(3) #Linker knopf (violett)red = Button(2) #Zähler für die gewählte Zahl (rot)(grün Gestr.)
 	ButtonMiddle = Button(27) #Mittlerer Knopf
-	SpeakerSwich = Button(17) #Rechter Kippschalter (grüner Anschluss)
+	SpeakerSwitch = Button(17) #Rechter Kippschalter (grüner Anschluss)
 	led = gpiozero.LED (20)
 
 	dial = Dial (DialInUse, DialCounter)
 
-	speakerThread = SpeakerThread (SpeakerSwich)
+	speakerThread = SpeakerThread (SpeakerSwitch)
 	speakerThread.start()
 
 	player = Player (Hook, ButtonLeft, ButtonMiddle, speakerThread)
@@ -275,7 +275,7 @@ def main ():
 	Hook.close ()
 	ButtonLeft.close ()
 	ButtonMiddle.close ()
-	SpeakerSwich.close ()
+	SpeakerSwitch.close ()
 	led.close ()
 
 	log.info ("bye.")

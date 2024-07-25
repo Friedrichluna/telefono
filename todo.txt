@@ -1,7 +1,6 @@
 translate README
 
 - fix variable shadowing
-- correct variable naming (typos)
 - hardware class
 
 - better name for shout
