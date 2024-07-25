@@ -11,9 +11,6 @@ Logging:
 	- log hardware events
 	- log IPC
 
-Recorder:
-	- set exists to True
-
 Subscriber:
 	- return call object on route
 	- allow description for different types

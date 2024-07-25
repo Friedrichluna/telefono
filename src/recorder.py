@@ -62,7 +62,7 @@ class Recorder ():
 		self.wavefile.writeframes (in_data)
 		return None, pyaudio.paContinue
 
-	def save (self, network):
+	def save (self):
 		self.log.debug ("saving recording file")
 
 		# atomically link file
@@ -71,8 +71,8 @@ class Recorder ():
 		                linkat.AT_FDCWD, filename,
 		                linkat.AT_SYMLINK_FOLLOW)
 
-		# detect created file
-		network.sync_fs ()
+		# register created file
+		self.__subscriber.exists = True
 		return
 
 	def __enter__ (self):
@@ -95,7 +95,7 @@ class Recorder ():
 		return False
 
 
-	def record (self, network, end, abort):
+	def record (self, end, abort):
 		timer = 0
 
 		with self:
@@ -112,7 +112,7 @@ class Recorder ():
 				self.log.info ("recording to short")
 				return RECORDER_RESULT.MIN_TIME
 
-			self.save (network)
+			self.save ()
 
 		if timer > RECORD_TIME_MAX:
 			self.log.info ("reached maximal recording time %ds",
