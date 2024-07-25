@@ -16,6 +16,9 @@ Subscriber:
 	- allow description for different types
 	- route subnumbers and branch extension
 
+Number:
+	- allow auto replacement to string on add
+
 Network:
 	- represent special tones
 

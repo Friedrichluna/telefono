@@ -16,6 +16,8 @@ from .CONSTANTS import RECORD_SUFFIX
 from .CONSTANTS import RECORD_LIST_FILE
 from .CONSTANTS import BACKUP_EXT
 
+from .number import Number
+
 
 class SubscriberType:
 	UNASSIGNED = 0
@@ -24,7 +26,7 @@ class SubscriberType:
 	CALLBACK = 3
 
 class Subscriber ():
-	def __init__ (self, network, number:str):
+	def __init__ (self, network, number:Number):
 		self.log = logging.getLogger ("Subscriber(%s)" % number)
 
 		self.__network = network
@@ -71,7 +73,7 @@ class Subscriber ():
 				filename += RECORD_DIR
 				filename += "/"
 				filename += RECORD_PREFIX
-				filename += self.__number
+				filename += str (self.__number)
 				filename += RECORD_SUFFIX
 				return filename
 
@@ -150,24 +152,19 @@ class Subscriber ():
 
 		if 'list' == name and SubscriberType.LIST == self.__type:
 			for subscriber in value:
-				if isinstance (subscriber, int):
-					subscriber = str (subscriber)
+				if not isinstance (subscriber, Subscriber):
+					number = Number (self, subscriber)
+					subscriber = self.__network[number]
 
-				if isinstance (subscriber, str):
-					subscriber = self.__network[subscriber]
-
-				if isinstance (subscriber, Subscriber) \
-				and SubscriberType.RECORDING != subscriber.__type:
+				if SubscriberType.RECORDING != subscriber.__type:
 					raise ValueError ("unsupported subscriber")
 
-				if isinstance (subscriber, Subscriber):
-					self.log.debug ("add number %s",
-					                subscriber.number)
-					self.__list.add (subscriber)
-					continue
+				self.log.debug ("add number %s",
+				                subscriber.number)
+				self.__list.add (subscriber)
 
-				raise TypeError ("can only add int, str,"
-				                 " Subscriber to list")
+			return
+
 
 		if 'callback' == name and SubscriberType.UNASSIGNED == self.__type:
 			self.log.debug ("changed type "
@@ -288,7 +285,7 @@ class Network ():
 
 		return None
 
-	def __find (self, number:str) -> (int, bool):
+	def __find (self, number:Number) -> (int, bool):
 		for index in range (len (self.__subscribers)):
 			if number == self.__subscribers[index].number:
 				return index, True
@@ -296,7 +293,7 @@ class Network ():
 				return index, False
 		return len (self.__subscribers), False
 
-	def __get (self, number:str) -> Subscriber:
+	def __get (self, number:Number) -> Subscriber:
 		index, exists = self.__find (number)
 
 		if not exists:
@@ -310,7 +307,7 @@ class Network ():
 
 		return self.__subscribers[index]
 
-	def __del (self, number:str) -> Subscriber:
+	def __del (self, number:Number) -> Subscriber:
 		index, exists = self.__find (number)
 
 		if not exists:
@@ -325,35 +322,19 @@ class Network ():
 		self.log.debug ("deleting %s", subscriber)
 		return subscriber
 
-	def __contains__ (self, number:str):
-		index, exists = self.__find (number)
+	def __contains__ (self, number:Number):
+		index, exists = self.__find (Number (self, number))
 
 		if not exists:
 			return False
 
 		return self.__subscribers[index].exists
 
-	def __getitem__ (self, number):
-		if isinstance (number, int):
-			number = str (number)
+	def __getitem__ (self, number:Number):
+		return self.__get (Number (self, number))
 
-		if not isinstance (number, str):
-			raise TypeError (
-			        "subscript must be str or int not %r"
-			        % type (number))
-
-		return self.__get (number)
-
-	def __delitem__ (self, number):
-		if isinstance (number, int):
-			number = str (number)
-
-		if not isinstance (number, str):
-			raise TypeError (
-			        "subscript must be str or int not %r"
-			        % type (number))
-
-		self.__del (number)
+	def __delitem__ (self, number:Number):
+		self.__del (Number (number))
 		self.log.debug ("deleting %s", ret)
 		self.sync_data ()
 		return
@@ -377,8 +358,8 @@ class Network ():
 			if subscriber.exists:
 				yield int (subscriber.number)
 
-	def pop (self, number:str):
-		ret = self.__del (number)
+	def pop (self, number:Number):
+		ret = self.__del (self, Number (number))
 		self.log.debug ("deleting %s", ret)
 		self.sync_data ()
 		return ret
