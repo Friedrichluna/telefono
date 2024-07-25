@@ -33,6 +33,8 @@ class Subscriber ():
 		self.__number = number
 		self.__type = SubscriberType.UNASSIGNED
 
+		self.__hidden = False
+
 		return
 
 	def __str__ (self):
@@ -64,6 +66,9 @@ class Subscriber ():
 				return self.__validate_file ()
 
 			return False
+
+		if 'hidden' == name:
+			return self.__hidden
 
 		if 'filename' == name:
 			if SubscriberType.RECORDING == self.__type:
@@ -139,6 +144,10 @@ class Subscriber ():
 				                value)
 				self.__exists = value
 				return
+
+		if 'hidden' == name:
+			self.__hidden = value
+			return
 
 		if 'filename' == name:
 			self.log.error ("attempting to change filename")
@@ -355,7 +364,7 @@ class Network ():
 
 	def numbers (self):
 		for subscriber in self.__subscribers:
-			if subscriber.exists:
+			if subscriber.exists and not subscriber.hidden:
 				yield int (subscriber.number)
 
 	def pop (self, number:Number):
