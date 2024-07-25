@@ -26,12 +26,13 @@ RATE = 44100
 FRAME_PER_BUFFER = 512
 
 class Recorder ():
-	def __init__ (self, fname, indicator,
+	def __init__ (self, subscriber, indicator,
 	              channels=CHANNELS, rate=RATE,
 	              frames_per_buffer=FRAME_PER_BUFFER):
-		self.log = logging.getLogger ("Recorder(%s)" % fname)
+		self.log = logging.getLogger ("Recorder(%s)"
+		                              % subscriber.filename)
 
-		self.fname = fname
+		self.__subscriber = subscriber
 		self.indicator = indicator
 
 		self.log.debug ("setting up PyAudio")
@@ -47,7 +48,7 @@ class Recorder ():
 
 		self.log.debug ("setting up file")
 		# create temporary file
-		self.fd = os.open (os.path.dirname (self.fname),
+		self.fd = os.open (os.path.dirname (subscriber.filename),
 		                   os.O_TMPFILE | os.O_WRONLY,
 		                   mode=0o600)
 
@@ -65,8 +66,9 @@ class Recorder ():
 		self.log.debug ("saving recording file")
 
 		# atomically link file
+		filename = self.__subscriber.filename.encode()
 		linkat.link_at (linkat.AT_FDCWD, b"/proc/self/fd/%d" % self.fd,
-		                linkat.AT_FDCWD, self.fname.encode(),
+		                linkat.AT_FDCWD, filename,
 		                linkat.AT_SYMLINK_FOLLOW)
 
 		# detect created file
