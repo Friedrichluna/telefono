@@ -73,8 +73,7 @@ def do_recording (off_hook, ButtonLeft, ButtonMiddle, network, player, led, log)
 	record = network.find_assignable ()
 
 	log.info ("start recording %s", record.number)
-	if not player.say ("Aufnahme Nr.: %s wird gestartet"
-	                   % record.number):
+	if not player.notify_recording_start (record.number):
 		# hang up
 		return
 
@@ -83,20 +82,19 @@ def do_recording (off_hook, ButtonLeft, ButtonMiddle, network, player, led, log)
 
 	if RECORDER_RESULT.ABORT == result:
 		log.info ("recording %s aborted", record.number)
-		player.say ("Aufnahme Nr.: %s abgebrochen" % record.number,
-		            interruptible=False)
 
 	elif RECORDER_RESULT.MIN_TIME == result:
 		log.info ("recording %s to short", record.number)
-		player.say ("Aufnahme zu kurz", interruptible=False)
 
 	elif RECORDER_RESULT.MAX_TIME == result:
 		log.info ("recording %s terminated after max. time",
 		              record.number)
-		player.say ("Aufnahme Nr.: %s wegen overtime beendet."
-		            % record.number, interruptible=False)
 	else:
 		log.info ("finished recording %s", record.number)
+
+	if not player.notify_recording_end (record.number, result):
+		# hang up
+		return
 
 	player.play_busy_tone ()
 	return
@@ -107,7 +105,7 @@ def do_menu (off_hook, dial, network, player, led, log):
 	def abort ():
 		return not off_hook ()
 
-	if not player.say ("Menü wird geöffnet."):
+	if not player.notify_menu_start ():
 		# hang up
 		return
 
@@ -144,8 +142,9 @@ def do_menu (off_hook, dial, network, player, led, log):
 			return
 	else:
 		log.info ("error in menu selection")
-		player.say ("Das habe ich nicht verstanden. Auf Wiederhörn!",
-		            interruptible=False)
+		if not player.notify_menu_error ():
+			# hang up
+			return
 
 	player.play_busy_tone ()
 	return

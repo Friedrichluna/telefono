@@ -59,6 +59,8 @@ from .CONSTANTS import BUSY_TIMEOUT
 
 from .CONSTANTS import TIME_FORMAT
 
+from .recorder import RECORDER_RESULT
+
 
 class Player ():
 	def __init__ (self, hook, wind_back, wind_forward, speaker):
@@ -390,6 +392,50 @@ class Player ():
 			self.__speaker.deactivate ()
 
 		return ret
+
+	def notify_recording_start (self, recording_number:str) -> bool:
+		self.log.debug ("notify recording %s start",
+		                recording_number)
+
+		return self.say ("Aufnahme %s wird gestartet"
+		                 % recording_number)
+
+	def notify_recording_end (self, recording_number:str,
+	                          result:RECORDER_RESULT) -> bool:
+		self.log.debug ("notify recording %s end with %r",
+		                recording_number, result)
+
+		if RECORDER_RESULT.ABORT == result:
+			message = "Aufnahme %s abgebrochen" \
+			        % recording_number
+
+		elif RECORDER_RESULT.MIN_TIME == result:
+			message = "Aufnahme zu kurz"
+
+		elif RECORDER_RESULT.MAX_TIME == result:
+			message = "Maximallänge erreicht. " \
+			          "Aufnahme %s gespeichert." \
+			        % recording_number
+
+		elif RECORDER_RESULT.END:
+			message = "Aufnahme %s gespeichert." \
+			        % recording_number
+
+		else:
+			self.log.error ("unknown %r", result)
+			return
+
+		return self.say (message, interruptible=False)
+
+	def notify_menu_start (self) -> bool:
+		self.log.debug ("notify menu start")
+		return self.say ("Menü wird geöffnet.")
+
+	def notify_menu_error (self) -> bool:
+		self.log.debug ("notify menu error")
+		return self.say ("Das habe ich nicht verstanden. "
+		                 "Auf Wiederhörn!",
+		                 interruptible=False)
 
 
 	def quit (self):

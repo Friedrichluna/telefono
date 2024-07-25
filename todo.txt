@@ -27,7 +27,6 @@ Network:
 Player:
 	- get rid of pygame
 	- don't wait for ffplay
-	- notify methods
 
 Speaker:
 	- get rid of activation delay
