@@ -76,8 +76,8 @@ def do_recording (off_hook, ButtonLeft, ButtonMiddle, network, player, led):
 		# hang up
 		return
 
-	result = Recorder (record.filename,
-	                   network, led).record (end, abort)
+	result = Recorder (subscriber.filename, led) \
+	                   .record (network, end, abort)
 
 	if not player.notify_recording_end (record.number, result):
 		# hang up

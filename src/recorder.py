@@ -26,13 +26,12 @@ RATE = 44100
 FRAME_PER_BUFFER = 512
 
 class Recorder ():
-	def __init__ (self, fname, network, indicator,
+	def __init__ (self, fname, indicator,
 	              channels=CHANNELS, rate=RATE,
 	              frames_per_buffer=FRAME_PER_BUFFER):
 		self.log = logging.getLogger ("Recorder(%s)" % fname)
 
 		self.fname = fname
-		self.network = network
 		self.indicator = indicator
 
 		self.log.debug ("setting up PyAudio")
@@ -62,7 +61,7 @@ class Recorder ():
 		self.wavefile.writeframes (in_data)
 		return None, pyaudio.paContinue
 
-	def save (self):
+	def save (self, network):
 		self.log.debug ("saving recording file")
 
 		# atomically link file
@@ -71,7 +70,7 @@ class Recorder ():
 		                linkat.AT_SYMLINK_FOLLOW)
 
 		# detect created file
-		self.network.sync_fs ()
+		network.sync_fs ()
 		return
 
 	def __enter__ (self):
@@ -94,7 +93,7 @@ class Recorder ():
 		return False
 
 
-	def record (self, end, abort):
+	def record (self, network, end, abort):
 		timer = 0
 
 		with self:
@@ -111,7 +110,7 @@ class Recorder ():
 				self.log.info ("recording to short")
 				return RECORDER_RESULT.MIN_TIME
 
-			self.save ()
+			self.save (network)
 
 		if timer > RECORD_TIME_MAX:
 			self.log.info ("reached maximal recording time %ds",
