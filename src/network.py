@@ -36,6 +36,16 @@ class Subscriber ():
 	def __str__ (self):
 		return "Subscriber(%s)" % self.__number
 
+	def __validate_file (self):
+		if self.__exists and not os.path.isfile (self.filename):
+			self.log.warning ("file %s vanished",
+			                  self.filename)
+
+			self.__exists = False
+			return False
+
+		return self.__exists
+
 	def __getattribute__ (self, name):
 		if 'type' == name:
 			return self.__type
@@ -49,7 +59,7 @@ class Subscriber ():
 
 		if 'exists' == name:
 			if SubscriberType.RECORDING == self.__type:
-				return self.__exists
+				return self.__validate_file ()
 
 			return False
 
@@ -192,16 +202,6 @@ class Subscriber ():
 
 		raise NotImplementedError ("unknown subscriber type")
 
-	def validate_file (self):
-		if self.exists and not os.path.isfile (self.filename):
-			self.log.warning ("file %s vanished",
-			                  self.filename)
-
-			self.exists = False
-			return False
-
-		return self.exists
-
 	def __call (self, player, aloud, wind) -> bool:
 		if SubscriberType.CALLBACK == self.__type:
 			self.log.debug ("invoking callback with "
@@ -209,8 +209,6 @@ class Subscriber ():
 			                player, aloud, wind)
 
 			return self.__callback (player, aloud, wind)
-
-		self.validate_file ()
 
 		if not self.exists:
 			self.log.info ("number doesn't exist")
@@ -221,7 +219,7 @@ class Subscriber ():
 
 	def is_callable (self) -> bool:
 		if SubscriberType.RECORDING == self.__type:
-			return self.validate_file ()
+			return self.exists
 
 		if SubscriberType.LIST == self.__type:
 			for subscriber in self.__list:
