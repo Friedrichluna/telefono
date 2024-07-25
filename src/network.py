@@ -359,7 +359,7 @@ class Network ():
 	def numbers (self):
 		for subscriber in self.__subscribers:
 			if subscriber.exists:
-				yield subscriber.number
+				yield int (subscriber.number)
 
 	def pop (self, number:int):
 		ret = self.__del (str (number))
