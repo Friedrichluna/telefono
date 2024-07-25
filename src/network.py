@@ -105,10 +105,15 @@ class Subscriber ():
 
 				self.__type = SubscriberType.RECORDING
 				self.__exists = False
+				self.__description = ""
 
 			if SubscriberType.RECORDING == self.__type:
 				self.log.debug ("set description to %s",
 				                value)
+
+				if "" == value \
+				and "" == self.__description:
+					return
 
 				self.__description = value
 				self.__network.sync_data ()
@@ -524,5 +529,6 @@ class Network ():
 
 		self.log.debug ("found %d", number)
 
+		# register subscriber
 		self[number].description = ""
 		return self[number]
