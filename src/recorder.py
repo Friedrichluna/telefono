@@ -29,10 +29,13 @@ class Recorder ():
 	def __init__ (self, fname, network, indicator,
 	              channels=CHANNELS, rate=RATE,
 	              frames_per_buffer=FRAME_PER_BUFFER):
+		self.log = logging.getLogger ("Recorder(%s)" % fname)
 
 		self.fname = fname
 		self.network = network
 		self.indicator = indicator
+
+		self.log.debug ("setting up PyAudio")
 		self._pa = pyaudio.PyAudio ()
 
 		# Use a stream with a callback in non-blocking mode
@@ -43,6 +46,7 @@ class Recorder ():
 		                              frames_per_buffer=frames_per_buffer,
 		                              stream_callback=self.__on_data)
 
+		self.log.debug ("setting up file")
 		# create temporary file
 		self.fd = os.open (os.path.dirname (self.fname),
 		                   os.O_TMPFILE | os.O_WRONLY,
@@ -59,7 +63,7 @@ class Recorder ():
 		return None, pyaudio.paContinue
 
 	def save (self):
-		logging.debug ("Recorder: linking file %s", self.fname)
+		self.log.debug ("saving recording file")
 
 		# atomically link file
 		linkat.link_at (linkat.AT_FDCWD, b"/proc/self/fd/%d" % self.fd,
@@ -71,12 +75,16 @@ class Recorder ():
 		return
 
 	def __enter__ (self):
+		self.log.info ("start recording")
+
 		self.indicator.on ()
 		self._stream.start_stream ()
 
 		return self
 
 	def __exit__ (self, exception, value, traceback):
+		self.log.info ("stop recording")
+
 		self._stream.stop_stream ()
 		self.indicator.off ()
 
@@ -96,14 +104,19 @@ class Recorder ():
 				timer += 1
 
 				if abort ():
+					self.log.info ("recording aborted")
 					return RECORDER_RESULT.ABORT
 
 			if timer <= RECORD_TIME_MIN:
+				self.log.info ("recording to short")
 				return RECORDER_RESULT.MIN_TIME
 
 			self.save ()
 
 		if timer > RECORD_TIME_MAX:
+			self.log.info ("reached maximal recording time %ds",
+			               RECORD_TIME_MAX * RECORD_DELAY)
 			return RECORDER_RESULT.MAX_TIME
 
+		self.log.info ("finished recording")
 		return RECORDER_RESULT.END

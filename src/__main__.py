@@ -62,7 +62,7 @@ def do_dial_call (off_hook, ButtonLeft, dial, network, player, led, log):
 		player.play_busy_tone ()
 	return
 
-def do_recording (off_hook, ButtonLeft, ButtonMiddle, network, player, led, log):
+def do_recording (off_hook, ButtonLeft, ButtonMiddle, network, player, led):
 
 	def end ():
 		return ButtonLeft.is_released or not off_hook ()
@@ -72,25 +72,12 @@ def do_recording (off_hook, ButtonLeft, ButtonMiddle, network, player, led, log)
 
 	record = network.find_assignable ()
 
-	log.info ("start recording %s", record.number)
 	if not player.notify_recording_start (record.number):
 		# hang up
 		return
 
 	result = Recorder (record.filename,
 	                   network, led).record (end, abort)
-
-	if RECORDER_RESULT.ABORT == result:
-		log.info ("recording %s aborted", record.number)
-
-	elif RECORDER_RESULT.MIN_TIME == result:
-		log.info ("recording %s to short", record.number)
-
-	elif RECORDER_RESULT.MAX_TIME == result:
-		log.info ("recording %s terminated after max. time",
-		              record.number)
-	else:
-		log.info ("finished recording %s", record.number)
 
 	if not player.notify_recording_end (record.number, result):
 		# hang up
@@ -167,7 +154,7 @@ def off_hook_loop (network, player, off_hook, dial, ButtonLeft, ButtonMiddle, le
 			player.stop_tone ()
 			return do_recording (off_hook,
 			                     ButtonLeft, ButtonMiddle,
-			                     network, player, led, log)
+			                     network, player, led)
 
 		if ButtonMiddle.is_pressed:
 			player.stop_tone ()
