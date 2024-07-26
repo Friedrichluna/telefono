@@ -146,6 +146,11 @@ class Subscriber ():
 				return
 
 		if 'hidden' == name:
+			if value:
+				self.log.debug ("hiding number")
+			else:
+				self.log.debug ("unhiding number")
+
 			self.__hidden = value
 			return
 
