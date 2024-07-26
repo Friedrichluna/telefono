@@ -16,9 +16,6 @@ Subscriber:
 	- allow description for different types
 	- route subnumbers and branch extension
 
-Number:
-	- allow auto replacement to string on add
-
 Network:
 	- represent special tones
 
@@ -32,6 +29,7 @@ IPC:
 	- handle larger lists of descriptions
 
 WebApp:
+	- jump to number after editing
 	- support other subscriber types
 	- record and call functionality
 	- improve layout

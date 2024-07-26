@@ -78,7 +78,7 @@ class Subscriber ():
 				filename += RECORD_DIR
 				filename += "/"
 				filename += RECORD_PREFIX
-				filename += str (self.__number)
+				filename += self.__number
 				filename += RECORD_SUFFIX
 				return filename
 

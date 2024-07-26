@@ -79,6 +79,9 @@ class Number ():
 	def __bool__ (self) -> bool:
 		return self.__number != ""
 
+	def __radd__ (self, other):
+		return other + self.__number
+
 	def __iadd__ (self, other):
 		self.__number += Number (self.__network, other).__number
 
