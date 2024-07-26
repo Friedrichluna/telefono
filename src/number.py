@@ -50,6 +50,9 @@ class Number ():
 	def __repr__ (self) -> str:
 		return "Number(%s)" % repr (self.__number)
 
+	def __copy__ (self):
+		return Number (self.__network, self.__number)
+
 
 	def __eq__ (self, other) -> bool:
 		if self.__type != other.__type:
@@ -75,6 +78,19 @@ class Number ():
 
 	def __bool__ (self) -> bool:
 		return self.__number != ""
+
+	def __iadd__ (self, other):
+		self.__number += Number (self.__network, other).__number
+
+		# update log name
+		self.log.name = repr (self)
+		return
+
+	def __add__ (self, other):
+		copy = self.__copy__ ()
+		copy.__iadd__ (other)
+		return copy
+
 
 	def add_digit (self, digit):
 
