@@ -72,3 +72,6 @@ class Number ():
 
 	def __int__ (self):
 		return int (self.__number)
+
+	def __bool__ (self) -> bool:
+		return self.__number != ""
