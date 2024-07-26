@@ -45,6 +45,7 @@ from .CONSTANTS import ESPEAK_CMD
 from .CONSTANTS import ESPEAK_SPEED
 from .CONSTANTS import ESPEAK_AMPLITUDE
 from .CONSTANTS import ESPEAK_VOICE
+from .CONSTANTS import ESPEAK_TEXT
 
 from .CONSTANTS import TTS_SPEED
 from .CONSTANTS import TTS_AMPLITUDE
@@ -362,7 +363,7 @@ class Player ():
 		           *ESPEAK_SPEED, str(speed),
 		           *ESPEAK_AMPLITUDE, str (amplitude),
 		           *ESPEAK_VOICE, voice,
-		           text)
+		           *ESPEAK_TEXT, text)
 
 		self.log.debug ("invoking espeak: %s", repr (command))
 

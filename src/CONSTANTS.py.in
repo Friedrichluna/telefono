@@ -133,6 +133,7 @@ ESPEAK_CMD = ("espeak", )
 ESPEAK_SPEED = ("-s", )
 ESPEAK_AMPLITUDE = ("-a", )
 ESPEAK_VOICE = ("-v", )
+ESPEAK_TEXT = ("--", )
 
 TTS_SPEED = 140
 TTS_AMPLITUDE = 100
