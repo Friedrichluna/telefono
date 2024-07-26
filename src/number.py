@@ -87,5 +87,9 @@ class Number ():
 		if not ord('0') <= ord (digit) <= ord ('9'):
 			raise ValueError ("only digits allowed in number")
 
+		self.log.debug ("add digit %s", digit)
 		self.__number += digit
+
+		# update log name
+		self.log.name = repr (self)
 		return

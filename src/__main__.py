@@ -53,7 +53,7 @@ def do_dial_call (off_hook, ButtonLeft, dial, network, player, led, log):
 		return ButtonLeft.is_released or not off_hook ()
 
 	number = dial.get_number (abort, led, player)
-	if None is number:
+	if not number:
 		# started dialling, but didn't dial anything
 		return player.play_busy_tone ()
 
