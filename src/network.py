@@ -265,6 +265,9 @@ class Subscriber ():
 
 		return number.__call (player, aloud=(not ring), wind=False)
 
+	def dial (self, number):
+		return self.__network[self.__number + number]
+
 
 class Network ():
 	def __init__ (self, filename:str=RECORD_LIST_FILE):
