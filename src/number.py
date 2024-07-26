@@ -75,3 +75,17 @@ class Number ():
 
 	def __bool__ (self) -> bool:
 		return self.__number != ""
+
+	def add_digit (self, digit):
+
+		if isinstance (digit, int):
+			digit = str (digit)
+
+		if not isinstance (digit, str):
+			raise TypeError ("can add int, str as digit")
+
+		if not ord('0') <= ord (digit) <= ord ('9'):
+			raise ValueError ("only digits allowed in number")
+
+		self.__number += digit
+		return
