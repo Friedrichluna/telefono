@@ -51,7 +51,7 @@ class EventQueue:
 		return
 
 	def add_text (self, text:str, time=0):
-		self.log.info ("schedule text %s for %s",
+		self.log.info ("schedule text %r for %s",
 		               text, self.__get_debug_time (time))
 		self.__add_event (time, (EVENT_TYPE.TEXT, text))
 		return
@@ -68,7 +68,7 @@ class EventQueue:
 
 		event = (EVENT_TYPE.DAILY_SHOUT, call, filter)
 
-		self.log.info ("schedule shout %s for %s",
+		self.log.info ("schedule shout %r for %s",
 		               call.number, self.__get_debug_time (time))
 
 		self.__add_event (time, event)
@@ -130,7 +130,7 @@ class EventQueue:
 				self.__process_call (event[1], player)
 
 			elif EVENT_TYPE.TEXT == event[0]:
-				self.log.info ("process text %s at %s",
+				self.log.info ("process text %r at %s",
 				               event[1],
 				               self.__get_debug_time (_time))
 				self.__process_text (event[1], player)
@@ -146,7 +146,7 @@ class EventQueue:
 				self.__add_random_call (tomorrow)
 
 			elif EVENT_TYPE.DAILY_SHOUT == event[0]:
-				self.log.info ("process shout %s at %s",
+				self.log.info ("process shout %r at %s",
 				               event[1],
 				               self.__get_debug_time (_time))
 				date = datetime.datetime.fromtimestamp (_time)
