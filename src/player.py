@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import datetime
+import fcntl
 import logging
 import os
 import subprocess
@@ -102,11 +103,29 @@ class Player ():
 
 		process = subprocess.Popen (command,
 		                            stderr=subprocess.PIPE,
-		                            text=True)
+		                            text=False)
 
-		# wait for ffplay to produce output
-		time.sleep (FFPLAY_STARTUP_TIME)
 		return process
+
+	@staticmethod
+	def __parse_ffplay_output (buffer) -> float:
+		end = buffer.rfind (b" M-A:")
+		if -1 == end:
+			return None
+
+		start = buffer.rfind (b" ", 0, end)
+		if -1 == start:
+			return None
+
+		if b"nan" == buffer[start:end]:
+			return None
+
+		try:
+			number = float (buffer[start:end])
+		except ValueError:
+			return None
+
+		return number
 
 	def __play (self, filename, abort, volume=100,
 	            aloud=False, wind=False) -> bool:
@@ -131,31 +150,38 @@ class Player ():
 
 		process = self.__ffplay (filename, volume=volume)
 
+		# make fd non-blocking
+		fd = process.stderr.fileno ()
+		fcntl.fcntl (fd, fcntl.F_SETFL, os.O_NONBLOCK)
+
+		buffer = bytearray ()
+		start = 0
+
 		while process.poll () is None:
 			time.sleep (FFPLAY_POLL_DELAY)
+
 			if abort ():
 				process.terminate ()
 				aborted = True
 
+			# parse current timestamp
+			data = process.stderr.read ()
+			if data is not None:
+				buffer += data
+				if 128 < len (buffer):
+					buffer = buffer[-128:]
+
+				_pos = self.__parse_ffplay_output (buffer)
+				if _pos is not None:
+					start = _pos
+					buffer.clear ()
+					self.log.debug ("duration: %f", start)
+
 			if wind and self.__back ():
 				process.terminate ()
-				data = process.communicate ()
-				try:
-					data = data[1]
-					data = data.split ('\n')
-					data = data[-2]
-					data = data.strip ()
-					data = data.split (' ')
-					data = data[0]
-					start = float (data)
-					start -= WIND_TIME
-				except:
-					start = 0
-					self.log.error ("failed to parse "
-					                "ffplay output")
+				start -= WIND_TIME
 
 				self.log.debug ("wind back to %d", start)
-
 				process = self.__ffplay (filename,
 				                         start,
 				                         volume)
@@ -163,20 +189,7 @@ class Player ():
 
 			if wind and self.__forward ():
 				process.terminate ()
-				data = process.communicate ()
-				try:
-					data = data[1]
-					data = data.split ('\n')
-					data = data[-2]
-					data = data.strip ()
-					data = data.split (' ')
-					data = data[0]
-					start = float (data)
-					start += WIND_TIME
-				except:
-					start = 0
-					self.log.error ("failed to parse "
-					                "ffplay output")
+				start += WIND_TIME
 
 				self.log.debug ("wind forward to %d", start)
 				process = self.__ffplay (filename,
