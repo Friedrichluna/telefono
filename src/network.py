@@ -189,7 +189,7 @@ class Subscriber ():
 			self.log.debug ("changed type UNASSIGNED -> LIST")
 
 			self.__type = SubscriberType.LIST
-			self.__list = set ()
+			self.__list = list ()
 
 		if 'list' == name and SubscriberType.LIST == self.__type:
 			for subscriber in value:
@@ -200,9 +200,15 @@ class Subscriber ():
 				if SubscriberType.RECORDING != subscriber.__type:
 					raise ValueError ("unsupported subscriber")
 
+				if subscriber in self.__list:
+					self.log.debug ("skipping duplicate"
+					                " subscriber %s",
+					                subscriber.number)
+					return
+
 				self.log.debug ("add number %s",
 				                subscriber.number)
-				self.__list.add (subscriber)
+				self.__list.append (subscriber)
 
 			return
 
@@ -241,12 +247,29 @@ class Subscriber ():
 			return self
 
 		if SubscriberType.LIST == self.__type:
-			return random.choice ([*self.__list]).__route ()
+			return random.choice (self.__list).__route ()
 
 		if SubscriberType.CALLBACK == self.__type:
 			return self
 
 		raise NotImplementedError ("unknown subscriber type")
+
+	def subroute (self, number:Number):
+		subnumber = number.remove_base (self.__number)
+		if not subnumber:
+			# self isn't a base number
+			self.log.debug ("%s isn't extending this number",
+			                number)
+			return None
+
+		if SubscriberType.LIST == self.__type \
+		and int (subnumber) < len (self.__list):
+			self.log.debug ("selecting subnumber %s",
+			                subnumber)
+			return self.__list[int (subnumber)]
+
+		self.log.debug ("%s is no valid subscript", number)
+		return Subscriber (self.__network, number, assignable=False)
 
 	def __call (self, player, aloud, wind) -> bool:
 		if SubscriberType.CALLBACK == self.__type:
@@ -344,6 +367,17 @@ class Network ():
 		index, exists = self.__find (number)
 
 		if not exists:
+			if 0 != index:
+				# Because the subscriber list is sorted,
+				# a potential base number will always
+				# be the preceding one.
+				base_number = self.__subscribers[index-1]
+
+				subscriber = base_number.subroute (number)
+				if None is not subscriber:
+					return subscriber
+
+			# assignable
 			subscriber = Subscriber (self, number)
 			self.__subscribers.insert (index, subscriber)
 

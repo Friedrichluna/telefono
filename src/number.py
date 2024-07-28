@@ -112,3 +112,10 @@ class Number ():
 		# update log name
 		self.log.name = repr (self)
 		return
+
+	def remove_base (self, base_number) -> str:
+		if not self.__number.startswith (base_number.__number):
+			return ""
+
+		return self.__number.removeprefix (base_number.__number)
+
