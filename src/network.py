@@ -19,19 +19,24 @@ from .CONSTANTS import BACKUP_EXT
 from .number import Number
 
 
-class SubscriberType:
+class SubscriberType (enum.IntEnum):
 	UNASSIGNED = 0
-	RECORDING = 1
-	LIST = 2
-	CALLBACK = 3
+	RESERVED = 1
+	RECORDING = 2
+	LIST = 3
+	CALLBACK = 4
 
 class Subscriber ():
-	def __init__ (self, network, number:Number):
+	def __init__ (self, network, number:Number, assignable:bool=True):
 		self.log = logging.getLogger ("Subscriber(%s)" % number)
 
 		self.__network = network
 		self.__number = number
-		self.__type = SubscriberType.UNASSIGNED
+
+		if assignable:
+			self.__type = SubscriberType.UNASSIGNED
+		else:
+			self.__type = SubscriberType.RESERVED
 
 		self.__hidden = False
 
@@ -64,6 +69,12 @@ class Subscriber ():
 		if 'exists' == name:
 			if SubscriberType.RECORDING == self.__type:
 				return self.__validate_file ()
+
+			return False
+
+		if 'reserved' == name:
+			if SubscriberType.RESERVED == self.__type:
+				return True
 
 			return False
 
@@ -145,6 +156,22 @@ class Subscriber ():
 				self.__exists = value
 				return
 
+		if 'reserved' == name \
+		and SubscriberType.RESERVED == self.__type:
+			self.log.debug ("changed type "
+			                "UNASSIGNED -> RESERVED")
+
+			self.__type = SubscriberType.RESERVED
+			self.__reserved = True
+
+		if 'reserved' == name \
+		and SubscriberType.RESERVED == self.__type:
+			if value:
+				self.__reserved = True
+				return
+			self.__reserved = False
+			return
+
 		if 'hidden' == name:
 			if value:
 				self.log.debug ("hiding number")
@@ -205,6 +232,9 @@ class Subscriber ():
 
 	def __route (self):
 		if SubscriberType.UNASSIGNED == self.__type:
+			return self
+
+		if SubscriberType.RESERVED == self.__type:
 			return self
 
 		if SubscriberType.RECORDING == self.__type:
