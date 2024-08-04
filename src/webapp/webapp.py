@@ -6,6 +6,7 @@ from flask import Flask, redirect, render_template, request
 import psutil
 
 from ..CONSTANTS import FLASK_TEMPLATES
+from ..CONSTANTS import FLASK_STATIC
 
 from ..CONSTANTS import RECORD_PREFIX
 from ..CONSTANTS import RECORD_SUFFIX
@@ -20,7 +21,7 @@ def getFreeDiskSpace():
 
 class TelefonoWebApp (Flask):
 	def __init__ (self, ipc):
-		super ().__init__ (__name__, template_folder=FLASK_TEMPLATES)
+		super ().__init__ (__name__, template_folder=FLASK_TEMPLATES, static_folder=FLASK_STATIC)
 
 		self.ipc = ipc
 

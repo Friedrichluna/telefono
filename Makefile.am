@@ -28,7 +28,8 @@ noinst_PYTHON += src/CONSTANTS.py.in
 
 edit = sed -e 's|@pkgdatadir[@]|$(pkgdatadir)|g' \
            -e 's|@pkglocalstatedir[@]|$(pkglocalstatedir)|g' \
-           -e 's|@templatedir[@]|$(templatedir)|g'
+           -e 's|@templatedir[@]|$(templatedir)|g' \
+           -e 's|@staticdir[@]|$(staticdir)|g'
 
 all: CONSTANTS.py
 
@@ -57,6 +58,10 @@ dist_template_DATA += src/webapp/templates/index.html
 dist_template_DATA += src/webapp/templates/list.html
 dist_template_DATA += src/webapp/templates/say.html
 dist_template_DATA += src/webapp/templates/upload.html
+
+staticdir = $(pkgdatadir)/static
+dist_static_DATA =
+dist_static_DATA += src/webapp/static/favicon.ico
 
 pkglocalstatedir = $(localstatedir)/$(PACKAGE)
 dist_pkglocalstate_DATA =
