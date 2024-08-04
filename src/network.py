@@ -45,6 +45,9 @@ class Subscriber ():
 	def __str__ (self):
 		return "Subscriber(%s)" % self.__number
 
+	def __repr__ (self):
+		return "Subscriber(%s, %s)" % (self.__number, self.__type)
+
 	def __validate_file (self):
 		if self.__exists and not os.path.isfile (self.filename):
 			self.log.warning ("file %s vanished",
@@ -202,12 +205,12 @@ class Subscriber ():
 
 				if subscriber in self.__list:
 					self.log.debug ("skipping duplicate"
-					                " subscriber %s",
-					                subscriber.number)
+					                " subscriber %r",
+					                subscriber)
 					return
 
-				self.log.debug ("add number %s",
-				                subscriber.number)
+				self.log.debug ("add number %r",
+				                subscriber)
 				self.__list.append (subscriber)
 
 			return
@@ -381,7 +384,7 @@ class Network ():
 			subscriber = Subscriber (self, number)
 			self.__subscribers.insert (index, subscriber)
 
-			self.log.debug ("creating %s on access",
+			self.log.debug ("creating %r on access",
 			                subscriber)
 
 			return subscriber
@@ -400,7 +403,7 @@ class Network ():
 		subscriber = self.__subscribers[index]
 		self.__subscribers.__delitem__ (index)
 
-		self.log.debug ("deleting %s", subscriber)
+		self.log.debug ("deleting %r", subscriber)
 		return subscriber
 
 	def __contains__ (self, number:Number):
@@ -584,7 +587,7 @@ class Network ():
 		# remove useless entries
 		for subscriber in self.__subscribers:
 			if SubscriberType.UNASSIGNED == subscriber.__type:
-				self.log.debug ("remove %s", subscriber)
+				self.log.debug ("remove %r", subscriber)
 				self.__subscribers.remove (subscriber)
 
 		return
@@ -595,7 +598,7 @@ class Network ():
 			return None
 
 		subscriber = self[random.choice (numbers)]
-		self.log.debug ("chose random %s", subscriber)
+		self.log.debug ("chose random %r", subscriber)
 
 		return subscriber
 
