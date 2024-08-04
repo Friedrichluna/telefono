@@ -8,8 +8,6 @@ import os
 import subprocess
 import time
 
-import pygame
-
 from .CONSTANTS import RING_FILE
 
 from .CONSTANTS import SOX_DIAL
@@ -41,6 +39,8 @@ from .CONSTANTS import FFPLAY_VOLUME
 from .CONSTANTS import FFPLAY_STARTUP_TIME
 from .CONSTANTS import FFPLAY_POLL_DELAY
 
+from .CONSTANTS import FFPLAY_ENV
+
 from .CONSTANTS import ESPEAK_CMD
 from .CONSTANTS import ESPEAK_SPEED
 from .CONSTANTS import ESPEAK_AMPLITUDE
@@ -67,10 +67,6 @@ from .recorder import RECORDER_RESULT
 class Player ():
 	def __init__ (self, hook, wind_back, wind_forward, speaker):
 		self.log = logging.getLogger ("Player")
-
-		# setup pygame
-		pygame.mixer.init()
-		pygame.init()
 
 		self.__hook = hook
 		self.__wind_back = wind_back
@@ -104,6 +100,7 @@ class Player ():
 
 		process = subprocess.Popen (command,
 		                            stderr=subprocess.PIPE,
+		                            env=FFPLAY_ENV,
 		                            text=False)
 
 		return process
@@ -450,7 +447,3 @@ class Player ():
 		return self.say ("Das habe ich nicht verstanden. "
 		                 "Auf Wiederhörn!",
 		                 interruptible=False)
-
-
-	def quit (self):
-		return pygame.quit ()

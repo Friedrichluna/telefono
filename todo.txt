@@ -18,9 +18,6 @@ Subscriber:
 Network:
 	- represent special tones
 
-Player:
-	- get rid of pygame
-
 Speaker:
 	- get rid of activation delay
 

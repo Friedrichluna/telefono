@@ -128,6 +128,10 @@ FFPLAY_VOLUME = ("-volume", )
 FFPLAY_STARTUP_TIME = 0.5
 FFPLAY_POLL_DELAY = 0.01
 
+FFPLAY_ENV = {
+	"XDG_RUNTIME_DIR": "/run/user/1000",
+}
+
 
 ESPEAK_CMD = ("espeak", )
 ESPEAK_SPEED = ("-s", )
