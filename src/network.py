@@ -265,14 +265,22 @@ class Subscriber ():
 			                number)
 			return None
 
-		if SubscriberType.LIST == self.__type \
-		and int (subnumber) < len (self.__list):
+		if SubscriberType.LIST == self.__type:
+			if int (subnumber) >= len (self.__list):
+				self.log.debug ("%s is no valid subscript",
+				                number)
+				return Subscriber (self.__network,
+				                   number,
+				                   assignable=False)
+
 			self.log.debug ("selecting subnumber %s",
 			                subnumber)
 			return self.__list[int (subnumber)]
 
-		self.log.debug ("%s is no valid subscript", number)
-		return Subscriber (self.__network, number, assignable=False)
+		# allow using subscripts for non-subscriptible numbers
+		self.log.warn ("allow reusing possible prefix %s for %s",
+		               self.__number, number)
+		return None
 
 	def __call (self, player, aloud, wind) -> bool:
 		if SubscriberType.CALLBACK == self.__type:

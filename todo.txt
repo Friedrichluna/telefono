@@ -17,6 +17,7 @@ Subscriber:
 
 Network:
 	- represent special tones
+	- don't store unassigned empty numbers
 
 Speaker:
 	- get rid of activation delay
