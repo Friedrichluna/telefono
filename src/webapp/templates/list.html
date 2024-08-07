@@ -2,6 +2,8 @@
 
 {% block style %}
 		section {
+			display: flex;
+			align-items: center; /* Center vertically */
 			padding: .75rem 1.25rem;
 
 			border-width: 1px;
@@ -25,6 +27,7 @@
 		.button.gray {
 			background-color: var(--secondary);
 			border-color: var(--secondary);
+			margin-right: 1rem;
 		}
 		.button.gray:hover {
 			background-color: #5a6268;
@@ -39,7 +42,7 @@
 		}
 
 		a.button {
-			float: right;
+			margin-left: auto;
 		}
 {% endblock %}
 
