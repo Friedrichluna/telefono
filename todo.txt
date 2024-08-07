@@ -39,6 +39,8 @@ WebApp:
 		- style heading
 		- maybe max-width ?
 
+	- improve edit page
+
 	Upload:
 		- multiple files
 		- keep uploaded files with wrong numbers

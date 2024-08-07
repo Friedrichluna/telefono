@@ -196,6 +196,14 @@
 		<a href="#message">&#10006;</a>
 	</p>
 {% endif %}
+{% if request.endpoint != 'edit_value' %}
+	<nav>
+		<a {% if request.path == url_for('home') %}class="active"{% endif %} href={{ url_for('home') }}>Nummernfeld </a>
+		<a {% if request.path == url_for('list') %}class="active"{% endif %} href={{ url_for('list') }}>Liste</a>
+		<a {% if request.path == url_for('upload_page') %}class="active"{% endif %} href={{ url_for('upload_page') }}>Upload</a>
+		<a {% if request.path == url_for('say') %}class="active"{% endif %} href={{ url_for('say') }}>Text ansagen</a>
+	</nav>
+{% endif %}
 	{% block content %}
 	{% endblock %}
 </body>
