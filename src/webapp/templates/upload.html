@@ -20,6 +20,13 @@
 			margin-bottom: .5rem !important;
 			font-weight: bolder;
 		}
+
+		footer {
+			position: fixed;
+			bottom: 0;
+			margin-bottom: 1rem;
+			padding-left: 15px;
+		}
 {% endblock %}
 
 {% block title %} Telefono Home Page {% endblock %}
@@ -31,6 +38,6 @@
 		<label for="number">gew&uuml;nschte Nummer:</label>
 		<input type="number" id="number" name="requestedNumber" min=0 >
 		<input type="submit" class="button blue" value="Hochladen">
-		<p>Freier Speicher: {{diskSpace}} GiB</p>
 	</form>
+	<footer>Freier Speicher: {{diskSpace}} GiB</footer>
 {% endblock %}
