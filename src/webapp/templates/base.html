@@ -54,14 +54,17 @@
 		}
 
 		h1 {
+			position: relative;
+			top: 1px;
+			margin: .3125rem 16px .3125rem 0;
+			display: inline;
 			font-size: 1.25rem;
-			margin-top: 0;
-			margin-bottom: .5rem;
 			font-weight: 400;
-			line-height: 1.2;
+			line-height: 1.5;
 		}
 
 		h1::before {
+			margin-right: 5px;
 			content: " ";
 			display: inline-block;
 			width: 30px;
@@ -135,32 +138,24 @@
 
 		/* primary navbar */
 		nav {
-			border-bottom: 1px solid #dee2e6;
+			padding: 8px 16px;
+			background-color: #f8f9fa;
 		}
 
 		nav > a {
 			display: inline-block;
-			margin-bottom: -1px;
-			padding: .5rem 1rem;
+			padding: 8px;
 
-			color: var(--primary);
+			color: rgba(0,0,0,.5);
 			text-decoration: none;
-
-			border: 1px solid transparent;
-			border-top-left-radius: .25rem;
-			border-top-right-radius: .25rem;
 		}
 
 		nav > a.active {
-			color: #495057;
-			border-color: #dee2e6;
-			border-bottom-color: white;
+			color: rgba(0,0,0,.9);
 		}
 
 		nav > a:focus:not(.active), nav > a:hover:not(.active) {
-			color: #0056b3;
-			border-color: #e9ecef;
-			border-bottom-color: #dee2e6;
+			color: rgba(0,0,0,.7);
 		}
 
 
@@ -200,7 +195,6 @@
 	<title>{% block title%}{% endblock %}</title>
 </head>
 <body>
-	<h1>Telefon-Webapp</h1>
 {% if message %}
 	<p id="message" class="{{ message_type }} ">{{ message }}
 		<a href="#message">&#10006;</a>
@@ -208,6 +202,7 @@
 {% endif %}
 {% if request.endpoint != 'edit_value' %}
 	<nav>
+		<h1>Telefono-Webapp</h1>
 		<a {% if request.path == url_for('home') %}class="active"{% endif %} href={{ url_for('home') }}>Nummernfeld </a>
 		<a {% if request.path == url_for('list') %}class="active"{% endif %} href={{ url_for('list') }}>Liste</a>
 		<a {% if request.path == url_for('upload_page') %}class="active"{% endif %} href={{ url_for('upload_page') }}>Upload</a>
