@@ -138,26 +138,95 @@
 
 		/* primary navbar */
 		nav {
+			display: grid;
+			grid-template-columns: repeat(2, auto);
+			justify-content: space-between;
 			padding: 8px 16px;
 			background-color: #f8f9fa;
 		}
 
-		nav > a {
-			display: inline-block;
-			padding: 8px;
+		nav a {
+			display: block;
+			padding: 8px 0;
 
 			color: rgba(0,0,0,.5);
 			text-decoration: none;
 		}
 
-		nav > a.active {
+		nav a.active {
 			color: rgba(0,0,0,.9);
 		}
 
-		nav > a:focus:not(.active), nav > a:hover:not(.active) {
+		nav a:focus:not(.active), nav a:hover:not(.active) {
 			color: rgba(0,0,0,.7);
 		}
 
+		details {
+			display: contents;
+		}
+
+		summary {
+			display: block;
+			width: 1.5em;
+			height: 1.5em;
+			padding: .25rem .75rem;
+
+			border-style: solid;
+			border-width: 1px;
+			border-radius: .25rem;
+			border-color: rgba(0,0,0,.1);
+
+			font-size: 1.25rem;
+			appearance: button;
+			cursor: pointer;
+		}
+
+		details > *:not(summary) {
+			grid-column: 1;
+		}
+
+		@media not (prefers-reduced-motion:reduce)
+		{
+			@keyframes menu-open {
+				from {
+					max-height: 0;
+				}
+
+				to {
+					max-height: 200px;
+				}
+			}
+
+			div {
+				overflow: hidden;
+			}
+
+			details[open] > div {
+				animation-name: menu-open;
+				animation-duration: .4375s;
+				animation-timing-function: ease;
+				animation-fill-mode: forwards;
+			}
+		}
+
+		@media screen and (min-width: 900px) {
+			summary {
+				display: none;
+			}
+
+			nav {
+				display: block;
+			}
+
+			nav div {
+				display: contents;
+			}
+
+			nav a {
+				display: inline-block;
+				padding: 8px;
+			}
+		}
 
 		/* general buttons */
 		.button {
@@ -203,10 +272,19 @@
 {% if request.endpoint != 'edit_value' %}
 	<nav>
 		<h1>Telefono-Webapp</h1>
-		<a {% if request.path == url_for('home') %}class="active"{% endif %} href={{ url_for('home') }}>Nummernfeld </a>
-		<a {% if request.path == url_for('list') %}class="active"{% endif %} href={{ url_for('list') }}>Liste</a>
-		<a {% if request.path == url_for('upload_page') %}class="active"{% endif %} href={{ url_for('upload_page') }}>Upload</a>
-		<a {% if request.path == url_for('say') %}class="active"{% endif %} href={{ url_for('say') }}>Text ansagen</a>
+		<details open>
+			<summary>
+				<svg viewBox='0 0 30 30' xmlns='http://www.w3.org/2000/svg'>
+					<path stroke='rgba(0, 0, 0, 0.5)' stroke-width='2' stroke-linecap='round' stroke-miterlimit='10' d='M4 7h22M4 15h22M4 23h22'/>
+				</svg>
+			</summary>
+			<div>
+				<a {% if request.path == url_for('home') %}class="active" {% endif %}href={{ url_for('home') }}>Nummernfeld </a>
+				<a {% if request.path == url_for('list') %}class="active" {% endif %}href={{ url_for('list') }}>Liste</a>
+				<a {% if request.path == url_for('upload_page') %}class="active" {% endif %}href={{ url_for('upload_page') }}>Upload</a>
+				<a {% if request.path == url_for('say') %}class="active" {% endif %}href={{ url_for('say') }}>Text ansagen</a>
+			</div>
+		</details>
 	</nav>
 {% endif %}
 	{% block content %}

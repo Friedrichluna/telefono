@@ -36,7 +36,6 @@ WebApp:
 	- support other subscriber types
 	- record and call functionality
 	- improve layout
-		- style heading
 		- maybe max-width ?
 
 	- improve edit page
