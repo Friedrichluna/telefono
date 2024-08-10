@@ -226,6 +226,16 @@
 				display: inline-block;
 				padding: 8px;
 			}
+
+			#menu-details[open] {
+				open: true;
+			}
+		}
+
+		@media screen and (max-width: 899px) {
+			#menu-details {
+				open: false;
+			}
 		}
 
 		/* general buttons */
@@ -279,7 +289,7 @@
 {% if request.endpoint != 'edit_value' %}
 	<nav>
 		<h1>Telefono-Webapp</h1>
-		<details open>
+		<details id="menu-details">
 			<summary>
 				<svg viewBox='0 0 30 30' xmlns='http://www.w3.org/2000/svg'>
 					<path stroke='rgba(0, 0, 0, 0.5)' stroke-width='2' stroke-linecap='round' stroke-miterlimit='10' d='M4 7h22M4 15h22M4 23h22'/>
@@ -297,4 +307,23 @@
 	{% block content %}
 	{% endblock %}
 </body>
+<script>
+	document.addEventListener("DOMContentLoaded", function() {
+		const details = document.getElementById("menu-details");
+	    
+		if (window.innerWidth >= 900) {
+		    details.setAttribute("open", true);
+		} else {
+		    details.removeAttribute("open");
+		}
+	    
+		window.addEventListener("resize", function() {
+		    if (window.innerWidth >= 900) {
+			details.setAttribute("open", true);
+		    } else {
+			details.removeAttribute("open");
+		    }
+		});
+	    });
+</script>
 </html>
