@@ -10,7 +10,7 @@ class NumberType (enum.IntEnum):
 
 
 class Number ():
-	def __new__ (cls, number:str):
+	def __new__ (cls, number:str=""):
 
 		# allow casting Number -> Number
 		if isinstance (number, cls):
@@ -18,7 +18,7 @@ class Number ():
 
 		return super ().__new__ (cls)
 
-	def __init__ (self, number:str):
+	def __init__ (self, number:str=""):
 
 		# allow casting Number -> Number
 		if isinstance (number, Number):
