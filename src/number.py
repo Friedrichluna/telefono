@@ -10,16 +10,15 @@ class NumberType (enum.IntEnum):
 
 
 class Number ():
-	def __new__ (cls, network, number:str):
+	def __new__ (cls, number:str):
 
 		# allow casting Number -> Number
 		if isinstance (number, cls):
-			number.__network = network
 			return number
 
 		return super ().__new__ (cls)
 
-	def __init__ (self, network, number:str):
+	def __init__ (self, number:str):
 
 		# allow casting Number -> Number
 		if isinstance (number, Number):
@@ -37,7 +36,6 @@ class Number ():
 				raise ValueError (
 				        "only digits allowed in number")
 
-		self.__network = network
 		self.__number = number
 		self.__type = NumberType.INTERNAL
 
@@ -51,7 +49,7 @@ class Number ():
 		return "Number(%s)" % repr (self.__number)
 
 	def __copy__ (self):
-		return Number (self.__network, self.__number)
+		return Number (self.__number)
 
 
 	def __eq__ (self, other) -> bool:
@@ -83,7 +81,7 @@ class Number ():
 		return other + self.__number
 
 	def __iadd__ (self, other):
-		self.__number += Number (self.__network, other).__number
+		self.__number += Number (other).__number
 
 		# update log name
 		self.log.name = repr (self)

@@ -197,7 +197,7 @@ class Subscriber ():
 		if 'list' == name and SubscriberType.LIST == self.__type:
 			for subscriber in value:
 				if not isinstance (subscriber, Subscriber):
-					number = Number (self, subscriber)
+					number = Number (subscriber)
 					subscriber = self.__network[number]
 
 				if SubscriberType.RECORDING != subscriber.__type:
@@ -415,7 +415,7 @@ class Network ():
 		return subscriber
 
 	def __contains__ (self, number:Number):
-		index, exists = self.__find (Number (self, number))
+		index, exists = self.__find (Number (number))
 
 		if not exists:
 			return False
@@ -423,7 +423,7 @@ class Network ():
 		return self.__subscribers[index].exists
 
 	def __getitem__ (self, number:Number):
-		return self.__get (Number (self, number))
+		return self.__get (Number (number))
 
 	def __delitem__ (self, number:Number):
 		self.__del (Number (number))
@@ -451,7 +451,7 @@ class Network ():
 				yield int (subscriber.number)
 
 	def pop (self, number:Number):
-		ret = self.__del (self, Number (number))
+		ret = self.__del (Number (number))
 		self.log.debug ("deleting %s", ret)
 		self.sync_data ()
 		return ret

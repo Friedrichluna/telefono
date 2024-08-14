@@ -104,7 +104,7 @@ class Dial ():
 	def get_number (self, abort, led, player) -> Number:
 		self.log.debug ("started dialing number")
 		led.blink (on_time=0.1, off_time=0.1, n=None, background=True)
-		number = Number (None, "")
+		number = Number ("")
 
 		while not abort():
 			digit = self.__get_digit (abort, DIAL_AUTO_TIMEOUT)
