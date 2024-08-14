@@ -6,6 +6,3 @@
 Makefile.in
 
 __pycache__
-
-# ignore data
-*.wav
