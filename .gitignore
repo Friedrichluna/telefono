@@ -7,8 +7,5 @@ Makefile.in
 
 __pycache__
 
-# ignore logfiles
-*.log
-
 # ignore data
 *.wav
