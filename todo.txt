@@ -39,6 +39,12 @@ WebApp:
 		- edit description
 		- chrome bug
 
+	- remove useless index parameter for render_template in edit_value
+	- validate index before converting to a Number
+	- validate requested_number before converting to a Number
+
+	- don't generate filenames in upload_file
+
 
 better systemd integration
 - run as user unit

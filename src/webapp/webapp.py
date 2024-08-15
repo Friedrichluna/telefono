@@ -12,6 +12,8 @@ from ..CONSTANTS import RECORD_SUFFIX
 
 from ..CONSTANTS import UPLOAD_DIR
 
+from ..number import Number
+
 
 def getFreeDiskSpace():
 	hdd = psutil.disk_usage (UPLOAD_DIR)
@@ -42,7 +44,8 @@ class TelefonoWebApp (Flask):
 				return render_template ("index.html")
 
 			recording = int (requested_number)
-			message, message_type = self.ipc.queue_call (recording)
+			number = Number (recording)
+			message, message_type = self.ipc.queue_call (number)
 
 			return render_template("index.html",
 			                       message=message,
@@ -62,7 +65,8 @@ class TelefonoWebApp (Flask):
 				return render_template("index.html")
 
 			recording = int (requested_number)
-			message, message_type = self.ipc.queue_call (recording)
+			number = Number (recording)
+			message, message_type = self.ipc.queue_call (number)
 
 		return render_template("list.html",
 		                       network_list=self.ipc.get_list (),
@@ -70,14 +74,16 @@ class TelefonoWebApp (Flask):
 		                       message_type=message_type)
 
 	def edit_value(self, index):
+		number = Number (index)
+
 		if request.method == "POST":
 			new_value = request.form["new_value"]
-			self.ipc.set_description (index, new_value)
+			self.ipc.set_description (number, new_value)
 
 			return redirect("/list")
 
 		return render_template("edit.html", index=index,
-		                       value=self.ipc.get_description (index))
+		                       value=self.ipc.get_description (number))
 
 	def say (self):
 		if request.method == "POST":
@@ -110,10 +116,11 @@ class TelefonoWebApp (Flask):
 				message_type="error")
 
 		requested_number = int(requested_number)
+		number = Number (requested_number)
 
-		if not self.ipc.is_free (requested_number):
+		if not self.ipc.is_free (number):
 			return render_template("upload.html",
-				message="Nummer %d existiert bereits!" % requested_number,
+				message="Nummer %s existiert bereits!" % number,
 				message_type="error")
 
 		if not uploaded_file.filename.endswith(".wav"):
@@ -121,7 +128,7 @@ class TelefonoWebApp (Flask):
 				message="Bitte nur .wav hochladen!",
 				message_type="error")
 
-		file_path = UPLOAD_DIR + "/" + RECORD_PREFIX + str(requested_number) + RECORD_SUFFIX
+		file_path = UPLOAD_DIR + "/" + RECORD_PREFIX + str(number) + RECORD_SUFFIX
 		uploaded_file.save(file_path)
 
 		self.ipc.upload ()
