@@ -21,6 +21,7 @@ class IPC_MESSAGE (enum.IntEnum):
 	UPLOAD = 7
 
 IPC_INT_SIZE = 4
+IPC_NUMBER_SIZE = 32
 
 IPC_TTS_MESSAGE_SIZE = IPC_MAX_DATA -1 -1
 
@@ -54,7 +55,8 @@ class IPC:
 		return int.from_bytes (message[:IPC_INT_SIZE],
 		                       IPC_BYTEORDER, signed=False)
 
-	def __serialize_str (self, string:str, max_size:int) -> bytes:
+	@staticmethod
+	def serialize_str (string:str, max_size:int) -> bytes:
 		if len (string) > max_size:
 			print ("string too long")
 			return b""
@@ -69,7 +71,8 @@ class IPC:
 
 		return message[:size].decode ()
 
-	def __deserialize_str2 (self, message:bytes, max_size) -> (str, bytes):
+	@staticmethod
+	def deserialize_str (message:bytes, max_size) -> (str, bytes):
 		size = 0
 		while size < max_size \
 		and size < len(message) \
@@ -82,7 +85,7 @@ class IPC:
 		data = bytearray ()
 
 		data.append (IPC_MESSAGE.CALL)
-		data.extend (number.to_bytes ())
+		data.extend (number.to_bytes (IPC_NUMBER_SIZE, self))
 
 		return data
 
@@ -91,8 +94,7 @@ class IPC:
 
 		data.append (IPC_MESSAGE.TTS)
 
-		text = self.__serialize_str (message,
-		                             IPC_TTS_MESSAGE_SIZE)
+		text = IPC.serialize_str (message, IPC_TTS_MESSAGE_SIZE)
 		if not text:
 			return bytearray ()
 
@@ -133,7 +135,7 @@ class IPC:
 		return (message_type, payload)
 
 	def __deserialize_call (self, message:bytes) -> Number:
-		return Number.from_bytes (message)[0]
+		return Number.from_bytes (message, IPC_NUMBER_SIZE, self)[0]
 
 	def __deserialize_tts (self, message:bytes) -> str:
 		return self.__deserialize_str (message,
@@ -143,26 +145,29 @@ class IPC:
 		data = bytearray ()
 
 		data.append (IPC_MESSAGE.GET_DESCRIPTION)
-		data.extend (number.to_bytes ())
+		data.extend (number.to_bytes (IPC_NUMBER_SIZE, self))
 
 		return data
 
 	def __deserialize_record_get (self, message:bytes) -> Number:
-		return Number.from_bytes (message)[0]
+		return Number.from_bytes (message, IPC_NUMBER_SIZE, self)[0]
 
 	def _serialize_record_set (self, number:Number,
 	                           description:str) -> bytearray:
 		data = bytearray ()
 
 		data.append (IPC_MESSAGE.SET_DESCRIPTION)
-		data.extend (number.to_bytes ())
-		data.extend (self.__serialize_str (description,
-		                                   IPC_DESCRIPTION_SIZE))
+		data.extend (number.to_bytes (IPC_NUMBER_SIZE, self))
+		data.extend (IPC.serialize_str (description,
+		                                IPC_DESCRIPTION_SIZE))
 
 		return data
 
 	def __deserialize_record_set (self, message:bytes) -> (Number, str):
-		number, message = Number.from_bytes (message)
+		number, message = Number.from_bytes (message,
+		                                     IPC_NUMBER_SIZE,
+		                                     self)
+
 		value = self.__deserialize_str (message,
 		                                IPC_DESCRIPTION_SIZE)
 		return number, value
@@ -178,11 +183,11 @@ class IPC:
 	def _serialize_free (self, number:Number):
 		data = bytearray ()
 		data.append (IPC_MESSAGE.FREE)
-		data.extend (number.to_bytes ())
+		data.extend (number.to_bytes (IPC_NUMBER_SIZE, self))
 		return data
 
 	def __deserialize_free (self, message:bytes) -> Number:
-		return Number.from_bytes (message)[0]
+		return Number.from_bytes (message, IPC_NUMBER_SIZE, self)[0]
 
 	def _serialize_upload (self) -> bytearray:
 		data = bytearray ()
@@ -224,8 +229,8 @@ class IPC:
 			return answer, payload
 
 	def _serialize_description (self, description:str) -> bytes:
-		return self.__serialize_str (description,
-		                             IPC_DESCRIPTION_SIZE)
+		return IPC.serialize_str (description,
+		                          IPC_DESCRIPTION_SIZE)
 
 	def __deserialize_description (self, message:bytes) -> str:
 		return self.__deserialize_str (message,
@@ -238,8 +243,10 @@ class IPC:
 
 		for number in network:
 			number = Number (number)
-			data.extend (number.to_bytes ())
-			value = self.__serialize_str (
+			data.extend (number.to_bytes (IPC_NUMBER_SIZE,
+			                              self))
+
+			value = IPC.serialize_str (
 			                        network[number].description,
 			                        IPC_DESCRIPTION_SIZE)
 			data.extend (value)
@@ -253,11 +260,13 @@ class IPC:
 		message = message[IPC_INT_SIZE:]
 
 		while True:
-			number, message = Number.from_bytes (message)
-			if number is None:
+			number, message = Number.from_bytes (message,
+			                                     IPC_NUMBER_SIZE,
+			                                     self)
+			if not number:
 				break
 
-			value, message = self.__deserialize_str2 (
+			value, message = self.deserialize_str (
 			                        message,
 			                        IPC_DESCRIPTION_SIZE)
 

@@ -6,6 +6,7 @@ translate README
 - better name for shout
 
 - consistently refer to subscribers
+- treat numbers as Number or as str everywhere.
 
 Logging:
 	- log hardware events
@@ -25,6 +26,9 @@ Speaker:
 IPC:
 	- handle larger lists of descriptions
 	- export CONSTANTS
+	- calculate terminal NULL-byte in serialization method
+	- use a single serialize_str method
+	- robust error handling
 
 WebApp:
 	- jump to number after editing
