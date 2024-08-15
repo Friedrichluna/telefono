@@ -24,6 +24,7 @@ Speaker:
 
 IPC:
 	- handle larger lists of descriptions
+	- export CONSTANTS
 
 WebApp:
 	- jump to number after editing

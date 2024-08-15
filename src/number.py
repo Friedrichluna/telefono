@@ -5,6 +5,10 @@ import enum
 import logging
 
 
+IPC_BYTEORDER = "big"
+IPC_INT_SIZE = 4
+
+
 class NumberType (enum.IntEnum):
 	INTERNAL = 0
 
@@ -41,6 +45,22 @@ class Number ():
 
 		self.log = logging.getLogger ("%r" % self)
 		return
+
+	def to_bytes (self) -> bytes:
+		return int (self).to_bytes (IPC_INT_SIZE, IPC_BYTEORDER,
+		                            signed=False)
+
+	@staticmethod
+	def from_bytes (data:bytes) -> (object, bytes):
+		if len (data) < IPC_INT_SIZE:
+			return None, data
+
+		number, data = data[:IPC_INT_SIZE], data[IPC_INT_SIZE:]
+
+		number = Number (int.from_bytes (number, IPC_BYTEORDER,
+		                                 signed=False))
+
+		return number, data
 
 	def __str__ (self) -> str:
 		return self.__number
