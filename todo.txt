@@ -26,7 +26,6 @@ Speaker:
 IPC:
 	- handle larger lists of descriptions
 	- export CONSTANTS
-	- calculate terminal NULL-byte in serialization method
 	- robust error handling
 
 WebApp:

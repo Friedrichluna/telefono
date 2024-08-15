@@ -23,7 +23,7 @@ class IPC_MESSAGE (enum.IntEnum):
 IPC_INT_SIZE = 4
 IPC_NUMBER_SIZE = 32
 
-IPC_TTS_MESSAGE_SIZE = IPC_MAX_DATA -1 -1
+IPC_TTS_MESSAGE_SIZE = IPC_MAX_DATA -1
 
 
 class IPC_ANSWER (enum.IntEnum):
@@ -57,7 +57,7 @@ class IPC:
 
 	@staticmethod
 	def serialize_str (string:str, max_size:int) -> bytes:
-		if len (string) > max_size:
+		if len (string) >= max_size:
 			print ("string too long")
 			return b""
 

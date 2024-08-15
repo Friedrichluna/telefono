@@ -43,7 +43,7 @@ class Number ():
 		return
 
 	def to_bytes (self, size, IPC) -> bytes:
-		return IPC.serialize_str (str (self), size-1)
+		return IPC.serialize_str (str (self), size)
 
 	@staticmethod
 	def from_bytes (data:bytes, size, IPC) -> (object, bytes):
