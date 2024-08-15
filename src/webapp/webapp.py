@@ -82,7 +82,7 @@ class TelefonoWebApp (Flask):
 
 			return redirect("/list")
 
-		return render_template("edit.html", index=index,
+		return render_template("edit.html",
 		                       value=self.ipc.get_description (number))
 
 	def say (self):
