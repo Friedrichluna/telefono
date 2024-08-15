@@ -63,14 +63,6 @@ class IPC:
 
 		return string.encode () + b"\0"
 
-	def __deserialize_str (self, message:bytes, max_size) -> str:
-		size = 0
-		while size < max_size \
-		and message[size] != 0:
-			size += 1
-
-		return message[:size].decode ()
-
 	@staticmethod
 	def deserialize_str (message:bytes, max_size) -> (str, bytes):
 		size = 0
@@ -138,8 +130,8 @@ class IPC:
 		return Number.from_bytes (message, IPC_NUMBER_SIZE, self)[0]
 
 	def __deserialize_tts (self, message:bytes) -> str:
-		return self.__deserialize_str (message,
-		                               IPC_TTS_MESSAGE_SIZE)
+		return self.deserialize_str (message,
+		                             IPC_TTS_MESSAGE_SIZE)[0]
 
 	def _serialize_record_get (self, number:Number) -> bytearray:
 		data = bytearray ()
@@ -168,8 +160,8 @@ class IPC:
 		                                     IPC_NUMBER_SIZE,
 		                                     self)
 
-		value = self.__deserialize_str (message,
-		                                IPC_DESCRIPTION_SIZE)
+		value = self.deserialize_str (message,
+		                              IPC_DESCRIPTION_SIZE)[0]
 		return number, value
 
 	def _serialize_record_list (self) -> bytearray:
@@ -233,8 +225,8 @@ class IPC:
 		                          IPC_DESCRIPTION_SIZE)
 
 	def __deserialize_description (self, message:bytes) -> str:
-		return self.__deserialize_str (message,
-		                               IPC_DESCRIPTION_SIZE)
+		return self.deserialize_str (message,
+		                             IPC_DESCRIPTION_SIZE)[0]
 
 	def _serialize_list (self, network) -> bytes:
 		data = bytearray ()
