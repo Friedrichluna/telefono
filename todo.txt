@@ -20,6 +20,9 @@ Network:
 	- represent special tones
 	- don't store unassigned empty numbers
 
+Player:
+	- get rid of pygame
+
 Speaker:
 	- get rid of activation delay
 

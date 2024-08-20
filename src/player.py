@@ -8,6 +8,8 @@ import os
 import subprocess
 import time
 
+import pygame
+
 from .CONSTANTS import RING_FILE
 
 from .CONSTANTS import SOX_DIAL
@@ -67,6 +69,9 @@ from .recorder import RECORDER_RESULT
 class Player ():
 	def __init__ (self, hook, wind_back, wind_forward, speaker):
 		self.log = logging.getLogger ("Player")
+
+		# setup pygame
+		pygame.mixer.init()
 
 		self.__hook = hook
 		self.__wind_back = wind_back
@@ -447,3 +452,7 @@ class Player ():
 		return self.say ("Das habe ich nicht verstanden. "
 		                 "Auf Wiederhörn!",
 		                 interruptible=False)
+
+
+	def quit (self):
+		return pygame.quit ()
