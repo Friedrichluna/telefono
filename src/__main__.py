@@ -108,22 +108,22 @@ def do_menu (off_hook, dial, network, player, led, log):
 		pass
 	elif option == 0:
 		log.info ("menu: selected 0")
-		if not network[0].outbound_call (player):
+		if not network["0"].outbound_call (player):
 			# hang up
 			return
 	elif option == 1:
 		log.info ("menu: selected 1")
-		if not network[100].outbound_call (player):
+		if not network["100"].outbound_call (player):
 			# hang up
 			return
 	elif option == 2:
 		log.info ("menu: selected 2")
-		if not network[200].outbound_call (player):
+		if not network["200"].outbound_call (player):
 			# hang up
 			return
 	elif option == 3:
 		log.info ("menu: selected 3")
-		if not network[300].outbound_call (player):
+		if not network["300"].outbound_call (player):
 			# hang up
 			return
 	else:
@@ -196,13 +196,13 @@ def main ():
 	network = Network ()
 	network.sync_fs ()
 	# say current time
-	network[0].callback = Player.say_time
+	network["0"].callback = Player.say_time
 	# supper prayer songs
-	network[100].list = [101, 102, 103, 104, 105, 106]
+	network["100"].list = ["101", "102", "103", "104", "105", "106"]
 	# supper prayers
-	network[200].list = [201, 202, 203, 204, 205, 206]
+	network["200"].list = ["201", "202", "203", "204", "205", "206"]
 	# pater quotes
-	network[300].list = [2, 10, 11, 19, 22, 26, 30, 88]
+	network["300"].list = ["2", "10", "11", "19", "22", "26", "30", "88"]
 
 	DialCounter = Button(2) #Zähler für die gewählte Zahl (rot)
 	DialInUse = Button(26) #Wählscheibe wird benutzt (grau)(weiß im Tel)
@@ -229,10 +229,10 @@ def main ():
 	def every_weekday (_datetime:datetime.datetime):
 		return True
 
-	queue.add_shout (network[1830], dinner_weekday, datetime.time (18, 30))
-	queue.add_shout (network[1930], dinner_weekday, datetime.time (19, 30))
-	queue.add_shout (network[2014], every_weekday, datetime.time (20, 00))
-	queue.add_shout (network[59], every_weekday, datetime.time (22, 00))
+	queue.add_shout (network["1830"], dinner_weekday, datetime.time (18, 30))
+	queue.add_shout (network["1930"], dinner_weekday, datetime.time (19, 30))
+	queue.add_shout (network["2014"], every_weekday, datetime.time (20, 00))
+	queue.add_shout (network["59"], every_weekday, datetime.time (22, 00))
 
 	# start webapp
 	webAppProcess = run_webapp (ipc.get_client_fd (), log)

@@ -434,7 +434,7 @@ class Network ():
 
 	def __iter__ (self):
 		l = list (self.numbers ())
-		l.sort ()
+		l.sort (key=int)
 		return iter (l)
 
 	def __len__ (self):
@@ -448,7 +448,7 @@ class Network ():
 	def numbers (self):
 		for subscriber in self.__subscribers:
 			if subscriber.exists and not subscriber.hidden:
-				yield int (subscriber.number)
+				yield subscriber.number
 
 	def pop (self, number:Number):
 		ret = self.__del (Number (number))
@@ -585,7 +585,7 @@ class Network ():
 
 				file = file[len(RECORD_PREFIX) :]
 				file = file[: -len(RECORD_SUFFIX)]
-				number = int (file)
+				number = Number (file)
 
 				self[number].exists = True
 		return
@@ -613,11 +613,13 @@ class Network ():
 	def find_assignable (self):
 		self.log.debug ("find assignable number")
 		number = 0
-		while not self[number].is_assignable ():
+		subscriber = self[Number.from_int (number)]
+		while not subscriber.is_assignable ():
 			number += 1
+			subscriber = self[Number.from_int (number)]
 
 		self.log.debug ("found %d", number)
 
 		# register subscriber
-		self[number].description = ""
-		return self[number]
+		subscriber.description = ""
+		return subscriber

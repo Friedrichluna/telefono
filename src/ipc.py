@@ -234,7 +234,6 @@ class IPC:
 		data.extend (self.__serialize_int (len (network)))
 
 		for number in network:
-			number = Number (number)
 			data.extend (number.to_bytes (IPC_NUMBER_SIZE,
 			                              self))
 

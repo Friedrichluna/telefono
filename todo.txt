@@ -6,7 +6,6 @@ translate README
 - better name for shout
 
 - consistently refer to subscribers
-- treat numbers as Number or as str everywhere.
 
 Logging:
 	- log hardware events
@@ -19,6 +18,8 @@ Subscriber:
 Network:
 	- represent special tones
 	- don't store unassigned empty numbers
+	- better reserving mechanism for assigning
+	- make whole network loadable from file
 
 Player:
 	- get rid of pygame
@@ -49,6 +50,7 @@ WebApp:
 	- validate requested_number before converting to a Number
 
 	- don't generate filenames in upload_file
+	- treat numbers as Number or as str everywhere.
 
 
 better systemd integration

@@ -24,12 +24,8 @@ class Number ():
 		if isinstance (number, Number):
 			return None
 
-		if isinstance (number, int):
-			number = str (number)
-
 		if not isinstance (number, str):
-			raise TypeError ("can only convert int, str "
-			                 "to Number")
+			raise TypeError ("can only convert str to Number")
 
 		for digit in number:
 			if not ord('0') <= ord (digit) <= ord ('9'):
@@ -41,6 +37,10 @@ class Number ():
 
 		self.log = logging.getLogger ("%r" % self)
 		return
+
+	@staticmethod
+	def from_int (number:int):
+		return Number (str(number))
 
 	def to_bytes (self, size, IPC) -> bytes:
 		return IPC.serialize_str (str (self), size)

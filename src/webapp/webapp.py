@@ -44,7 +44,7 @@ class TelefonoWebApp (Flask):
 				return render_template ("index.html")
 
 			recording = int (requested_number)
-			number = Number (recording)
+			number = Number.from_int (recording)
 			message, message_type = self.ipc.queue_call (number)
 
 			return render_template("index.html",
@@ -65,7 +65,7 @@ class TelefonoWebApp (Flask):
 				return render_template("index.html")
 
 			recording = int (requested_number)
-			number = Number (recording)
+			number = Number.from_int (recording)
 			message, message_type = self.ipc.queue_call (number)
 
 		return render_template("list.html",
@@ -74,7 +74,7 @@ class TelefonoWebApp (Flask):
 		                       message_type=message_type)
 
 	def edit_value(self, index):
-		number = Number (index)
+		number = Number.from_int (index)
 
 		if request.method == "POST":
 			new_value = request.form["new_value"]
@@ -116,7 +116,7 @@ class TelefonoWebApp (Flask):
 				message_type="error")
 
 		requested_number = int(requested_number)
-		number = Number (requested_number)
+		number = Number.from_int (requested_number)
 
 		if not self.ipc.is_free (number):
 			return render_template("upload.html",
