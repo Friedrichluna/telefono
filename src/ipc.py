@@ -386,8 +386,8 @@ class IPC_Server (IPC):
 	def __init__ (self):
 
 		server, client = socket.socketpair (socket.AF_UNIX,
-	                                            socket.SOCK_DGRAM,
-	                                            0)
+		                                    socket.SOCK_DGRAM,
+		                                    0)
 
 		super ().__init__ (server)
 

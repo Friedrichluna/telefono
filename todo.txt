@@ -26,6 +26,7 @@ Player:
 
 Speaker:
 	- get rid of activation delay
+	- defer activation delay on startup
 
 IPC:
 	- handle larger lists of descriptions
@@ -33,6 +34,7 @@ IPC:
 	- robust error handling
 
 WebApp:
+	- synchronize on startup
 	- jump to number after editing
 	- support other subscriber types
 	- record and call functionality
