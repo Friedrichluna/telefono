@@ -487,7 +487,7 @@ class Network ():
 			name = name.strip ()
 
 			try:
-				number = int (number)
+				number = Number (number)
 			except ValueError:
 				self.log.error ("Key is not a number! "
 				                "Ignoring line")
@@ -511,10 +511,10 @@ class Network ():
 
 		_file.truncate ()
 
-		numbers = [int (subscriber.number)
+		numbers = [subscriber.number
 		           for subscriber in self.__subscribers
 		           if SubscriberType.RECORDING == subscriber.type]
-		numbers.sort ()
+		numbers.sort (key=int)
 
 		for number in numbers:
 			name = self[number].description.strip ()
