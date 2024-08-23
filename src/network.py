@@ -511,19 +511,21 @@ class Network ():
 
 		_file.truncate ()
 
-		numbers = [subscriber.number
-		           for subscriber in self.__subscribers
-		           if SubscriberType.RECORDING == subscriber.type]
-		numbers.sort (key=int)
+		subscribers = [subscriber
+		               for subscriber in self.__subscribers
+		               if SubscriberType.RECORDING == subscriber.type]
 
-		for number in numbers:
-			name = self[number].description.strip ()
+		# sort file numerically
+		subscribers.sort (key=lambda s: int (s.number))
+
+		for subscriber in subscribers:
+			name = subscriber.description.strip ()
 
 			# ignore empty names
 			if not name:
 				continue
 
-			_file.write (str (number))
+			_file.write (str (subscriber.number))
 			_file.write (": ")
 			_file.write (name)
 			_file.write ("\n")
