@@ -613,6 +613,8 @@ class Network ():
 				number = Number (file)
 
 				self[number].exists = True
+				self[number].filename = path
+
 		return
 
 	def compact (self):
