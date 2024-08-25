@@ -170,17 +170,6 @@ class Subscriber ():
 			self.__type = SubscriberType.RESERVED
 			return
 
-		if 'reserved' == name \
-		and SubscriberType.RESERVED == self.__type:
-			if value:
-				return
-
-			self.log.debug ("changed type "
-			                "RESERVED -> UNASSIGNED")
-
-			self.__type = SubscriberType.UNASSIGNED
-			return
-
 		if 'hidden' == name:
 			if value:
 				self.log.debug ("hiding number")
