@@ -21,10 +21,11 @@ from .number import Number
 
 class SubscriberType (enum.IntEnum):
 	UNASSIGNED = 0
-	RESERVED = 1
-	RECORDING = 2
-	LIST = 3
-	CALLBACK = 4
+	UNUSED = 1
+	RESERVED = 2
+	RECORDING = 3
+	LIST = 4
+	CALLBACK = 5
 
 class Subscriber ():
 	def __init__ (self, network, number:Number, assignable:bool=True):
@@ -66,7 +67,7 @@ class Subscriber ():
 			return self.__number
 
 		if 'description' == name \
-		and SubscriberType.RECORDING == self.__type:
+		and SubscriberType.UNASSIGNED != self.__type:
 			return self.__description
 
 		if 'exists' == name:
@@ -122,23 +123,20 @@ class Subscriber ():
 
 			if SubscriberType.UNASSIGNED == self.__type:
 				self.log.debug ("changed type "
-				                "UNASSIGNED -> RECORDING")
+				                "UNASSIGNED -> UNUSED")
 
-				self.__type = SubscriberType.RECORDING
+				self.__type = SubscriberType.UNUSED
 				self.__exists = False
-				self.__description = ""
+				self.__description = str ()
 
-			if SubscriberType.RECORDING == self.__type:
-				self.log.debug ("set description to %s",
-				                value)
+			self.log.debug ("set description to %s", value)
 
-				if "" == value \
-				and "" == self.__description:
-					return
-
-				self.__description = value
-				self.__network.sync_data ()
+			if "" == value and "" == self.__description:
 				return
+
+			self.__description = value
+			self.__network.sync_data ()
+			return
 
 		if 'exists' == name:
 			if not isinstance (value, bool):
@@ -146,7 +144,7 @@ class Subscriber ():
 				    "exists must be bool not %r" %
 				    type (value))
 
-			if SubscriberType.UNASSIGNED == self.__type and value:
+			if SubscriberType.UNASSIGNED == self.__type:
 				self.log.debug ("changed type "
 				                "UNASSIGNED -> RECORDING")
 
@@ -168,6 +166,7 @@ class Subscriber ():
 			                "UNASSIGNED -> RESERVED")
 
 			self.__type = SubscriberType.RESERVED
+			self.__description = str ()
 			return
 
 		if 'hidden' == name:
@@ -187,6 +186,7 @@ class Subscriber ():
 			self.log.debug ("changed type UNASSIGNED -> LIST")
 
 			self.__type = SubscriberType.LIST
+			self.__description = str ()
 			self.__list = list ()
 
 		if 'list' == name and SubscriberType.LIST == self.__type:
@@ -216,6 +216,7 @@ class Subscriber ():
 			                "UNASSIGNED -> CALLBACK")
 
 			self.__type = SubscriberType.CALLBACK
+			self.__description = str ()
 
 		if 'callback' == name and SubscriberType.CALLBACK == self.__type:
 			self.__callback = value
@@ -488,6 +489,9 @@ class Network ():
 				                "Ignoring line")
 				continue
 
+			# create subscriber
+			self[number].exists = False
+
 			# ignore empty names
 			if not name:
 				continue
@@ -506,11 +510,8 @@ class Network ():
 
 		_file.truncate ()
 
-		subscribers = [subscriber
-		               for subscriber in self.__subscribers
-		               if SubscriberType.RECORDING == subscriber.type]
-
 		# sort file numerically
+		subscribers = self.__subscribers.copy ()
 		subscribers.sort (key=lambda s: int (s.number))
 
 		for subscriber in subscribers:
@@ -618,5 +619,5 @@ class Network ():
 		self.log.debug ("found %d", number)
 
 		# register subscriber
-		subscriber.description = ""
+		subscriber.exists = False
 		return subscriber

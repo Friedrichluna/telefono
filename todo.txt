@@ -13,7 +13,6 @@ Logging:
 
 Subscriber:
 	- return call object on route
-	- allow description for different types
 
 Network:
 	- represent special tones
