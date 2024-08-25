@@ -16,7 +16,6 @@ Subscriber:
 
 Network:
 	- represent special tones
-	- don't store unassigned empty numbers
 	- better reserving mechanism for assigning
 	- make whole network loadable from file
 
