@@ -55,6 +55,7 @@ class Subscriber ():
 			                  self.filename)
 
 			self.__exists = False
+			self.__filename = str ()
 			return False
 
 		return self.__exists
@@ -85,17 +86,25 @@ class Subscriber ():
 		if 'hidden' == name:
 			return self.__hidden
 
-		if 'filename' == name:
-			if SubscriberType.RECORDING == self.__type:
-				self.log.debug ("constructing filename")
+		if 'filename' == name \
+		and SubscriberType.RECORDING == self.__type:
+			if self.__filename:
+				self.log.debug ("accessing filename")
+				return self.__filename
 
-				filename = ""
-				filename += RECORD_DIR
-				filename += "/"
-				filename += RECORD_PREFIX
-				filename += self.__number
-				filename += RECORD_SUFFIX
-				return filename
+			if self.__exists:
+				raise Exception ("existing recording %r "
+				                 "with no associated filename" % self)
+
+			self.log.debug ("constructing filename")
+
+			filename = ""
+			filename += RECORD_DIR
+			filename += "/"
+			filename += RECORD_PREFIX
+			filename += self.__number
+			filename += RECORD_SUFFIX
+			return filename
 
 		if 'list' == name and SubscriberType.LIST:
 			# return immutable tuple
@@ -150,11 +159,21 @@ class Subscriber ():
 
 				self.__type = SubscriberType.RECORDING
 				self.__description = str ()
+				self.__filename = str ()
 
 			if SubscriberType.RECORDING == self.__type:
 				self.log.debug ("set exists to %r",
 				                value)
 				self.__exists = value
+
+				if value:
+					filename = ""
+					filename += RECORD_DIR
+					filename += "/"
+					filename += RECORD_PREFIX
+					filename += self.__number
+					filename += RECORD_SUFFIX
+					self.__filename = filename
 				return
 
 		if 'reserved' == name \
@@ -178,9 +197,17 @@ class Subscriber ():
 			self.__hidden = value
 			return
 
-		if 'filename' == name:
-			self.log.error ("attempting to change filename")
-			raise AttributeError ("read-only attribute")
+		if 'filename' == name \
+		and SubscriberType.RECORDING == self.__type:
+			if not isinstance (value, str):
+				raise TypeError (
+				    "filename must be str not %r" %
+				    type (value))
+
+			self.log.debug ("set filename to %r", value)
+			self.__filename = value
+			self.__validate_file ()
+			return
 
 		if 'list' == name and SubscriberType.UNASSIGNED == self.__type:
 			self.log.debug ("changed type UNASSIGNED -> LIST")
