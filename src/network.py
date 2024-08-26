@@ -49,7 +49,7 @@ class Subscriber ():
 	def __repr__ (self):
 		return "Subscriber(%s, %s)" % (self.__number, self.__type)
 
-	def __validate_file (self):
+	def _validate_file (self):
 		if self.__exists and not os.path.isfile (self.filename):
 			self.log.warning ("file %s vanished",
 			                  self.filename)
@@ -73,7 +73,7 @@ class Subscriber ():
 
 		if 'exists' == name:
 			if SubscriberType.RECORDING == self.__type:
-				return self.__validate_file ()
+				return self._validate_file ()
 
 			return False
 
@@ -206,7 +206,7 @@ class Subscriber ():
 
 			self.log.debug ("set filename to %r", value)
 			self.__filename = value
-			self.__validate_file ()
+			self._validate_file ()
 			return
 
 		if 'list' == name and SubscriberType.UNASSIGNED == self.__type:
@@ -598,7 +598,8 @@ class Network ():
 		self.log.info ("scan for existing recordings")
 
 		for subscriber in self.__subscribers:
-			subscriber.exists = False
+			if SubscriberType.RECORDING == subscriber.type:
+				subscriber._validate_file ()
 
 		for file in os.listdir (directory):
 			path = os.path.join (directory, file)
@@ -612,8 +613,10 @@ class Network ():
 				file = file[: -len(RECORD_SUFFIX)]
 				number = Number (file)
 
-				self[number].exists = True
-				self[number].filename = path
+				subscriber = self[number]
+				if not subscriber.exists:
+					subscriber.exists = True
+					subscriber.filename = path
 
 		return
 
