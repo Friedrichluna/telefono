@@ -138,7 +138,7 @@ class Subscriber ():
 				self.__exists = False
 				self.__description = str ()
 
-			self.log.debug ("set description to %s", value)
+			self.log.debug ("set description to %r", value)
 
 			if "" == value and "" == self.__description:
 				return
