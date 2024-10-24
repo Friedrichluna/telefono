@@ -1,0 +1,7 @@
+#!/bin/sh
+# add commit information to build/vcs_version
+
+if [ -e build/vcs_version ]
+then
+	git describe --long --tags --dirty --always > build/vcs_version
+fi

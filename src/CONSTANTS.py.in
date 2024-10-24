@@ -4,6 +4,8 @@
 DEBUG = False
 LOG_FORMAT = "%(filename)15s:%(lineno)4d (%(levelname)s) %(name)s: %(message)s"
 
+VCS_VERSION = "@vcs_version@"
+
 DATA_DIR = "@pkgdatadir@"
 
 RECORD_DIR = "@pkglocalstatedir@"

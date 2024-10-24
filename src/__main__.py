@@ -13,6 +13,7 @@ import gpiozero
 from . import *
 
 from .CONSTANTS import DEBUG
+from .CONSTANTS import VCS_VERSION
 from .CONSTANTS import LOG_FORMAT
 
 from .CONSTANTS import STARTUP_FILE
@@ -185,7 +186,7 @@ def main ():
 	logging.basicConfig (level=log_level, format=LOG_FORMAT)
 
 	log = logging.getLogger (__name__)
-	log.info ("started telefono")
+	log.info ("started telefono (%s)", VCS_VERSION)
 
 	# initialize random module
 	random.seed ()
