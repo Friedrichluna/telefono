@@ -108,6 +108,10 @@ class Player ():
 		                            env=FFPLAY_ENV,
 		                            text=False)
 
+		# make fd non-blocking
+		fd = process.stderr.fileno ()
+		fcntl.fcntl (fd, fcntl.F_SETFL, os.O_NONBLOCK)
+
 		return process
 
 	@staticmethod
@@ -152,10 +156,6 @@ class Player ():
 
 
 		process = self.__ffplay (filename, volume=volume)
-
-		# make fd non-blocking
-		fd = process.stderr.fileno ()
-		fcntl.fcntl (fd, fcntl.F_SETFL, os.O_NONBLOCK)
 
 		buffer = bytearray ()
 		start = 0
