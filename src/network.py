@@ -135,7 +135,6 @@ class Subscriber ():
 				                "UNASSIGNED -> UNUSED")
 
 				self.__type = SubscriberType.UNUSED
-				self.__exists = False
 				self.__description = str ()
 
 			self.log.debug ("set description to %r", value)
