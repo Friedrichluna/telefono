@@ -50,14 +50,20 @@ class Subscriber ():
 		return "Subscriber(%s, %s)" % (self.__number, self.__type)
 
 	def _validate_file (self):
-		if bool (self.__filename) and not os.path.isfile (self.filename):
+		self.log.debug ("checking whether file '%s' exists",
+		                self.__filename)
+
+		if not self.__filename:
+			return False
+
+		if not os.path.isfile (self.__filename):
 			self.log.warning ("file %s vanished",
-			                  self.filename)
+			                  self.__filename)
 
 			self.__filename = str ()
 			return False
 
-		return bool (self.__filename)
+		return True
 
 	def __getattribute__ (self, name):
 		if 'type' == name:
@@ -90,10 +96,6 @@ class Subscriber ():
 			if self.__filename:
 				self.log.debug ("accessing filename")
 				return self.__filename
-
-			if bool (self.__filename):
-				raise Exception ("existing recording %r "
-				                 "with no associated filename" % self)
 
 			self.log.debug ("constructing filename")
 
