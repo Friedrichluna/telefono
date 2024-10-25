@@ -452,7 +452,7 @@ class Network ():
 		return self.__get (Number (number))
 
 	def __delitem__ (self, number:Number):
-		self.__del (Number (number))
+		ret = self.__del (Number (number))
 		self.log.debug ("deleting %s", ret)
 		self.sync_data ()
 		return
