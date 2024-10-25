@@ -13,26 +13,27 @@ Logging:
 
 Subscriber:
 	- return call object on route
-	- allow description for different types
-	- route subnumbers and branch extension
-
-Number:
-	- allow auto replacement to string on add
 
 Network:
 	- represent special tones
+	- better reserving mechanism for assigning
+	- make whole network loadable from file
 
 Player:
 	- get rid of pygame
-	- don't wait for ffplay
 
 Speaker:
 	- get rid of activation delay
+	- defer activation delay on startup
 
 IPC:
 	- handle larger lists of descriptions
+	- export CONSTANTS
+	- robust error handling
 
 WebApp:
+	- synchronize on startup
+	- jump to number after editing
 	- support other subscriber types
 	- record and call functionality
 	- improve layout
@@ -45,6 +46,12 @@ WebApp:
 		- keep uploaded files with wrong numbers
 		- edit description
 		- chrome bug
+
+	- validate index before converting to a Number
+	- validate requested_number before converting to a Number
+
+	- don't generate filenames in upload_file
+	- treat numbers as Number or as str everywhere.
 
 
 better systemd integration

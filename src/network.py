@@ -19,19 +19,25 @@ from .CONSTANTS import BACKUP_EXT
 from .number import Number
 
 
-class SubscriberType:
+class SubscriberType (enum.IntEnum):
 	UNASSIGNED = 0
-	RECORDING = 1
-	LIST = 2
-	CALLBACK = 3
+	UNUSED = 1
+	RESERVED = 2
+	RECORDING = 3
+	LIST = 4
+	CALLBACK = 5
 
 class Subscriber ():
-	def __init__ (self, network, number:Number):
+	def __init__ (self, network, number:Number, assignable:bool=True):
 		self.log = logging.getLogger ("Subscriber(%s)" % number)
 
 		self.__network = network
 		self.__number = number
-		self.__type = SubscriberType.UNASSIGNED
+
+		if assignable:
+			self.__type = SubscriberType.UNASSIGNED
+		else:
+			self.__type = SubscriberType.RESERVED
 
 		self.__hidden = False
 
@@ -40,15 +46,44 @@ class Subscriber ():
 	def __str__ (self):
 		return "Subscriber(%s)" % self.__number
 
-	def __validate_file (self):
-		if self.__exists and not os.path.isfile (self.filename):
-			self.log.warning ("file %s vanished",
-			                  self.filename)
+	def __repr__ (self):
+		return "Subscriber(%s, %s)" % (self.__number, self.__type)
 
-			self.__exists = False
+	def _validate_file (self):
+		self.log.debug ("checking whether file '%s' exists",
+		                self.__filename)
+
+		if not self.__filename:
 			return False
 
-		return self.__exists
+		if not os.path.isfile (self.__filename):
+			self.log.warning ("file %s vanished",
+			                  self.__filename)
+
+			self.__filename = str ()
+			return False
+
+		return True
+
+	def register_file (self):
+		filename = ""
+		filename += RECORD_DIR
+		filename += "/"
+		filename += RECORD_PREFIX
+		filename += self.__number
+		filename += RECORD_SUFFIX
+
+		self.log.debug ("checking whether file '%s' exists",
+		                filename)
+
+		if os.path.isfile (filename):
+			self.log.info ("file '%s' registered", filename)
+
+			self.__filename = filename
+			return True
+
+		self.log.error ("file '%s' missing", filename)
+		return False
 
 	def __getattribute__ (self, name):
 		if 'type' == name:
@@ -58,29 +93,39 @@ class Subscriber ():
 			return self.__number
 
 		if 'description' == name \
-		and SubscriberType.RECORDING == self.__type:
+		and SubscriberType.UNASSIGNED != self.__type:
 			return self.__description
 
 		if 'exists' == name:
 			if SubscriberType.RECORDING == self.__type:
-				return self.__validate_file ()
+				return self._validate_file ()
+
+			return False
+
+		if 'reserved' == name:
+			if SubscriberType.RESERVED == self.__type:
+				return True
 
 			return False
 
 		if 'hidden' == name:
 			return self.__hidden
 
-		if 'filename' == name:
-			if SubscriberType.RECORDING == self.__type:
-				self.log.debug ("constructing filename")
+		if 'filename' == name \
+		and SubscriberType.RECORDING == self.__type:
+			if self.__filename:
+				self.log.debug ("accessing filename")
+				return self.__filename
 
-				filename = ""
-				filename += RECORD_DIR
-				filename += "/"
-				filename += RECORD_PREFIX
-				filename += str (self.__number)
-				filename += RECORD_SUFFIX
-				return filename
+			self.log.debug ("constructing filename")
+
+			filename = ""
+			filename += RECORD_DIR
+			filename += "/"
+			filename += RECORD_PREFIX
+			filename += self.__number
+			filename += RECORD_SUFFIX
+			return filename
 
 		if 'list' == name and SubscriberType.LIST:
 			# return immutable tuple
@@ -108,69 +153,90 @@ class Subscriber ():
 
 			if SubscriberType.UNASSIGNED == self.__type:
 				self.log.debug ("changed type "
-				                "UNASSIGNED -> RECORDING")
+				                "UNASSIGNED -> UNUSED")
 
-				self.__type = SubscriberType.RECORDING
-				self.__exists = False
-				self.__description = ""
+				self.__type = SubscriberType.UNUSED
+				self.__description = str ()
 
-			if SubscriberType.RECORDING == self.__type:
-				self.log.debug ("set description to %s",
-				                value)
+			self.log.debug ("set description to %r", value)
 
-				if "" == value \
-				and "" == self.__description:
-					return
-
-				self.__description = value
-				self.__network.sync_data ()
+			if "" == value and "" == self.__description:
 				return
 
+			self.__description = value
+			self.__network.sync_data ()
+			return
+
 		if 'exists' == name:
-			if not isinstance (value, bool):
+			self.log.error ("attempting to change exists")
+			raise AttributeError ("read-only attribute")
+
+		if 'reserved' == name \
+		and SubscriberType.UNASSIGNED == self.__type:
+			if not value:
+				return
+
+			self.log.debug ("changed type "
+			                "UNASSIGNED -> RESERVED")
+
+			self.__type = SubscriberType.RESERVED
+			self.__description = str ()
+			return
+
+		if 'hidden' == name:
+			if value:
+				self.log.debug ("hiding number")
+			else:
+				self.log.debug ("unhiding number")
+
+			self.__hidden = value
+			return
+
+		if 'filename' == name:
+			if not isinstance (value, str):
 				raise TypeError (
-				    "exists must be bool not %r" %
+				    "filename must be str not %r" %
 				    type (value))
 
-			if SubscriberType.UNASSIGNED == self.__type and value:
+			if SubscriberType.UNASSIGNED == self.__type:
 				self.log.debug ("changed type "
 				                "UNASSIGNED -> RECORDING")
 
 				self.__type = SubscriberType.RECORDING
 				self.__description = str ()
+				self.__filename = str ()
 
 			if SubscriberType.RECORDING == self.__type:
-				self.log.debug ("set exists to %r",
-				                value)
-				self.__exists = value
+				self.log.debug ("set filename to %r", value)
+				self.__filename = value
+				self._validate_file ()
 				return
-
-		if 'hidden' == name:
-			self.__hidden = value
-			return
-
-		if 'filename' == name:
-			self.log.error ("attempting to change filename")
-			raise AttributeError ("read-only attribute")
 
 		if 'list' == name and SubscriberType.UNASSIGNED == self.__type:
 			self.log.debug ("changed type UNASSIGNED -> LIST")
 
 			self.__type = SubscriberType.LIST
-			self.__list = set ()
+			self.__description = str ()
+			self.__list = list ()
 
 		if 'list' == name and SubscriberType.LIST == self.__type:
 			for subscriber in value:
 				if not isinstance (subscriber, Subscriber):
-					number = Number (self, subscriber)
+					number = Number (subscriber)
 					subscriber = self.__network[number]
 
 				if SubscriberType.RECORDING != subscriber.__type:
 					raise ValueError ("unsupported subscriber")
 
-				self.log.debug ("add number %s",
-				                subscriber.number)
-				self.__list.add (subscriber)
+				if subscriber in self.__list:
+					self.log.debug ("skipping duplicate"
+					                " subscriber %r",
+					                subscriber)
+					return
+
+				self.log.debug ("add number %r",
+				                subscriber)
+				self.__list.append (subscriber)
 
 			return
 
@@ -180,6 +246,7 @@ class Subscriber ():
 			                "UNASSIGNED -> CALLBACK")
 
 			self.__type = SubscriberType.CALLBACK
+			self.__description = str ()
 
 		if 'callback' == name and SubscriberType.CALLBACK == self.__type:
 			self.__callback = value
@@ -202,16 +269,44 @@ class Subscriber ():
 		if SubscriberType.UNASSIGNED == self.__type:
 			return self
 
+		if SubscriberType.RESERVED == self.__type:
+			return self
+
 		if SubscriberType.RECORDING == self.__type:
 			return self
 
 		if SubscriberType.LIST == self.__type:
-			return random.choice ([*self.__list]).__route ()
+			return random.choice (self.__list).__route ()
 
 		if SubscriberType.CALLBACK == self.__type:
 			return self
 
 		raise NotImplementedError ("unknown subscriber type")
+
+	def subroute (self, number:Number):
+		subnumber = number.remove_base (self.__number)
+		if not subnumber:
+			# self isn't a base number
+			self.log.debug ("%s isn't extending this number",
+			                number)
+			return None
+
+		if SubscriberType.LIST == self.__type:
+			if int (subnumber) >= len (self.__list):
+				self.log.debug ("%s is no valid subscript",
+				                number)
+				return Subscriber (self.__network,
+				                   number,
+				                   assignable=False)
+
+			self.log.debug ("selecting subnumber %s",
+			                subnumber)
+			return self.__list[int (subnumber)]
+
+		# allow using subscripts for non-subscriptible numbers
+		self.log.warn ("allow reusing possible prefix %s for %s",
+		               self.__number, number)
+		return None
 
 	def __call (self, player, aloud, wind) -> bool:
 		if SubscriberType.CALLBACK == self.__type:
@@ -265,6 +360,9 @@ class Subscriber ():
 
 		return number.__call (player, aloud=(not ring), wind=False)
 
+	def dial (self, number):
+		return self.__network[self.__number + number]
+
 
 class Network ():
 	def __init__ (self, filename:str=RECORD_LIST_FILE):
@@ -306,10 +404,21 @@ class Network ():
 		index, exists = self.__find (number)
 
 		if not exists:
+			if 0 != index:
+				# Because the subscriber list is sorted,
+				# a potential base number will always
+				# be the preceding one.
+				base_number = self.__subscribers[index-1]
+
+				subscriber = base_number.subroute (number)
+				if None is not subscriber:
+					return subscriber
+
+			# assignable
 			subscriber = Subscriber (self, number)
 			self.__subscribers.insert (index, subscriber)
 
-			self.log.debug ("creating %s on access",
+			self.log.debug ("creating %r on access",
 			                subscriber)
 
 			return subscriber
@@ -328,11 +437,11 @@ class Network ():
 		subscriber = self.__subscribers[index]
 		self.__subscribers.__delitem__ (index)
 
-		self.log.debug ("deleting %s", subscriber)
+		self.log.debug ("deleting %r", subscriber)
 		return subscriber
 
 	def __contains__ (self, number:Number):
-		index, exists = self.__find (Number (self, number))
+		index, exists = self.__find (Number (number))
 
 		if not exists:
 			return False
@@ -340,10 +449,10 @@ class Network ():
 		return self.__subscribers[index].exists
 
 	def __getitem__ (self, number:Number):
-		return self.__get (Number (self, number))
+		return self.__get (Number (number))
 
 	def __delitem__ (self, number:Number):
-		self.__del (Number (number))
+		ret = self.__del (Number (number))
 		self.log.debug ("deleting %s", ret)
 		self.sync_data ()
 		return
@@ -351,7 +460,7 @@ class Network ():
 
 	def __iter__ (self):
 		l = list (self.numbers ())
-		l.sort ()
+		l.sort (key=int)
 		return iter (l)
 
 	def __len__ (self):
@@ -365,10 +474,10 @@ class Network ():
 	def numbers (self):
 		for subscriber in self.__subscribers:
 			if subscriber.exists and not subscriber.hidden:
-				yield int (subscriber.number)
+				yield subscriber.number
 
 	def pop (self, number:Number):
-		ret = self.__del (self, Number (number))
+		ret = self.__del (Number (number))
 		self.log.debug ("deleting %s", ret)
 		self.sync_data ()
 		return ret
@@ -404,11 +513,14 @@ class Network ():
 			name = name.strip ()
 
 			try:
-				number = int (number)
+				number = Number (number)
 			except ValueError:
 				self.log.error ("Key is not a number! "
 				                "Ignoring line")
 				continue
+
+			# create subscriber
+			self[number].filename = ""
 
 			# ignore empty names
 			if not name:
@@ -428,19 +540,18 @@ class Network ():
 
 		_file.truncate ()
 
-		numbers = [int (subscriber.number)
-		           for subscriber in self.__subscribers
-		           if SubscriberType.RECORDING == subscriber.type]
-		numbers.sort ()
+		# sort file numerically
+		subscribers = self.__subscribers.copy ()
+		subscribers.sort (key=lambda s: int (s.number))
 
-		for number in numbers:
-			name = self[number].description.strip ()
+		for subscriber in subscribers:
+			name = subscriber.description.strip ()
 
 			# ignore empty names
 			if not name:
 				continue
 
-			_file.write (str (number))
+			_file.write (str (subscriber.number))
 			_file.write (": ")
 			_file.write (name)
 			_file.write ("\n")
@@ -490,7 +601,8 @@ class Network ():
 		self.log.info ("scan for existing recordings")
 
 		for subscriber in self.__subscribers:
-			subscriber.exists = False
+			if SubscriberType.RECORDING == subscriber.type:
+				subscriber._validate_file ()
 
 		for file in os.listdir (directory):
 			path = os.path.join (directory, file)
@@ -502,9 +614,12 @@ class Network ():
 
 				file = file[len(RECORD_PREFIX) :]
 				file = file[: -len(RECORD_SUFFIX)]
-				number = int (file)
+				number = Number (file)
 
-				self[number].exists = True
+				subscriber = self[number]
+				if not subscriber.exists:
+					subscriber.filename = path
+
 		return
 
 	def compact (self):
@@ -512,7 +627,7 @@ class Network ():
 		# remove useless entries
 		for subscriber in self.__subscribers:
 			if SubscriberType.UNASSIGNED == subscriber.__type:
-				self.log.debug ("remove %s", subscriber)
+				self.log.debug ("remove %r", subscriber)
 				self.__subscribers.remove (subscriber)
 
 		return
@@ -523,18 +638,20 @@ class Network ():
 			return None
 
 		subscriber = self[random.choice (numbers)]
-		self.log.debug ("chose random %s", subscriber)
+		self.log.debug ("chose random %r", subscriber)
 
 		return subscriber
 
 	def find_assignable (self):
 		self.log.debug ("find assignable number")
 		number = 0
-		while not self[number].is_assignable ():
+		subscriber = self[Number.from_int (number)]
+		while not subscriber.is_assignable ():
 			number += 1
+			subscriber = self[Number.from_int (number)]
 
 		self.log.debug ("found %d", number)
 
 		# register subscriber
-		self[number].description = ""
-		return self[number]
+		subscriber.filename = ""
+		return subscriber

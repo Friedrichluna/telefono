@@ -29,11 +29,12 @@ noinst_PYTHON += src/CONSTANTS.py.in
 edit = sed -e 's|@pkgdatadir[@]|$(pkgdatadir)|g' \
            -e 's|@pkglocalstatedir[@]|$(pkglocalstatedir)|g' \
            -e 's|@templatedir[@]|$(templatedir)|g' \
-           -e 's|@staticdir[@]|$(staticdir)|g'
+           -e 's|@staticdir[@]|$(staticdir)|g' \
+           -e 's|@vcs_version[@]|'`cat vcs_version`'|g'
 
 all: CONSTANTS.py
 
-CONSTANTS.py: $(srcdir)/src/CONSTANTS.py.in Makefile
+CONSTANTS.py: $(srcdir)/src/CONSTANTS.py.in Makefile vcs_version
 	$(MKDIR_P) src
 	rm -f $@ $@.tmp
 	$(edit) $< >$@.tmp
@@ -42,7 +43,10 @@ CONSTANTS.py: $(srcdir)/src/CONSTANTS.py.in Makefile
 	chmod a-w $@.tmp
 	mv $@.tmp $@
 
-CLEANFILES = CONSTANTS.py
+vcs_version:
+	git describe --long --tags --dirty --always > vcs_version
+
+CLEANFILES = CONSTANTS.py vcs_version
 
 
 dist_pkgdata_DATA =

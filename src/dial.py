@@ -10,6 +10,8 @@ from .CONSTANTS import DIAL_TIMEOUT_DELAY
 from .CONSTANTS import DIAL_TIMEOUT
 from .CONSTANTS import DIAL_AUTO_TIMEOUT
 
+from .number import Number
+
 
 class Dial ():
 	def __init__ (self, DialInUse, DialCounter):
@@ -99,17 +101,19 @@ class Dial ():
 		led.off ()
 		return digit
 
-	def get_number (self, abort, led, player):
+	def get_number (self, abort, led, player) -> Number:
 		self.log.debug ("started dialing number")
 		led.blink (on_time=0.1, off_time=0.1, n=None, background=True)
-		number = None
+		number = Number ()
 
 		while not abort():
 			digit = self.__get_digit (abort, DIAL_AUTO_TIMEOUT)
 
 			# timeout
 			if -1 == digit:
-				if None is number:
+				# don't timeout (i.e. auto dial)
+				# if nothing was dialed yet
+				if not number:
 					continue
 				else:
 					break
@@ -118,14 +122,10 @@ class Dial ():
 			if None is digit:
 				continue
 
-			if None is number:
-				number = digit
-			else:
-				number *= 10
-				number += digit
+			number.add_digit (digit)
 
 			player.dial_sound (digit)
 
-		self.log.info ("dialed number %d", number)
+		self.log.info ("dialed number %s", number)
 		led.off ()
 		return number

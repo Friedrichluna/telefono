@@ -1,0 +1,34 @@
+Abstract
+========
+
+This file contains ideas that are to be assessed as well as
+general plans what Telefono should emerge into.
+
+Concrete implementation plans belong into todo.txt .
+
+
+Questioned Plans
+================
+
+Numbering Plan (Network)
+------------------------
+
+- Prefix Code
+	Making the numbers a prefix free code has several advantages,
+	but all existing recordings need to be reassigned and the new
+	numbers might conflict with some existing and intended semantic
+	meaning of the currently assigned numbers.
+
+	Enforcing that when dialling/calling numbers needs to reflect in
+	Subscriber.subroute returning RESERVED-Subscriber also for
+	base numbers with a type different then LIST, but correctly
+	prevent conflicting numbers from being assigned and used needs
+	other changes as well.
+
+	A feature that could be implemented when deciding for a
+	prefix code would be immediate dialling where the number will
+	be dialled as soon, as it is unique, and can be immediately
+	rejected as invalid, before being completely dialled.
+	Theoretically it would also be possible to implement
+	auto-completion, but this would be difficult to present to the
+	user given the current UI.

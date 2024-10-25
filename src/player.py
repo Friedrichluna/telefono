@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import datetime
+import fcntl
 import logging
 import os
 import subprocess
@@ -37,13 +38,15 @@ from .CONSTANTS import SOX_NUMBER_D
 from .CONSTANTS import FFPLAY_CMD
 from .CONSTANTS import FFPLAY_START
 from .CONSTANTS import FFPLAY_VOLUME
-from .CONSTANTS import FFPLAY_STARTUP_TIME
 from .CONSTANTS import FFPLAY_POLL_DELAY
+
+from .CONSTANTS import FFPLAY_ENV
 
 from .CONSTANTS import ESPEAK_CMD
 from .CONSTANTS import ESPEAK_SPEED
 from .CONSTANTS import ESPEAK_AMPLITUDE
 from .CONSTANTS import ESPEAK_VOICE
+from .CONSTANTS import ESPEAK_TEXT
 
 from .CONSTANTS import TTS_SPEED
 from .CONSTANTS import TTS_AMPLITUDE
@@ -68,7 +71,6 @@ class Player ():
 
 		# setup pygame
 		pygame.mixer.init()
-		pygame.init()
 
 		self.__hook = hook
 		self.__wind_back = wind_back
@@ -102,11 +104,34 @@ class Player ():
 
 		process = subprocess.Popen (command,
 		                            stderr=subprocess.PIPE,
-		                            text=True)
+		                            env=FFPLAY_ENV,
+		                            text=False)
 
-		# wait for ffplay to produce output
-		time.sleep (FFPLAY_STARTUP_TIME)
+		# make fd non-blocking
+		fd = process.stderr.fileno ()
+		fcntl.fcntl (fd, fcntl.F_SETFL, os.O_NONBLOCK)
+
 		return process
+
+	@staticmethod
+	def __parse_ffplay_output (buffer) -> float:
+		end = buffer.rfind (b" M-A:")
+		if -1 == end:
+			return None
+
+		start = buffer.rfind (b" ", 0, end)
+		if -1 == start:
+			return None
+
+		if b"nan" == buffer[start:end]:
+			return None
+
+		try:
+			number = float (buffer[start:end])
+		except ValueError:
+			return None
+
+		return number
 
 	def __play (self, filename, abort, volume=100,
 	            aloud=False, wind=False) -> bool:
@@ -131,31 +156,34 @@ class Player ():
 
 		process = self.__ffplay (filename, volume=volume)
 
+		buffer = bytearray ()
+		start = 0
+
 		while process.poll () is None:
 			time.sleep (FFPLAY_POLL_DELAY)
+
 			if abort ():
 				process.terminate ()
 				aborted = True
 
+			# parse current timestamp
+			data = process.stderr.read ()
+			if data is not None:
+				buffer += data
+				if 128 < len (buffer):
+					buffer = buffer[-128:]
+
+				_pos = self.__parse_ffplay_output (buffer)
+				if _pos is not None:
+					start = _pos
+					buffer.clear ()
+					self.log.debug ("duration: %f", start)
+
 			if wind and self.__back ():
 				process.terminate ()
-				data = process.communicate ()
-				try:
-					data = data[1]
-					data = data.split ('\n')
-					data = data[-2]
-					data = data.strip ()
-					data = data.split (' ')
-					data = data[0]
-					start = float (data)
-					start -= WIND_TIME
-				except:
-					start = 0
-					self.log.error ("failed to parse "
-					                "ffplay output")
+				start -= WIND_TIME
 
 				self.log.debug ("wind back to %d", start)
-
 				process = self.__ffplay (filename,
 				                         start,
 				                         volume)
@@ -163,20 +191,7 @@ class Player ():
 
 			if wind and self.__forward ():
 				process.terminate ()
-				data = process.communicate ()
-				try:
-					data = data[1]
-					data = data.split ('\n')
-					data = data[-2]
-					data = data.strip ()
-					data = data.split (' ')
-					data = data[0]
-					start = float (data)
-					start += WIND_TIME
-				except:
-					start = 0
-					self.log.error ("failed to parse "
-					                "ffplay output")
+				start += WIND_TIME
 
 				self.log.debug ("wind forward to %d", start)
 				process = self.__ffplay (filename,
@@ -349,7 +364,7 @@ class Player ():
 		           *ESPEAK_SPEED, str(speed),
 		           *ESPEAK_AMPLITUDE, str (amplitude),
 		           *ESPEAK_VOICE, voice,
-		           text)
+		           *ESPEAK_TEXT, text)
 
 		self.log.debug ("invoking espeak: %s", repr (command))
 
@@ -405,7 +420,11 @@ class Player ():
 		self.log.debug ("notify recording %s end with %r",
 		                recording_number, result)
 
-		if RECORDER_RESULT.ABORT == result:
+		if RECORDER_RESULT.ERROR == result:
+			message = "Aufnahme %s fehlgeschlagen" \
+			        % recording_number
+
+		elif RECORDER_RESULT.ABORT == result:
 			message = "Aufnahme %s abgebrochen" \
 			        % recording_number
 

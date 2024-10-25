@@ -1,6 +1,10 @@
 # telefono
 Ein wählscheibentelefon zu einer interaktiven Maschine umgebaut.
 
+## Hint
+Please install the git hooks under hooks/ for a working build.
+
+
 ## Funktionsweise
 Wenn der Hörer abgenommen wird ist ein Freiton hörbar. Hier hat man mehrere Optionen:
 

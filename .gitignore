@@ -4,11 +4,3 @@
 /autom4te.cache
 /configure
 Makefile.in
-
-__pycache__
-
-# ignore logfiles
-*.log
-
-# ignore data
-*.wav

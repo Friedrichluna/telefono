@@ -4,6 +4,8 @@
 DEBUG = False
 LOG_FORMAT = "%(filename)15s:%(lineno)4d (%(levelname)s) %(name)s: %(message)s"
 
+VCS_VERSION = "@vcs_version@"
+
 DATA_DIR = "@pkgdatadir@"
 
 RECORD_DIR = "@pkglocalstatedir@"
@@ -126,14 +128,18 @@ SOX_NUMBER_D = SOX_NUMBER (941, 1633)
 FFPLAY_CMD = ("ffplay", "-nodisp", "-autoexit", "-i")
 FFPLAY_START = ("-ss", )
 FFPLAY_VOLUME = ("-volume", )
-FFPLAY_STARTUP_TIME = 0.5
 FFPLAY_POLL_DELAY = 0.01
+
+FFPLAY_ENV = {
+	"XDG_RUNTIME_DIR": "/run/user/1000",
+}
 
 
 ESPEAK_CMD = ("espeak", )
 ESPEAK_SPEED = ("-s", )
 ESPEAK_AMPLITUDE = ("-a", )
 ESPEAK_VOICE = ("-v", )
+ESPEAK_TEXT = ("--", )
 
 TTS_SPEED = 140
 TTS_AMPLITUDE = 100

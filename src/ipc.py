@@ -4,6 +4,9 @@
 import enum
 import socket
 
+from .number import Number
+
+
 IPC_MAX_DATA = 1024
 IPC_BYTEORDER = "big"
 
@@ -18,8 +21,9 @@ class IPC_MESSAGE (enum.IntEnum):
 	UPLOAD = 7
 
 IPC_INT_SIZE = 4
+IPC_NUMBER_SIZE = 32
 
-IPC_TTS_MESSAGE_SIZE = IPC_MAX_DATA -1 -1
+IPC_TTS_MESSAGE_SIZE = IPC_MAX_DATA -1
 
 
 class IPC_ANSWER (enum.IntEnum):
@@ -51,22 +55,16 @@ class IPC:
 		return int.from_bytes (message[:IPC_INT_SIZE],
 		                       IPC_BYTEORDER, signed=False)
 
-	def __serialize_str (self, string:str, max_size:int) -> bytes:
-		if len (string) > max_size:
+	@staticmethod
+	def serialize_str (string:str, max_size:int) -> bytes:
+		if len (string) >= max_size:
 			print ("string too long")
 			return b""
 
 		return string.encode () + b"\0"
 
-	def __deserialize_str (self, message:bytes, max_size) -> str:
-		size = 0
-		while size < max_size \
-		and message[size] != 0:
-			size += 1
-
-		return message[:size].decode ()
-
-	def __deserialize_str2 (self, message:bytes, max_size) -> (str, bytes):
+	@staticmethod
+	def deserialize_str (message:bytes, max_size) -> (str, bytes):
 		size = 0
 		while size < max_size \
 		and size < len(message) \
@@ -75,11 +73,11 @@ class IPC:
 
 		return message[:size].decode (), message[size+1:]
 
-	def _serialize_call (self, call_id:int) -> bytearray:
+	def _serialize_call (self, number:Number) -> bytearray:
 		data = bytearray ()
 
 		data.append (IPC_MESSAGE.CALL)
-		data.extend (self.__serialize_int (call_id))
+		data.extend (number.to_bytes (IPC_NUMBER_SIZE, self))
 
 		return data
 
@@ -88,8 +86,7 @@ class IPC:
 
 		data.append (IPC_MESSAGE.TTS)
 
-		text = self.__serialize_str (message,
-		                             IPC_TTS_MESSAGE_SIZE)
+		text = IPC.serialize_str (message, IPC_TTS_MESSAGE_SIZE)
 		if not text:
 			return bytearray ()
 
@@ -129,40 +126,43 @@ class IPC:
 
 		return (message_type, payload)
 
-	def __deserialize_call (self, message:bytes) -> int:
-		return self.__deserialize_int (message)
+	def __deserialize_call (self, message:bytes) -> Number:
+		return Number.from_bytes (message, IPC_NUMBER_SIZE, self)[0]
 
 	def __deserialize_tts (self, message:bytes) -> str:
-		return self.__deserialize_str (message,
-		                               IPC_TTS_MESSAGE_SIZE)
+		return self.deserialize_str (message,
+		                             IPC_TTS_MESSAGE_SIZE)[0]
 
-	def _serialize_record_get (self, call_id:int) -> bytearray:
+	def _serialize_record_get (self, number:Number) -> bytearray:
 		data = bytearray ()
 
 		data.append (IPC_MESSAGE.GET_DESCRIPTION)
-		data.extend (self.__serialize_int (call_id))
+		data.extend (number.to_bytes (IPC_NUMBER_SIZE, self))
 
 		return data
 
-	def __deserialize_record_get (self, message:bytes) -> int:
-		return self.__deserialize_int (message)
+	def __deserialize_record_get (self, message:bytes) -> Number:
+		return Number.from_bytes (message, IPC_NUMBER_SIZE, self)[0]
 
-	def _serialize_record_set (self, call_id:int,
+	def _serialize_record_set (self, number:Number,
 	                           description:str) -> bytearray:
 		data = bytearray ()
 
 		data.append (IPC_MESSAGE.SET_DESCRIPTION)
-		data.extend (self.__serialize_int (call_id))
-		data.extend (self.__serialize_str (description,
-		                                   IPC_DESCRIPTION_SIZE))
+		data.extend (number.to_bytes (IPC_NUMBER_SIZE, self))
+		data.extend (IPC.serialize_str (description,
+		                                IPC_DESCRIPTION_SIZE))
 
 		return data
 
-	def __deserialize_record_set (self, message:bytes) -> (int, str):
-		key = self.__deserialize_int (message)
-		value = self.__deserialize_str (message[IPC_INT_SIZE:],
-		                                IPC_DESCRIPTION_SIZE)
-		return key, value
+	def __deserialize_record_set (self, message:bytes) -> (Number, str):
+		number, message = Number.from_bytes (message,
+		                                     IPC_NUMBER_SIZE,
+		                                     self)
+
+		value = self.deserialize_str (message,
+		                              IPC_DESCRIPTION_SIZE)[0]
+		return number, value
 
 	def _serialize_record_list (self) -> bytearray:
 		data = bytearray ()
@@ -172,14 +172,14 @@ class IPC:
 	def __deserialize_record_list (self, message:bytes):
 		return b""
 
-	def _serialize_free (self, number:int):
+	def _serialize_free (self, number:Number):
 		data = bytearray ()
 		data.append (IPC_MESSAGE.FREE)
-		data.extend (self.__serialize_int (number))
+		data.extend (number.to_bytes (IPC_NUMBER_SIZE, self))
 		return data
 
-	def __deserialize_free (self, message:bytes) -> int:
-		return self.__deserialize_int (message)
+	def __deserialize_free (self, message:bytes) -> Number:
+		return Number.from_bytes (message, IPC_NUMBER_SIZE, self)[0]
 
 	def _serialize_upload (self) -> bytearray:
 		data = bytearray ()
@@ -221,12 +221,12 @@ class IPC:
 			return answer, payload
 
 	def _serialize_description (self, description:str) -> bytes:
-		return self.__serialize_str (description,
-		                             IPC_DESCRIPTION_SIZE)
+		return IPC.serialize_str (description,
+		                          IPC_DESCRIPTION_SIZE)
 
 	def __deserialize_description (self, message:bytes) -> str:
-		return self.__deserialize_str (message,
-		                               IPC_DESCRIPTION_SIZE)
+		return self.deserialize_str (message,
+		                             IPC_DESCRIPTION_SIZE)[0]
 
 	def _serialize_list (self, network) -> bytes:
 		data = bytearray ()
@@ -234,8 +234,10 @@ class IPC:
 		data.extend (self.__serialize_int (len (network)))
 
 		for number in network:
-			data.extend (self.__serialize_int (int (number)))
-			value = self.__serialize_str (
+			data.extend (number.to_bytes (IPC_NUMBER_SIZE,
+			                              self))
+
+			value = IPC.serialize_str (
 			                        network[number].description,
 			                        IPC_DESCRIPTION_SIZE)
 			data.extend (value)
@@ -249,16 +251,17 @@ class IPC:
 		message = message[IPC_INT_SIZE:]
 
 		while True:
-			key = self.__deserialize_int (message)
-			message = message[IPC_INT_SIZE:]
-			if key is None:
+			number, message = Number.from_bytes (message,
+			                                     IPC_NUMBER_SIZE,
+			                                     self)
+			if not number:
 				break
 
-			value, message = self.__deserialize_str2 (
+			value, message = self.deserialize_str (
 			                        message,
 			                        IPC_DESCRIPTION_SIZE)
 
-			records.append ((key, value))
+			records.append ((number, value))
 
 		return records
 
@@ -285,8 +288,8 @@ class IPC_Client (IPC):
 		super ().__init__ (socket.socket (fileno=fd))
 		return
 
-	def get_description (self, call_id:int):
-		data = self._serialize_record_get (call_id)
+	def get_description (self, number:Number):
+		data = self._serialize_record_get (number)
 		self._send (data)
 
 		data = self._recv (IPC_ANSWER_SIZE)
@@ -297,8 +300,8 @@ class IPC_Client (IPC):
 
 		return None
 
-	def set_description (self, call_id:int, description:str):
-		data = self._serialize_record_set (call_id, description)
+	def set_description (self, number:Number, description:str):
+		data = self._serialize_record_set (number, description)
 		self._send (data)
 
 		data = self._recv (IPC_ANSWER_SIZE)
@@ -321,7 +324,7 @@ class IPC_Client (IPC):
 
 		return network_list
 
-	def is_free (self, number):
+	def is_free (self, number:Number):
 		data = self._serialize_free (number)
 		self._send (data)
 
@@ -340,22 +343,22 @@ class IPC_Client (IPC):
 		answer, _ = self._deserialize_answer (data)
 		return
 
-	def queue_call (self, call_id:int):
-		data = self._serialize_call (call_id)
+	def queue_call (self, number:Number):
+		data = self._serialize_call (number)
 		self._send (data)
 
 		data = self._recv (IPC_ANSWER_SIZE)
 		answer, _ = self._deserialize_answer (data)
 
 		if IPC_ANSWER.OK == answer:
-			return "Anruf %d abgesetzt" % call_id, "success"
+			return "Anruf %d abgesetzt" % number, "success"
 
 		elif IPC_ANSWER.ERROR == answer:
 			return "Ein Fehler ist aufgetreten.", "error"
 
 		elif IPC_ANSWER.NO_NUMBER == answer:
 			return "Die Nummer %d ist nicht vergeben." \
-			           % call_id, \
+			           % number, \
 			       "error"
 
 		return "Ein Fehler ist aufgetreten.", "error"
@@ -383,8 +386,8 @@ class IPC_Server (IPC):
 	def __init__ (self):
 
 		server, client = socket.socketpair (socket.AF_UNIX,
-	                                            socket.SOCK_DGRAM,
-	                                            0)
+		                                    socket.SOCK_DGRAM,
+		                                    0)
 
 		super ().__init__ (server)
 
@@ -431,7 +434,7 @@ class IPC_Server (IPC):
 			return
 
 		elif IPC_MESSAGE.GET_DESCRIPTION == message_type \
-		and str (payload) in network:
+		and payload in network:
 			description = network[payload].description
 			data = self._serialize_description (description)
 			if data:
@@ -442,7 +445,7 @@ class IPC_Server (IPC):
 				return
 
 		elif IPC_MESSAGE.SET_DESCRIPTION == message_type \
-		and str (payload[0]) in network:
+		and payload[0] in network:
 			key, value = payload
 			network[key].description = value
 

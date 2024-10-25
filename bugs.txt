@@ -1,0 +1,10 @@
+This file contains known bugs, that won't be fixed.
+
+Network:
+	- don't store unassigned empty numbers
+		This isn't possible because a number must be created
+		on access in order for the caller to modify it, but
+		there is no possibility of ever deleting it, because
+		it can't be known if the caller has a reference to it
+		and will modify it eventually.
+		Thus, this needs to wait for a reimplementation in C.
