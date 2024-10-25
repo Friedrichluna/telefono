@@ -50,15 +50,14 @@ class Subscriber ():
 		return "Subscriber(%s, %s)" % (self.__number, self.__type)
 
 	def _validate_file (self):
-		if self.__exists and not os.path.isfile (self.filename):
+		if bool (self.__filename) and not os.path.isfile (self.filename):
 			self.log.warning ("file %s vanished",
 			                  self.filename)
 
-			self.__exists = False
 			self.__filename = str ()
 			return False
 
-		return self.__exists
+		return bool (self.__filename)
 
 	def __getattribute__ (self, name):
 		if 'type' == name:
@@ -92,7 +91,7 @@ class Subscriber ():
 				self.log.debug ("accessing filename")
 				return self.__filename
 
-			if self.__exists:
+			if bool (self.__filename):
 				raise Exception ("existing recording %r "
 				                 "with no associated filename" % self)
 
@@ -163,7 +162,6 @@ class Subscriber ():
 			if SubscriberType.RECORDING == self.__type:
 				self.log.debug ("set exists to %r",
 				                value)
-				self.__exists = value
 
 				if value:
 					filename = ""
@@ -173,6 +171,8 @@ class Subscriber ():
 					filename += self.__number
 					filename += RECORD_SUFFIX
 					self.__filename = filename
+				else:
+					self.__filename = str ()
 				return
 
 		if 'reserved' == name \
