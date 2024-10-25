@@ -82,6 +82,7 @@ class Subscriber ():
 			self.__filename = filename
 			return True
 
+		self.log.error ("file '%s' missing", filename)
 		return False
 
 	def __getattribute__ (self, name):

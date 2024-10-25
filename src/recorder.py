@@ -15,10 +15,11 @@ from .CONSTANTS import RECORD_TIME_MIN
 from .CONSTANTS import RECORD_TIME_MAX
 
 class RECORDER_RESULT (enum.IntEnum):
-	ABORT = 0
-	END = 1
-	MIN_TIME = 2
-	MAX_TIME = 3
+	ERROR = 0
+	ABORT = 1
+	END = 2
+	MIN_TIME = 3
+	MAX_TIME = 4
 
 
 CHANNELS = 2
@@ -72,8 +73,7 @@ class Recorder ():
 		                linkat.AT_SYMLINK_FOLLOW)
 
 		# register created file
-		self.__subscriber.register_file ()
-		return
+		return self.__subscriber.register_file ()
 
 	def __enter__ (self):
 		self.log.info ("start recording")
@@ -112,7 +112,9 @@ class Recorder ():
 				self.log.info ("recording to short")
 				return RECORDER_RESULT.MIN_TIME
 
-			self.save ()
+			if not self.save ():
+				self.log.info ("recording failed")
+				return RECORDER_RESULT.ERROR
 
 		if timer > RECORD_TIME_MAX:
 			self.log.info ("reached maximal recording time %ds",

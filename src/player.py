@@ -421,7 +421,11 @@ class Player ():
 		self.log.debug ("notify recording %s end with %r",
 		                recording_number, result)
 
-		if RECORDER_RESULT.ABORT == result:
+		if RECORDER_RESULT.ERROR == result:
+			message = "Aufnahme %s fehlgeschlagen" \
+			        % recording_number
+
+		elif RECORDER_RESULT.ABORT == result:
 			message = "Aufnahme %s abgebrochen" \
 			        % recording_number
 
