@@ -72,7 +72,7 @@ class Recorder ():
 		                linkat.AT_SYMLINK_FOLLOW)
 
 		# register created file
-		self.__subscriber.exists = True
+		self.__subscriber.register_file ()
 		return
 
 	def __enter__ (self):

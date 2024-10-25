@@ -65,6 +65,25 @@ class Subscriber ():
 
 		return True
 
+	def register_file (self):
+		filename = ""
+		filename += RECORD_DIR
+		filename += "/"
+		filename += RECORD_PREFIX
+		filename += self.__number
+		filename += RECORD_SUFFIX
+
+		self.log.debug ("checking whether file '%s' exists",
+		                filename)
+
+		if os.path.isfile (filename):
+			self.log.info ("file '%s' registered", filename)
+
+			self.__filename = filename
+			return True
+
+		return False
+
 	def __getattribute__ (self, name):
 		if 'type' == name:
 			return self.__type
@@ -147,27 +166,9 @@ class Subscriber ():
 			self.__network.sync_data ()
 			return
 
-		if 'exists' == name
-		and SubscriberType.RECORDING == self.__type:
-			if not isinstance (value, bool):
-				raise TypeError (
-				    "exists must be bool not %r" %
-				    type (value))
-
-				self.log.debug ("set exists to %r",
-				                value)
-
-				if value:
-					filename = ""
-					filename += RECORD_DIR
-					filename += "/"
-					filename += RECORD_PREFIX
-					filename += self.__number
-					filename += RECORD_SUFFIX
-					self.__filename = filename
-				else:
-					self.__filename = str ()
-				return
+		if 'exists' == name:
+			self.log.error ("attempting to change exists")
+			raise AttributeError ("read-only attribute")
 
 		if 'reserved' == name \
 		and SubscriberType.UNASSIGNED == self.__type:
