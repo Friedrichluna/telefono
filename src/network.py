@@ -147,21 +147,13 @@ class Subscriber ():
 			self.__network.sync_data ()
 			return
 
-		if 'exists' == name:
+		if 'exists' == name
+		and SubscriberType.RECORDING == self.__type:
 			if not isinstance (value, bool):
 				raise TypeError (
 				    "exists must be bool not %r" %
 				    type (value))
 
-			if SubscriberType.UNASSIGNED == self.__type:
-				self.log.debug ("changed type "
-				                "UNASSIGNED -> RECORDING")
-
-				self.__type = SubscriberType.RECORDING
-				self.__description = str ()
-				self.__filename = str ()
-
-			if SubscriberType.RECORDING == self.__type:
 				self.log.debug ("set exists to %r",
 				                value)
 
@@ -198,17 +190,25 @@ class Subscriber ():
 			self.__hidden = value
 			return
 
-		if 'filename' == name \
-		and SubscriberType.RECORDING == self.__type:
+		if 'filename' == name:
 			if not isinstance (value, str):
 				raise TypeError (
 				    "filename must be str not %r" %
 				    type (value))
 
-			self.log.debug ("set filename to %r", value)
-			self.__filename = value
-			self._validate_file ()
-			return
+			if SubscriberType.UNASSIGNED == self.__type:
+				self.log.debug ("changed type "
+				                "UNASSIGNED -> RECORDING")
+
+				self.__type = SubscriberType.RECORDING
+				self.__description = str ()
+				self.__filename = str ()
+
+			if SubscriberType.RECORDING == self.__type:
+				self.log.debug ("set filename to %r", value)
+				self.__filename = value
+				self._validate_file ()
+				return
 
 		if 'list' == name and SubscriberType.UNASSIGNED == self.__type:
 			self.log.debug ("changed type UNASSIGNED -> LIST")
@@ -518,7 +518,7 @@ class Network ():
 				continue
 
 			# create subscriber
-			self[number].exists = False
+			self[number].filename = ""
 
 			# ignore empty names
 			if not name:
@@ -616,7 +616,6 @@ class Network ():
 
 				subscriber = self[number]
 				if not subscriber.exists:
-					subscriber.exists = True
 					subscriber.filename = path
 
 		return
@@ -652,5 +651,5 @@ class Network ():
 		self.log.debug ("found %d", number)
 
 		# register subscriber
-		subscriber.exists = False
+		subscriber.filename = ""
 		return subscriber
