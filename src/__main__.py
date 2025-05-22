@@ -208,8 +208,8 @@ def main ():
 	DialCounter = Button(2) #Zähler für die gewählte Zahl (rot)
 	DialInUse = Button(26) #Wählscheibe wird benutzt (grau)(weiß im Tel)
 	Hook = Button(18) #wenn der Hörer aufgenommen ist (Orange, mit Blauem Kabel aus dem Telefon)
-	ButtonLeft = Button(3) #Linker knopf (violett)red = Button(2) #Zähler für die gewählte Zahl (rot)(grün Gestr.)
-	ButtonMiddle = Button(27) #Mittlerer Knopf
+	ButtonLeft = InvButton(3) #Linker knopf (violett)red = Button(2) #Zähler für die gewählte Zahl (rot)(grün Gestr.)
+	ButtonMiddle = InvButton(27) #Mittlerer Knopf
 	SpeakerSwitch = Button(17) #Rechter Kippschalter (grüner Anschluss)
 	led = gpiozero.LED (20)
 

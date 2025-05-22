@@ -6,6 +6,7 @@ pkgpython_PYTHON += src/__main__.py
 pkgpython_PYTHON += src/button.py
 pkgpython_PYTHON += src/dial.py
 pkgpython_PYTHON += src/event_queue.py
+pkgpython_PYTHON += src/invButton.py
 pkgpython_PYTHON += src/ipc.py
 pkgpython_PYTHON += src/network.py
 pkgpython_PYTHON += src/number.py
