@@ -28,6 +28,9 @@ UPLOAD_DIR = RECORD_DIR
 # 50 MiB are about 4:30 min of 48 kHz stereo
 UPLOAD_MAX_SIZE = 50 * 1024 * 1024
 
+# frames read at once while checking an uploaded wav file
+UPLOAD_CHECK_FRAMES = 4096
+
 WEBAPP_EXEC = ("python3", "-m", "telefono.webapp")
 
 FLASK_DEBUG = DEBUG

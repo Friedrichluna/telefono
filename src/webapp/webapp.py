@@ -1,6 +1,8 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
+import wave
+
 from flask import Flask, redirect, render_template, request
 
 import psutil
@@ -15,6 +17,7 @@ from ..CONSTANTS import RECORD_SUFFIX
 
 from ..CONSTANTS import UPLOAD_DIR
 from ..CONSTANTS import UPLOAD_MAX_SIZE
+from ..CONSTANTS import UPLOAD_CHECK_FRAMES
 
 from ..ipc import IPC_DESCRIPTION_MAX_BYTES
 from ..ipc import IPC_StringTooLong
@@ -197,6 +200,41 @@ class TelefonoWebApp (Flask):
 		                        message_type=message_type)
 
 
+	# the recordings are played by ffplay, which does not care about
+	# channels, rate or sample width, but the file must be complete;
+	# only PCM can be checked with the wave module, so that is required
+	def check_wav (self, stream):
+		try:
+			with wave.open (stream, "rb") as wav:
+				frame_size = wav.getnchannels () * wav.getsampwidth ()
+				expected = wav.getnframes () * frame_size
+
+				size = 0
+				data = wav.readframes (UPLOAD_CHECK_FRAMES)
+				while data:
+					size += len (data)
+					data = wav.readframes (UPLOAD_CHECK_FRAMES)
+
+		# wave raises a plain RuntimeError for a chunk that is
+		# larger than the file
+		except (wave.Error, EOFError, RuntimeError) as error:
+			self.logger.warning ("upload is no PCM wav file: %s", error)
+			return "Keine gültige .wav Datei, bitte eine unkomprimierte " 			       "(PCM) .wav Datei hochladen."
+
+		finally:
+			stream.seek (0)
+
+		if 0 == expected:
+			self.logger.warning ("upload has no audio data")
+			return "Die .wav Datei enthält keine Audiodaten."
+
+		if size < expected:
+			self.logger.warning ("upload is truncated: %d of %d bytes",
+			                     size, expected)
+			return "Die .wav Datei ist unvollständig."
+
+		return None
+
 	def upload_page(self):
 		diskSpace = getFreeDiskSpace()
 		return render_template("upload.html", diskSpace = diskSpace)
@@ -226,6 +264,13 @@ class TelefonoWebApp (Flask):
 			return render_template("upload.html",
 				message="Bitte nur .wav hochladen!",
 				message_type="error")
+
+		message = self.check_wav (uploaded_file.stream)
+		if message:
+			return render_template ("upload.html",
+			                        diskSpace=getFreeDiskSpace (),
+			                        message=message,
+			                        message_type="error"), 400
 
 		file_path = UPLOAD_DIR + "/" + RECORD_PREFIX + str(number) + RECORD_SUFFIX
 		uploaded_file.save(file_path)
