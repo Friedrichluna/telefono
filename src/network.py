@@ -581,26 +581,27 @@ class Network ():
 		              os.O_TMPFILE | os.O_WRONLY,
 		              mode=0o600)
 
-		# create backup file
-		if os.path.exists (self.__filename):
-			self.log.debug ("rename existing file %s -> %s",
-			                self.__filename,
-			                self.__filename + BACKUP_EXT)
-			os.rename (self.__filename,
-			           self.__filename + BACKUP_EXT)
+		# closing the temporary file without linking it
+		# discards it, so on errors the old file is kept
+		with os.fdopen (fd, "wt") as f:
+			# store into temporary file first, the existing
+			# file is only touched once the new one is complete
+			self.__store (f)
 
-		# store into temporary file
-		f = os.fdopen (fd, "wt")
-		self.__store (f)
+			# create backup file
+			if os.path.exists (self.__filename):
+				self.log.debug ("rename existing file %s -> %s",
+				                self.__filename,
+				                self.__filename + BACKUP_EXT)
+				os.rename (self.__filename,
+				           self.__filename + BACKUP_EXT)
 
-		self.log.debug ("saving file %s", self.__filename)
+			self.log.debug ("saving file %s", self.__filename)
 
-		# atomically link file
-		linkat.link_at (linkat.AT_FDCWD, b"/proc/self/fd/%d" % fd,
-		                linkat.AT_FDCWD, self.__filename.encode(),
-		                linkat.AT_SYMLINK_FOLLOW)
-
-		f.close ()
+			# atomically link file
+			linkat.link_at (linkat.AT_FDCWD, b"/proc/self/fd/%d" % fd,
+			                linkat.AT_FDCWD, self.__filename.encode(),
+			                linkat.AT_SYMLINK_FOLLOW)
 
 		return
 
