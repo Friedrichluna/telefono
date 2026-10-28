@@ -1,7 +1,10 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
+import time
+
 from .button import Button
+from .CONSTANTS import BUTTON_DELAY
 
 class InvButton:
     def __init__(self, *args, **kwargs):
@@ -21,7 +24,7 @@ class InvButton:
             return False
 
         while self.is_pressed:
-            pass
+            time.sleep (BUTTON_DELAY)
 
         return True
 

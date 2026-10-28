@@ -1,7 +1,11 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
+import time
+
 import gpiozero
+
+from .CONSTANTS import BUTTON_DELAY
 
 
 class Button (gpiozero.Button):
@@ -14,6 +18,6 @@ class Button (gpiozero.Button):
 			return False
 
 		while self.is_pressed:
-			pass
+			time.sleep (BUTTON_DELAY)
 
 		return True
