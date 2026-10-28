@@ -127,11 +127,11 @@ class Subscriber ():
 			filename += RECORD_SUFFIX
 			return filename
 
-		if 'list' == name and SubscriberType.LIST:
+		if 'list' == name and SubscriberType.LIST == self.__type:
 			# return immutable tuple
 			return (*self.__list, )
 
-		if 'callback' == name and SubscriberType.CALLBACK:
+		if 'callback' == name and SubscriberType.CALLBACK == self.__type:
 			return self.__callback
 
 		return super ().__getattribute__ (name)
