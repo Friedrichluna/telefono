@@ -16,12 +16,20 @@
 
 		li {
 			display: flex;
+			flex-wrap: wrap;
 			align-items: center;
-			gap: 1rem;
+			gap: .5rem 1rem;
 			padding: .5rem .75rem;
 
 			border-top: 1px solid rgba(0,0,0,.125);
 			scroll-margin-top: 4rem;
+		}
+
+		/* more room for the description on phones */
+		@media screen and (max-width: 419px) {
+			li {
+				column-gap: .75rem;
+			}
 		}
 
 		li:first-child {
@@ -62,6 +70,62 @@
 			overflow-wrap: anywhere;
 		}
 
+		/* play, download, edit */
+		.actions {
+			display: flex;
+			gap: .25rem;
+		}
+
+		.actions .button {
+			min-width: 2.125rem;
+		}
+
+		.actions svg {
+			width: 1em;
+			height: 1em;
+			fill: currentColor;
+			vertical-align: -.125em;
+		}
+
+		.play .pause-icon, li.playing .play .play-icon {
+			display: none;
+		}
+
+		li.playing .play .pause-icon {
+			display: inline;
+		}
+
+		li.loading .play {
+			opacity: .65;
+			cursor: progress;
+		}
+
+		/* the recording that was played last */
+		li.current {
+			background-color: var(--light);
+		}
+
+		.player {
+			display: flex;
+			flex-basis: 100%;
+			align-items: center;
+			gap: .75rem;
+		}
+
+		.player input {
+			flex: 1;
+			min-width: 0;
+			margin: 0;
+			accent-color: var(--primary);
+		}
+
+		.player span {
+			color: var(--secondary);
+			font-size: .875rem;
+			font-variant-numeric: tabular-nums;
+			white-space: nowrap;
+		}
+
 		#no-match {
 			color: var(--secondary);
 		}
@@ -78,7 +142,13 @@
 				<button type="submit" name="selected_value" value="{{ number }}" class="button gray" title="Nummer {{ number }} anrufen lassen">{{ number }}</button>
 			</form>
 			<span>{{ description }}</span>
-			<a href="{{ url_for('edit_value', number=number) }}" class="button blue" title="Beschreibung bearbeiten">&#9998;</a>
+			<div class="actions">
+{% if number|string in recorded %}
+				<a href="{{ url_for('recording', number=number) }}" class="button light play" title="Aufnahme {{ number }} anhören" aria-label="Aufnahme {{ number }} anhören"><svg class="play-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5v11l9.5-5.5z"/></svg><svg class="pause-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 2.5h3v11h-3zm6 0h3v11h-3z"/></svg></a>
+				<a href="{{ url_for('download', number=number) }}" class="button light" title="Aufnahme {{ number }} herunterladen" aria-label="Aufnahme {{ number }} herunterladen" download><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M7 1h2v7.6l2.8-2.8 1.4 1.4L8 12.4 2.8 7.2l1.4-1.4L7 8.6zM2 13.5h12V15H2z"/></svg></a>
+{% endif %}
+				<a href="{{ url_for('edit_value', number=number) }}" class="button blue" title="Beschreibung bearbeiten">&#9998;</a>
+			</div>
 		</li>
 {% endfor %}
 	</ul>
@@ -94,6 +164,12 @@
 	const items = Array.from (document.querySelectorAll ("li"));
 	const noMatch = document.getElementById ("no-match");
 
+	// number and description only (not e.g. the player's time)
+	const texts = items.map (function (item) {
+		return (item.querySelector ("button").textContent + " "
+		      + item.querySelector (":scope > span").textContent).toLowerCase ();
+	});
+
 	// the filter needs the script, so it is only shown with it
 	filter.hidden = false;
 
@@ -101,14 +177,14 @@
 		const words = filter.value.toLowerCase ().split (/\s+/).filter (Boolean);
 		let shown = 0;
 
-		for (const item of items) {
-			const text = item.textContent.toLowerCase ();
+		items.forEach (function (item, index) {
+			const text = texts[index];
 			const match = words.every (function (word) { return text.includes (word); });
 
 			item.hidden = !match;
 			if (match)
 				shown++;
-		}
+		});
 
 		noMatch.hidden = 0 !== shown;
 	}
@@ -118,6 +194,148 @@
 	// e.g. the browser restored the text on "back"
 	if (filter.value)
 		apply ();
+}) ();
+
+/* the play button is a link to the mp3 (opened by the browser
+   without the script); with it the recording plays in the list,
+   the audio element is only made (and loaded) on the first click */
+(function () {
+	"use strict";
+
+	function formatTime (seconds) {
+		if (!isFinite (seconds))
+			return "–:––";
+
+		seconds = Math.floor (seconds);
+		return Math.floor (seconds / 60) + ":" + String (seconds % 60).padStart (2, "0");
+	}
+
+	function setup (link) {
+		const item = link.closest ("li");
+		const number = item.querySelector ("button").value;
+		let audio = null;
+		let player, range, time;
+		let dragging = false;
+
+		function showTime (position) {
+			time.textContent = formatTime (position) + " / " + formatTime (audio.duration);
+		}
+
+		function setPlaying (playing) {
+			item.classList.toggle ("playing", playing);
+
+			const label = "Aufnahme " + number + (playing ? " anhalten" : " anhören");
+			link.title = label;
+			link.setAttribute ("aria-label", label);
+		}
+
+		function create () {
+			audio = document.createElement ("audio");
+			audio.preload = "none";
+			audio.src = link.href;
+
+			player = document.createElement ("div");
+			player.className = "player";
+
+			range = document.createElement ("input");
+			range.type = "range";
+			range.min = 0;
+			range.max = 0;
+			range.step = "any";
+			range.value = 0;
+			range.setAttribute ("aria-label", "Position in Aufnahme " + number);
+
+			time = document.createElement ("span");
+
+			player.append (range, time, audio);
+			item.appendChild (player);
+			showTime (0);
+
+			audio.addEventListener ("durationchange", function () {
+				if (isFinite (audio.duration))
+					range.max = audio.duration;
+				showTime (audio.currentTime);
+			});
+
+			audio.addEventListener ("timeupdate", function () {
+				if (dragging)
+					return;
+
+				range.value = audio.currentTime;
+				showTime (audio.currentTime);
+			});
+
+			audio.addEventListener ("play", function () {
+				// only one row shows its player
+				document.querySelectorAll ("li.current").forEach (function (other) {
+					if (other !== item) {
+						other.classList.remove ("current");
+						other.querySelector (".player").hidden = true;
+					}
+				});
+
+				item.classList.add ("current");
+				player.hidden = false;
+				setPlaying (true);
+			});
+
+			audio.addEventListener ("pause", function () {
+				item.classList.remove ("loading");
+				setPlaying (false);
+			});
+
+			audio.addEventListener ("waiting", function () {
+				item.classList.add ("loading");
+			});
+
+			audio.addEventListener ("playing", function () {
+				item.classList.remove ("loading");
+			});
+
+			audio.addEventListener ("error", function () {
+				showMessage ("Aufnahme " + number + " konnte nicht geladen werden.", "error");
+
+				// a new try loads it again
+				item.classList.remove ("loading", "playing", "current");
+				setPlaying (false);
+				player.remove ();
+				audio = null;
+			});
+
+			// seek when the slider is let go, not on every step
+			range.addEventListener ("input", function () {
+				dragging = true;
+				showTime (Number (range.value));
+			});
+
+			range.addEventListener ("change", function () {
+				dragging = false;
+				audio.currentTime = Number (range.value);
+			});
+		}
+
+		link.addEventListener ("click", function (event) {
+			event.preventDefault ();
+
+			if (!audio)
+				create ();
+
+			if (!audio.paused) {
+				audio.pause ();
+				return;
+			}
+
+			item.classList.add ("loading");
+
+			// e.g. the browser does not allow it, or the file is gone
+			// (also reported by the error event, so no second message)
+			audio.play ().catch (function () {
+				item.classList.remove ("loading");
+			});
+		});
+	}
+
+	document.querySelectorAll ("a.play").forEach (setup);
 }) ();
 </script>
 {% endblock %}

@@ -2,11 +2,12 @@
 # -*- coding: utf-8 -*-
 
 import errno
+import logging
 import os
 import shutil
 import wave
 
-from flask import Flask, flash, jsonify, redirect, render_template, request, url_for
+from flask import Flask, flash, jsonify, redirect, render_template, request, send_file, url_for
 
 import psutil
 
@@ -15,6 +16,7 @@ from werkzeug.exceptions import RequestEntityTooLarge
 from ..CONSTANTS import FLASK_TEMPLATES
 from ..CONSTANTS import FLASK_STATIC
 
+from ..CONSTANTS import RECORD_DIR
 from ..CONSTANTS import RECORD_PREFIX
 from ..CONSTANTS import RECORD_SUFFIX
 
@@ -65,6 +67,39 @@ def parse_number (text:str):
 		return None
 
 
+# same name as Subscriber.register_file, e.g. recording007.mp3; only
+# built from a parsed number (digits), so it is always in RECORD_DIR
+def recording_path (number:Number) -> str:
+	return os.path.join (RECORD_DIR,
+	                     RECORD_PREFIX + str (number) + RECORD_SUFFIX)
+
+
+# the numbers (as str) that have a recording file, read from the
+# directory and not from the main process, like the recording routes
+def recorded_numbers () -> set:
+	numbers = set ()
+
+	try:
+		with os.scandir (RECORD_DIR) as entries:
+			for entry in entries:
+				name = entry.name
+				if not name.startswith (RECORD_PREFIX) \
+				or not name.endswith (RECORD_SUFFIX):
+					continue
+
+				number = name[len (RECORD_PREFIX):-len (RECORD_SUFFIX)]
+				if parse_number (number) and entry.is_file ():
+					numbers.add (number)
+
+	# no play buttons then, the list is still shown
+	except OSError as error:
+		# the same logger as the app's (Flask.logger)
+		logging.getLogger (__name__).error ("reading %s failed: %s",
+		                                    RECORD_DIR, error)
+
+	return numbers
+
+
 # the upload can not be used, the message is shown to the user
 class InvalidUpload (Exception):
 	pass
@@ -96,6 +131,8 @@ class TelefonoWebApp (Flask):
 		self.add_url_rule ("/upload", "upload_page", self.upload_page)
 		self.add_url_rule ("/upload", "upload_file", self.upload_file, methods=["POST"])
 		self.add_url_rule ("/help", "help", self.help)
+		self.add_url_rule ("/recording/<number>", "recording", self.recording)
+		self.add_url_rule ("/download/<number>", "download", self.download)
 
 		self.register_error_handler (IPC_Timeout, self.busy)
 		self.register_error_handler (IPC_StringTooLong, self.too_long)
@@ -215,8 +252,11 @@ class TelefonoWebApp (Flask):
 			return self.finish (url_for ("list") + "#n%s" % number,
 			                    message, message_type)
 
+		network_list = self.ipc.get_list ()
+
 		return render_template("list.html",
-		                       network_list=self.ipc.get_list ())
+		                       network_list=network_list,
+		                       recorded=recorded_numbers ())
 
 	def edit_value(self, number):
 		number = parse_number (number)
@@ -251,7 +291,8 @@ class TelefonoWebApp (Flask):
 
 		return render_template("edit.html",
 		                       number=number,
-		                       value=self.ipc.get_description (number))
+		                       value=self.ipc.get_description (number),
+		                       recorded=os.path.isfile (recording_path (number)))
 
 	def say (self):
 		if request.method == "POST":
@@ -276,6 +317,46 @@ class TelefonoWebApp (Flask):
 	# also works while the phone is busy
 	def help (self):
 		return render_template ("help.html")
+
+	# the recording file itself, read from RECORD_DIR without asking
+	# the main process, so it can also be heard while the phone is
+	# busy; conditional: Range requests (seeking), ETag, 304
+	def send_recording (self, number:str, as_attachment:bool):
+		number = parse_number (number)
+		if None is number:
+			return self.reply ("message.html", INVALID_NUMBER,
+			                   "error", 404, back=url_for ("list"),
+			                   back_title="Zur Liste")
+
+		try:
+			response = send_file (recording_path (number),
+			                      mimetype="audio/mpeg",
+			                      as_attachment=as_attachment,
+			                      download_name="telefono-%s%s"
+			                                    % (number, RECORD_SUFFIX),
+			                      conditional=True)
+
+		# e.g. no recording (also a number too long for a file name)
+		except OSError as error:
+			if error.errno not in (errno.ENOENT, errno.ENOTDIR,
+			                       errno.EISDIR, errno.ENAMETOOLONG):
+				raise
+
+		else:
+			# werkzeug only sends it on answers to a Range request
+			response.accept_ranges = "bytes"
+			return response
+
+		return self.reply ("message.html",
+		                   "Unter der Nummer %s gibt es keine Aufnahme."
+		                   % number, "error", 404,
+		                   back=url_for ("list"), back_title="Zur Liste")
+
+	def recording (self, number):
+		return self.send_recording (number, False)
+
+	def download (self, number):
+		return self.send_recording (number, True)
 
 	# ffmpeg encodes any channels, rate or sample width to mp3, but the
 	# file must be complete; only PCM can be checked with the wave

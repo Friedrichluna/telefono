@@ -1,9 +1,45 @@
 {% extends "base.html" %}
 
+{% block style %}
+		#recording {
+			display: flex;
+			flex-wrap: wrap;
+			align-items: center;
+			gap: .5rem 1rem;
+			margin-bottom: 1.5rem;
+		}
+
+		/* like the label of the form */
+		#recording-label {
+			flex-basis: 100%;
+			font-weight: 500;
+		}
+
+		#recording audio {
+			flex: 1 1 16rem;
+			min-width: 0;
+		}
+
+		#recording svg {
+			width: 1em;
+			height: 1em;
+			margin-right: .25rem;
+			fill: currentColor;
+			vertical-align: -.125em;
+		}
+{% endblock %}
+
 {% block title %}Nummer {{ number }} bearbeiten{% endblock %}
 
 {% block content %}
 	<h2>Nummer {{ number }} bearbeiten</h2>
+{% if recorded %}
+	<div id="recording">
+		<span id="recording-label">Aufnahme:</span>
+		<audio controls preload="none" src="{{ url_for('recording', number=number) }}" aria-labelledby="recording-label"></audio>
+		<a href="{{ url_for('download', number=number) }}" class="button light" download><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M7 1h2v7.6l2.8-2.8 1.4 1.4L8 12.4 2.8 7.2l1.4-1.4L7 8.6zM2 13.5h12V15H2z"/></svg>Herunterladen</a>
+	</div>
+{% endif %}
 	<form method="post" class="stacked">
 		<label for="new_value">Beschreibung:</label>
 		<input type="text" id="new_value" name="new_value" value="{{ value }}" maxlength="{{ description_max }}" required autofocus>
