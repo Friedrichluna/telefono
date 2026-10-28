@@ -46,6 +46,23 @@ def too_long_message (name:str, text:str, max_bytes:int):
 	       "(Umlaute zählen doppelt)." % (name, size, max_bytes)
 
 
+INVALID_NUMBER = "Ungültige Nummer, bitte nur Ziffern (0-9) eingeben."
+
+# numbers stay digit strings like on the phone, where dialing 0, 0, 7
+# is a different number than 7 (recording007.wav), so no int ();
+# None if the text is empty or has anything but the digits 0-9
+# (str.isdecimal would also accept other unicode digits)
+def parse_number (text:str):
+	if not text:
+		return None
+
+	try:
+		return Number (text)
+
+	except ValueError:
+		return None
+
+
 # like Recorder.save: the file only becomes visible once it is complete
 # and on the disk, an existing file is never replaced (FileExistsError)
 def save_file (stream, filename:str):
@@ -84,7 +101,7 @@ class TelefonoWebApp (Flask):
 
 		self.add_url_rule ("/", "home", self.home, methods=["POST", "GET"])
 		self.add_url_rule ("/list", "list", self.list, methods=["POST", "GET"])
-		self.add_url_rule ("/edit/<int:index>", "edit_value", self.edit_value, methods=["GET", "POST"])
+		self.add_url_rule ("/edit/<number>", "edit_value", self.edit_value, methods=["GET", "POST"])
 		self.add_url_rule ("/say", "say", self.say, methods=["GET", "POST"])
 		self.add_url_rule ("/upload", "upload_page", self.upload_page)
 		self.add_url_rule ("/upload", "upload_file", self.upload_file, methods=["POST"])
@@ -148,12 +165,12 @@ class TelefonoWebApp (Flask):
 			requested_number = request.form["nm"]
 			print(requested_number)
 
-			# ignore malicious number
-			if not requested_number.isdecimal ():
-				return render_template ("index.html")
+			number = parse_number (requested_number)
+			if None is number:
+				return render_template ("index.html",
+				                        message=INVALID_NUMBER,
+				                        message_type="error"), 400
 
-			recording = int (requested_number)
-			number = Number.from_int (recording)
 			message, message_type = self.ipc.queue_call (number)
 
 			return render_template("index.html",
@@ -169,12 +186,12 @@ class TelefonoWebApp (Flask):
 			# Get the selected button value from the frontend
 			requested_number = request.form["selected_value"]
 
-			# ignore malicious number
-			if not requested_number.isdecimal ():
-				return render_template("index.html")
+			number = parse_number (requested_number)
+			if None is number:
+				return render_template ("index.html",
+				                        message=INVALID_NUMBER,
+				                        message_type="error"), 400
 
-			recording = int (requested_number)
-			number = Number.from_int (recording)
 			message, message_type = self.ipc.queue_call (number)
 
 		return render_template("list.html",
@@ -182,8 +199,12 @@ class TelefonoWebApp (Flask):
 		                       message=message,
 		                       message_type=message_type)
 
-	def edit_value(self, index):
-		number = Number.from_int (index)
+	def edit_value(self, number):
+		number = parse_number (number)
+		if None is number:
+			return render_template ("index.html",
+			                        message=INVALID_NUMBER,
+			                        message_type="error"), 404
 
 		if request.method == "POST":
 			new_value = request.form["new_value"]
@@ -277,16 +298,21 @@ class TelefonoWebApp (Flask):
 		uploaded_file = request.files["file"]
 		requested_number = request.form["requestedNumber"]
 
-		if (not uploaded_file.filename) or (not requested_number):
+		if not uploaded_file.filename:
 			return redirect ("/upload")
 
-		if not requested_number.isdecimal ():
-			return render_template("upload.html",
-				message="Keine Nummer angegeben!",
-				message_type="error")
+		if not requested_number:
+			return render_template ("upload.html",
+			                        diskSpace=getFreeDiskSpace (),
+			                        message="Keine Nummer angegeben!",
+			                        message_type="error"), 400
 
-		requested_number = int(requested_number)
-		number = Number.from_int (requested_number)
+		number = parse_number (requested_number)
+		if None is number:
+			return render_template ("upload.html",
+			                        diskSpace=getFreeDiskSpace (),
+			                        message=INVALID_NUMBER,
+			                        message_type="error"), 400
 
 		if not self.ipc.is_free (number):
 			return render_template("upload.html",
@@ -305,6 +331,7 @@ class TelefonoWebApp (Flask):
 			                        message=message,
 			                        message_type="error"), 400
 
+		# same name as Subscriber.register_file, e.g. recording007.wav
 		file_path = UPLOAD_DIR + "/" + RECORD_PREFIX + str(number) + RECORD_SUFFIX
 		try:
 			save_file (uploaded_file.stream, file_path)

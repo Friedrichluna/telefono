@@ -435,13 +435,13 @@ class IPC_Client (IPC):
 		answer, _ = self._deserialize_answer (data)
 
 		if IPC_ANSWER.OK == answer:
-			return "Anruf %d abgesetzt" % number, "success"
+			return "Anruf %s abgesetzt" % number, "success"
 
 		elif IPC_ANSWER.ERROR == answer:
 			return "Ein Fehler ist aufgetreten.", "error"
 
 		elif IPC_ANSWER.NO_NUMBER == answer:
-			return "Die Nummer %d ist nicht vergeben." \
+			return "Die Nummer %s ist nicht vergeben." \
 			           % number, \
 			       "error"
 
