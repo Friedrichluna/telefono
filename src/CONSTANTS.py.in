@@ -10,7 +10,9 @@ DATA_DIR = "@pkgdatadir@"
 
 RECORD_DIR = "@pkglocalstatedir@"
 RECORD_PREFIX = "recording"
-RECORD_SUFFIX = ".wav"
+RECORD_SUFFIX = ".mp3"
+# recordings of older versions, converted to RECORD_SUFFIX at startup
+LEGACY_RECORD_SUFFIX = ".wav"
 
 RING_FILE = DATA_DIR + "/ring.wav"
 STARTUP_FILE = DATA_DIR + "/startup.wav"
@@ -22,24 +24,29 @@ BACKUP_EXT = ".bak"
 UPLOAD_DIR = RECORD_DIR
 
 # largest accepted request (HTTP 413 above), uploads are kept in /tmp
-# (tmpfs, i.e. RAM) until they are saved: a recording made on the
-# phone is at most 21 MB (RECORD_TIME_MAX: 120 s, 44.1 kHz, stereo,
-# 16 bit), the largest existing one 39 MB (3:24 min, 48 kHz stereo),
-# 50 MiB are about 4:30 min of 48 kHz stereo
+# (tmpfs, i.e. RAM) until they are saved: 50 MiB are about 50 min of
+# 128 kbit/s mp3 or 4:30 min of 48 kHz stereo wav
 UPLOAD_MAX_SIZE = 50 * 1024 * 1024
 
 # frames read at once while checking an uploaded wav file
 UPLOAD_CHECK_FRAMES = 4096
 
-# uploaded mp3 files are converted to PCM wav (same channels and rate),
-# the output file is appended; 16 bit wav is about 11 times larger than
-# a 128 kbit/s mp3 (50 MiB mp3: about 55 min, 550 MiB wav)
-UPLOAD_CONVERT_CMD = ("ffmpeg", "-hide_banner", "-loglevel", "error",
-                      "-i", "pipe:0",
-                      "-map", "0:a:0", "-map_metadata", "-1",
-                      "-c:a", "pcm_s16le", "-f", "wav", "-y")
-# a 4 min mp3 takes about 3.5 s on the Pi Zero 2W, 50 MiB about 45 s
-UPLOAD_CONVERT_TIMEOUT = 180
+# all recordings are mp3: uploaded and old wav files are encoded with
+# MP3_ENCODE_CMD (input file, output file appended); ffmpeg picks the
+# nearest rate and channel layout mp3 supports (mono or stereo, at most
+# 48 kHz), VBR -q:a 2 is about 190 kbit/s for stereo, 1/7 of 16 bit wav
+MP3_ENCODE_OPTIONS = ("-map", "0:a:0", "-map_metadata", "-1",
+                      "-c:a", "libmp3lame", "-q:a", "2", "-f", "mp3", "-y")
+MP3_ENCODE_CMD = lambda source: ("ffmpeg", "-hide_banner", "-loglevel", "error",
+                                 "-i", source, *MP3_ENCODE_OPTIONS)
+# a 3:24 min wav takes about 24 s on the Pi Zero 2W, 50 MiB about 30 s
+MP3_ENCODE_TIMEOUT = 300
+
+# checks an mp3 file (appended) without decoding it, counts the frames
+MP3_PROBE_CMD = ("ffprobe", "-v", "error", "-select_streams", "a:0",
+                 "-count_packets", "-of", "json",
+                 "-show_entries", "format=format_name:stream=codec_name,nb_read_packets")
+MP3_PROBE_TIMEOUT = 60
 
 WEBAPP_EXEC = ("python3", "-m", "telefono.webapp")
 
@@ -205,3 +212,16 @@ BUTTON_DELAY = 0.01
 RECORD_DELAY = 0.1
 RECORD_TIME_MIN = 2 / RECORD_DELAY
 RECORD_TIME_MAX = 120 / RECORD_DELAY
+
+# recordings are encoded while they are made: the raw 16 bit samples
+# go through a pipe into ffmpeg, which writes the mp3 (appended)
+RECORD_ENCODE_CMD = lambda channels, rate: \
+                    ("ffmpeg", "-hide_banner", "-loglevel", "error",
+                     "-f", "s16le", "-ac", str (channels), "-ar", str (rate),
+                     "-i", "pipe:0", *MP3_ENCODE_OPTIONS)
+# the pipe buffers the first seconds while ffmpeg starts (about 0.5 s),
+# 1 MiB (the default maximum) are 6 s of 44.1 kHz stereo
+RECORD_PIPE_SIZE = 1024 * 1024
+# ffmpeg is about 8 times faster than real time, so it is done
+# soon after the input ends
+RECORD_ENCODE_TIMEOUT = 30

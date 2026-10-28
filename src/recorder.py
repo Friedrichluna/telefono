@@ -2,18 +2,23 @@
 # -*- coding: utf-8 -*-
 
 import enum
+import fcntl
 import logging
 import os
+import subprocess
 import time
 
 import linkat
 import pyaudio
-import wave
 
 from .CONSTANTS import RECORD_DELAY
 from .CONSTANTS import RECORD_TIME_MIN
 from .CONSTANTS import RECORD_TIME_MAX
+from .CONSTANTS import RECORD_ENCODE_CMD
+from .CONSTANTS import RECORD_ENCODE_TIMEOUT
+from .CONSTANTS import RECORD_PIPE_SIZE
 
+from .audio import fd_path
 from .network import sync_dir
 
 class RECORDER_RESULT (enum.IntEnum):
@@ -55,28 +60,82 @@ class Recorder ():
 		                   os.O_TMPFILE | os.O_WRONLY,
 		                   mode=0o600)
 
-		# keep the file object, wave does not close files it
-		# did not open, so self.fd stays valid after wave is done
 		self.file = os.fdopen (self.fd, "wb")
-		self.wavefile = wave.open (self.file, "w")
-		self.wavefile.setnchannels (channels)
-		self.wavefile.setsampwidth (self._pa.get_sample_size (pyaudio.paInt16))
-		self.wavefile.setframerate (rate)
+
+		# ffmpeg encodes the samples to mp3 while recording, so
+		# nobody waits for it afterwards; it writes into the
+		# temporary file (errors go to the journal)
+		self.log.debug ("starting encoder")
+		self.encoder = subprocess.Popen ((*RECORD_ENCODE_CMD (channels, rate),
+		                                  fd_path (self.file)),
+		                                 stdin=subprocess.PIPE,
+		                                 stdout=subprocess.DEVNULL,
+		                                 pass_fds=(self.fd, ))
+
+		# the callback must not block while ffmpeg starts
+		fcntl.fcntl (self.encoder.stdin, fcntl.F_SETPIPE_SZ,
+		             RECORD_PIPE_SIZE)
 		return
 
 	def __on_data (self, in_data, frame_count, time_info, status):
-		self.wavefile.writeframes (in_data)
+		try:
+			self.encoder.stdin.write (in_data)
+
+		# ffmpeg is gone (BrokenPipeError) or already finished
+		except (OSError, ValueError) as error:
+			self.log.error ("encoder takes no more data: %s", error)
+			return None, pyaudio.paAbort
+
 		return None, pyaudio.paContinue
+
+	# end of input, ffmpeg completes the mp3
+	def __finish_encoder (self) -> bool:
+		try:
+			self.encoder.stdin.close ()
+
+		except OSError as error:
+			self.log.error ("encoder takes no more data: %s", error)
+
+		try:
+			returncode = self.encoder.wait (RECORD_ENCODE_TIMEOUT)
+
+		except subprocess.TimeoutExpired:
+			self.log.error ("encoder did not finish within %d s",
+			                RECORD_ENCODE_TIMEOUT)
+			self.__kill_encoder ()
+			return False
+
+		if 0 != returncode:
+			self.log.error ("encoder failed (%d)", returncode)
+			return False
+
+		return True
+
+	def __kill_encoder (self):
+		if None is self.encoder.poll ():
+			self.encoder.kill ()
+			self.encoder.wait ()
+
+		try:
+			self.encoder.stdin.close ()
+
+		# unwritten data in the buffer
+		except OSError:
+			pass
+
+		return
 
 	def save (self):
 		self.log.debug ("saving recording file")
 
 		# finish the file before it becomes visible: stop the
-		# input so nothing is written after the fsync, let wave
-		# finish the header and make sure everything is on the
+		# input so nothing is written after the fsync, let ffmpeg
+		# finish the mp3 and make sure everything is on the
 		# disk (power loss)
 		self._stream.stop_stream ()
-		self.wavefile.close ()
+		if not self.__finish_encoder ():
+			return False
+
 		os.fsync (self.fd)
 
 		# atomically link file
@@ -107,7 +166,9 @@ class Recorder ():
 
 		self._stream.close ()
 		self._pa.terminate ()
-		self.wavefile.close ()
+
+		# not saved (aborted, too short, error): discard it all
+		self.__kill_encoder ()
 		self.file.close ()
 		return False
 

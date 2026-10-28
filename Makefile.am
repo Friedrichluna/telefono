@@ -3,6 +3,7 @@
 pkgpython_PYTHON =
 pkgpython_PYTHON += src/__init__.py
 pkgpython_PYTHON += src/__main__.py
+pkgpython_PYTHON += src/audio.py
 pkgpython_PYTHON += src/button.py
 pkgpython_PYTHON += src/dial.py
 pkgpython_PYTHON += src/event_queue.py

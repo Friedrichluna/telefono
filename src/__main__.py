@@ -26,6 +26,7 @@ from .CONSTANTS import MENU_DELAY
 from .CONSTANTS import OFF_HOOK_DELAY
 from .CONSTANTS import SHUTDOWN_BUTTON_DELAY
 
+from .audio import convert_legacy_recordings
 from .ipc import IPC_Server
 from .player import Player
 
@@ -201,6 +202,9 @@ def main ():
 	random.seed ()
 
 	ipc = IPC_Server ()
+
+	# older versions recorded wav, all recordings are mp3 now
+	convert_legacy_recordings ()
 
 	# initialize recording data
 	network = Network ()

@@ -1,0 +1,190 @@
+#!/usr/bin/python3
+# -*- coding: utf-8 -*-
+
+import concurrent.futures
+import errno
+import json
+import logging
+import os
+import subprocess
+
+import linkat
+
+from .CONSTANTS import RECORD_DIR
+from .CONSTANTS import RECORD_PREFIX
+from .CONSTANTS import RECORD_SUFFIX
+from .CONSTANTS import LEGACY_RECORD_SUFFIX
+
+from .CONSTANTS import MP3_ENCODE_CMD
+from .CONSTANTS import MP3_ENCODE_TIMEOUT
+from .CONSTANTS import MP3_PROBE_CMD
+from .CONSTANTS import MP3_PROBE_TIMEOUT
+
+from .network import sync_dir
+
+
+log = logging.getLogger ("Audio")
+
+
+# the file can not be encoded or is no usable mp3 file
+class EncodeError (Exception):
+	pass
+
+
+# a path other processes can open the file f through
+# (also works for an unlinked O_TMPFILE)
+def fd_path (f) -> str:
+	return "/proc/self/fd/%d" % f.fileno ()
+
+
+def check_result (result, what:str):
+	if 0 == result.returncode:
+		return
+
+	errors = result.stderr.decode (errors="replace").strip ()
+
+	# e.g. the SD card is full, not the file's fault
+	if "No space left on device" in errors:
+		raise OSError (errno.ENOSPC, os.strerror (errno.ENOSPC))
+
+	raise EncodeError ("%s failed (%d): %s"
+	                   % (what, result.returncode, errors))
+
+
+# ffmpeg writes the mp3 into the file f, opened again through /proc,
+# so it can seek back and write the VBR header; source is a path,
+# or "pipe:0" to read stdin (which must be a real file or a pipe)
+def encode_mp3 (source:str, f, stdin=subprocess.DEVNULL,
+                timeout:int=MP3_ENCODE_TIMEOUT):
+	try:
+		result = subprocess.run ((*MP3_ENCODE_CMD (source), fd_path (f)),
+		                         stdin=stdin,
+		                         stdout=subprocess.DEVNULL,
+		                         stderr=subprocess.PIPE,
+		                         pass_fds=(f.fileno (), ),
+		                         timeout=timeout)
+
+	except subprocess.TimeoutExpired:
+		raise EncodeError ("encoding took more than %d s" % timeout)
+
+	check_result (result, "encoding")
+	return
+
+
+# checks that the file f is mp3 and has audio frames (ffplay plays
+# anything, but all recordings are mp3), returns the number of frames
+def probe_mp3 (f) -> int:
+	f.flush ()
+
+	try:
+		result = subprocess.run ((*MP3_PROBE_CMD, fd_path (f)),
+		                         stdin=subprocess.DEVNULL,
+		                         capture_output=True,
+		                         pass_fds=(f.fileno (), ),
+		                         timeout=MP3_PROBE_TIMEOUT)
+
+	except subprocess.TimeoutExpired:
+		raise EncodeError ("checking took more than %d s"
+		                   % MP3_PROBE_TIMEOUT)
+
+	check_result (result, "checking")
+
+	try:
+		info = json.loads (result.stdout)
+		format_name = info["format"]["format_name"]
+		stream = info["streams"][0]
+		codec_name = stream["codec_name"]
+		frames = int (stream["nb_read_packets"])
+
+	except (ValueError, KeyError, IndexError) as error:
+		raise EncodeError ("no audio stream: %r" % error)
+
+	if "mp3" != format_name or "mp3" != codec_name:
+		raise EncodeError ("no mp3 file: %s, %s"
+		                   % (format_name, codec_name))
+
+	if 0 == frames:
+		raise EncodeError ("no audio frames")
+
+	return frames
+
+
+# like Recorder.save: the file only becomes visible once it is complete
+# and on the disk, an existing file is never replaced (FileExistsError);
+# write (f) fills the file, it may raise (e.g. InvalidUpload) to discard it
+def save_file (filename:str, write):
+	directory = os.path.dirname (filename)
+
+	# create temporary file, closing it without
+	# linking it discards it, so errors leave nothing behind
+	# (read and write: a converted file is checked before it is linked)
+	fd = os.open (directory, os.O_TMPFILE | os.O_RDWR, mode=0o600)
+
+	with os.fdopen (fd, "w+b") as f:
+		write (f)
+		f.flush ()
+
+		# make sure the data is on the disk before the
+		# file becomes visible (power loss)
+		os.fsync (fd)
+
+		# atomically link file
+		linkat.link_at (linkat.AT_FDCWD, b"/proc/self/fd/%d" % fd,
+		                linkat.AT_FDCWD, filename.encode (),
+		                linkat.AT_SYMLINK_FOLLOW)
+
+	# make the link durable
+	sync_dir (directory)
+	return
+
+
+def convert_legacy_recording (path:str) -> bool:
+	target = path[: -len (LEGACY_RECORD_SUFFIX)] + RECORD_SUFFIX
+
+	def write (f):
+		encode_mp3 (path, f)
+		probe_mp3 (f)
+
+	try:
+		# the mp3 is only linked once it is complete, so this is
+		# a conversion that stopped before the old file was removed
+		if os.path.exists (target):
+			log.warning ("%s already exists, removing %s",
+			             target, path)
+		else:
+			save_file (target, write)
+
+		os.unlink (path)
+		sync_dir (os.path.dirname (path))
+
+	except (EncodeError, OSError) as error:
+		log.error ("converting %s failed, it is not used: %s",
+		           path, error)
+		return False
+
+	log.info ("converted %s -> %s", path, target)
+	return True
+
+# recordings of older versions (recording<number>.wav) are converted to
+# mp3, the old file is removed afterwards; one ffmpeg per CPU core
+def convert_legacy_recordings (directory:str=RECORD_DIR) -> int:
+	paths = []
+	for file in sorted (os.listdir (directory)):
+		path = os.path.join (directory, file)
+
+		if os.path.isfile (path) \
+		and file.startswith (RECORD_PREFIX) \
+		and file.endswith (LEGACY_RECORD_SUFFIX):
+			paths.append (path)
+
+	if not paths:
+		return 0
+
+	log.info ("converting %d recordings from %s to %s",
+	          len (paths), LEGACY_RECORD_SUFFIX, RECORD_SUFFIX)
+
+	with concurrent.futures.ThreadPoolExecutor (os.cpu_count ()) as pool:
+		converted = sum (pool.map (convert_legacy_recording, paths))
+
+	log.info ("converted %d of %d recordings", converted, len (paths))
+	return converted
