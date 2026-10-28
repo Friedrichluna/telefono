@@ -407,7 +407,7 @@ class IPC_Client (IPC):
 		answer, _ = self._deserialize_answer (data)
 
 		if IPC_ANSWER.OK == answer:
-			return "Beschreibung ge&auml;ndert.", "success"
+			return "Beschreibung geändert.", "success"
 
 		elif IPC_ANSWER.ERROR == answer:
 			return "Ein Fehler ist aufgetreten.", "error"

@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+
+{% block title %}Hinweis{% endblock %}
+
+{% block content %}
+{% if back %}
+	<p><a href="{{ back }}" class="button light">{{ back_title }}</a></p>
+{% endif %}
+{% endblock %}

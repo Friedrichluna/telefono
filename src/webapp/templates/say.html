@@ -1,23 +1,12 @@
 {% extends "base.html" %}
 
-{% block style %}
+{% block title %}Text ansagen{% endblock %}
 
-		form {
-			padding-left: 15px;
-		}
-		form > * {
-			display: block;
-			margin-top: 0;
-			margin-bottom: 1rem;
-		}
-{% endblock %}
-
-{% block title %} Telefono Home Page {% endblock %}
-
-{% block content%}
-	<form method="post" enctype="multipart/form-data">
-		<label for="text">anzusagender Text:</label>
-		<textarea id="text" name="text" maxlength="{{ text_max }}">{{ text }}</textarea>
+{% block content %}
+	<h2>Text ansagen</h2>
+	<form method="post" class="stacked" data-async data-reset>
+		<label for="text">Anzusagender Text:</label>
+		<textarea id="text" name="text" maxlength="{{ text_max }}" required autofocus>{{ text }}</textarea>
 		<input type="submit" class="button blue" value="Ansagen">
 	</form>
 {% endblock %}

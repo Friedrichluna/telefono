@@ -1,23 +1,21 @@
 {% extends "base.html" %}
 
 {% block style %}
-		form {
-			padding-left: 15px;
-		}
-
-		form > * {
-			display: block;
-			margin-top: 0;
-			margin-bottom: 1rem;
+		#number {
+			max-width: 12rem;
+			font-size: 1.5rem;
+			letter-spacing: .1em;
 		}
 {% endblock %}
 
-{% block title %} Telefono Home Page {% endblock %}
+{% block title %}Anrufen{% endblock %}
 
-{% block content%}
-	<form method="post">
-		<label for="number">Nummer die anrufen soll:</label>
-		<input type="text" inputmode="numeric" pattern="[0-9]+" title="nur Ziffern (0-9)" id="number" name="nm" />
-		<input type="submit" class="button blue" value="let it call"/>
+{% block content %}
+	<h2>Anrufen lassen</h2>
+	<form method="post" class="stacked" data-async>
+		<label for="number">Nummer, die anrufen soll:</label>
+		<input type="text" inputmode="numeric" pattern="[0-9]+" title="nur Ziffern (0-9)" id="number" name="nm" value="{{ number }}" autocomplete="off" required autofocus>
+		<input type="submit" class="button blue" value="Anrufen">
+		<p class="hint">Das Telefon klingelt und spielt die Aufnahme dieser Nummer ab. Alle Nummern stehen in der <a href="{{ url_for('list') }}">Liste</a>.</p>
 	</form>
 {% endblock %}

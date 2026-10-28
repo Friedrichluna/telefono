@@ -6,7 +6,7 @@ import os
 import shutil
 import wave
 
-from flask import Flask, redirect, render_template, request
+from flask import Flask, flash, jsonify, redirect, render_template, request, url_for
 
 import linkat
 import psutil
@@ -90,6 +90,12 @@ def save_file (stream, filename:str):
 	return
 
 
+# the page's own script sends forms in the background
+# (data-async in the templates) and wants a JSON answer
+def is_async ():
+	return "XMLHttpRequest" == request.headers.get ("X-Requested-With")
+
+
 class TelefonoWebApp (Flask):
 	def __init__ (self, ipc):
 		super ().__init__ (__name__, template_folder=FLASK_TEMPLATES, static_folder=FLASK_STATIC)
@@ -98,6 +104,10 @@ class TelefonoWebApp (Flask):
 
 		# larger requests are refused before they are read
 		self.config["MAX_CONTENT_LENGTH"] = UPLOAD_MAX_SIZE
+
+		# only signs the flashed messages (session cookie),
+		# so a new key on every start does not matter
+		self.secret_key = os.urandom (16)
 
 		self.add_url_rule ("/", "home", self.home, methods=["POST", "GET"])
 		self.add_url_rule ("/list", "list", self.list, methods=["POST", "GET"])
@@ -118,6 +128,31 @@ class TelefonoWebApp (Flask):
 		        upload_max=UPLOAD_MAX_SIZE // 2**20)
 		return
 
+	# answer that keeps the form as it is (e.g. an error): JSON for
+	# the page's script, otherwise the page again with the input
+	def reply (self, template:str, message:str, message_type:str,
+	           status:int=200, **context):
+		if is_async ():
+			return jsonify (message=message, type=message_type,
+			                **context), status
+
+		return render_template (template,
+		                        message=message,
+		                        message_type=message_type,
+		                        **context), status
+
+	# answer after the request was done: JSON for the page's script,
+	# otherwise redirect, so reloading the page does not send the
+	# form (e.g. the call) again
+	def finish (self, url:str, message:str, message_type:str,
+	            **context):
+		if is_async ():
+			return jsonify (message=message, type=message_type,
+			                **context)
+
+		flash (message, message_type)
+		return redirect (url)
+
 	# the main process did not answer, e.g. while a recording plays
 	def busy (self, error):
 		self.logger.warning ("telefono busy: %s %s",
@@ -128,9 +163,15 @@ class TelefonoWebApp (Flask):
 		else:
 			message = "Telefon beschäftigt, bitte später nochmal versuchen."
 
-		return render_template ("index.html",
-		                        message=message,
-		                        message_type="warning"), 503
+		# only offer to send a GET again, a queued request
+		# would be done twice
+		if "GET" == request.method:
+			back, back_title = request.full_path, "Nochmal versuchen"
+		else:
+			back, back_title = request.path, "Zurück"
+
+		return self.reply ("message.html", message, "warning", 503,
+		                   back=back, back_title=back_title)
 
 	# input that does not fit into an IPC message (e.g. a very long
 	# number), the description and text are checked before sending
@@ -138,9 +179,8 @@ class TelefonoWebApp (Flask):
 		self.logger.warning ("input too long: %s %s: %s",
 		                     request.method, request.path, error)
 
-		return render_template ("index.html",
-		                        message="Eingabe zu lang.",
-		                        message_type="error"), 400
+		return self.reply ("message.html", "Eingabe zu lang.", "error",
+		                   400, back=request.path, back_title="Zurück")
 
 	# request larger than UPLOAD_MAX_SIZE (or a form field larger
 	# than Flask's MAX_FORM_MEMORY_SIZE)
@@ -150,61 +190,59 @@ class TelefonoWebApp (Flask):
 		                     request.content_length)
 
 		if "upload_file" != request.endpoint:
-			return render_template ("index.html",
-			                        message="Eingabe zu groß.",
-			                        message_type="error"), 413
+			return self.reply ("message.html", "Eingabe zu groß.",
+			                   "error", 413, back=request.path,
+			                   back_title="Zurück")
 
-		return render_template ("upload.html",
-		                        diskSpace=getFreeDiskSpace (),
-		                        message="Datei zu groß, höchstens %d MiB erlaubt."
-		                                % (UPLOAD_MAX_SIZE // 2**20),
-		                        message_type="error"), 413
+		return self.upload_reply ("Datei zu groß, höchstens %d MiB erlaubt."
+		                          % (UPLOAD_MAX_SIZE // 2**20),
+		                          "error", 413)
 
 	def home(self):
 		if request.method == "POST":
 			requested_number = request.form["nm"]
-			print(requested_number)
 
 			number = parse_number (requested_number)
 			if None is number:
-				return render_template ("index.html",
-				                        message=INVALID_NUMBER,
-				                        message_type="error"), 400
+				return self.reply ("index.html", INVALID_NUMBER,
+				                   "error", 400,
+				                   number=requested_number)
 
 			message, message_type = self.ipc.queue_call (number)
+			if "success" != message_type:
+				return self.reply ("index.html", message,
+				                   message_type,
+				                   number=requested_number)
 
-			return render_template("index.html",
-			                       message=message,
-			                       message_type=message_type)
+			return self.finish (url_for ("home"), message, message_type)
 		else:
 			return render_template("index.html")
 
 	def list(self):
-		message, message_type = None, None
-
 		if request.method == "POST":
 			# Get the selected button value from the frontend
 			requested_number = request.form["selected_value"]
 
 			number = parse_number (requested_number)
 			if None is number:
-				return render_template ("index.html",
-				                        message=INVALID_NUMBER,
-				                        message_type="error"), 400
+				return self.finish (url_for ("list"),
+				                    INVALID_NUMBER, "error")
 
 			message, message_type = self.ipc.queue_call (number)
 
+			# back to the number that was called
+			return self.finish (url_for ("list") + "#n%s" % number,
+			                    message, message_type)
+
 		return render_template("list.html",
-		                       network_list=self.ipc.get_list (),
-		                       message=message,
-		                       message_type=message_type)
+		                       network_list=self.ipc.get_list ())
 
 	def edit_value(self, number):
 		number = parse_number (number)
 		if None is number:
-			return render_template ("index.html",
-			                        message=INVALID_NUMBER,
-			                        message_type="error"), 404
+			return self.reply ("message.html", INVALID_NUMBER,
+			                   "error", 404, back=url_for ("list"),
+			                   back_title="Zur Liste")
 
 		if request.method == "POST":
 			new_value = request.form["new_value"]
@@ -212,24 +250,26 @@ class TelefonoWebApp (Flask):
 			message = too_long_message ("Beschreibung", new_value,
 			                            IPC_DESCRIPTION_MAX_BYTES)
 			if message:
-				return render_template ("edit.html",
-				                        value=new_value,
-				                        message=message,
-				                        message_type="error"), 400
+				return self.reply ("edit.html", message,
+				                   "error", 400, number=number,
+				                   value=new_value)
 
 			message, message_type = \
 			        self.ipc.set_description (number, new_value)
 
 			# e.g. the main process refused it
 			if "error" == message_type:
-				return render_template ("edit.html",
-				                        value=new_value,
-				                        message=message,
-				                        message_type=message_type)
+				return self.reply ("edit.html", message,
+				                   message_type, number=number,
+				                   value=new_value)
 
-			return redirect("/list")
+			# back to the edited number
+			return self.finish (url_for ("list") + "#n%s" % number,
+			                    "Beschreibung von %s geändert." % number,
+			                    message_type)
 
 		return render_template("edit.html",
+		                       number=number,
 		                       value=self.ipc.get_description (number))
 
 	def say (self):
@@ -239,20 +279,17 @@ class TelefonoWebApp (Flask):
 			message = too_long_message ("Text", text,
 			                            IPC_TTS_MESSAGE_MAX_BYTES)
 			if message:
-				return render_template ("say.html",
-				                        text=text,
-				                        message=message,
-				                        message_type="error"), 400
+				return self.reply ("say.html", message, "error",
+				                   400, text=text)
 
 			message, message_type = self.ipc.queue_message (text)
-		else:
-			message, message_type = None, None
+			if "success" != message_type:
+				return self.reply ("say.html", message,
+				                   message_type, text=text)
 
-		return render_template ("say.html",
-		                        message=message,
-		                        message_type=message_type)
+			return self.finish (url_for ("say"), message, message_type)
 
-
+		return render_template ("say.html")
 	# the recordings are played by ffplay, which does not care about
 	# channels, rate or sample width, but the file must be complete;
 	# only PCM can be checked with the wave module, so that is required
@@ -289,6 +326,15 @@ class TelefonoWebApp (Flask):
 
 		return None
 
+	# the upload page again, with the number that was entered
+	# (not read from request.form here: too_large can not parse it)
+	def upload_reply (self, message:str, message_type:str,
+	                  status:int=200, number:str=""):
+		return self.reply ("upload.html", message, message_type,
+		                   status,
+		                   diskSpace=getFreeDiskSpace (),
+		                   number=number)
+
 	def upload_page(self):
 		diskSpace = getFreeDiskSpace()
 		return render_template("upload.html", diskSpace = diskSpace)
@@ -299,37 +345,34 @@ class TelefonoWebApp (Flask):
 		requested_number = request.form["requestedNumber"]
 
 		if not uploaded_file.filename:
-			return redirect ("/upload")
+			return self.upload_reply ("Keine Datei ausgewählt!",
+			                          "error", 400,
+			                          number=requested_number)
 
 		if not requested_number:
-			return render_template ("upload.html",
-			                        diskSpace=getFreeDiskSpace (),
-			                        message="Keine Nummer angegeben!",
-			                        message_type="error"), 400
+			return self.upload_reply ("Keine Nummer angegeben!",
+			                          "error", 400,
+			                          number=requested_number)
 
 		number = parse_number (requested_number)
 		if None is number:
-			return render_template ("upload.html",
-			                        diskSpace=getFreeDiskSpace (),
-			                        message=INVALID_NUMBER,
-			                        message_type="error"), 400
+			return self.upload_reply (INVALID_NUMBER, "error", 400,
+			                          number=requested_number)
 
 		if not self.ipc.is_free (number):
-			return render_template("upload.html",
-				message="Nummer %s existiert bereits!" % number,
-				message_type="error")
+			return self.upload_reply ("Nummer %s existiert bereits!"
+			                          % number, "error", 409,
+			                          number=requested_number)
 
-		if not uploaded_file.filename.endswith(".wav"):
-			return render_template("upload.html",
-				message="Bitte nur .wav hochladen!",
-				message_type="error")
+		if not uploaded_file.filename.lower ().endswith (".wav"):
+			return self.upload_reply ("Bitte nur .wav hochladen!",
+			                          "error", 400,
+			                          number=requested_number)
 
 		message = self.check_wav (uploaded_file.stream)
 		if message:
-			return render_template ("upload.html",
-			                        diskSpace=getFreeDiskSpace (),
-			                        message=message,
-			                        message_type="error"), 400
+			return self.upload_reply (message, "error", 400,
+			                          number=requested_number)
 
 		# same name as Subscriber.register_file, e.g. recording007.wav
 		file_path = UPLOAD_DIR + "/" + RECORD_PREFIX + str(number) + RECORD_SUFFIX
@@ -339,10 +382,9 @@ class TelefonoWebApp (Flask):
 		# a file the main process does not know yet (e.g. copied
 		# there by hand, or a second upload at the same time)
 		except FileExistsError:
-			return render_template ("upload.html",
-			                        diskSpace=getFreeDiskSpace (),
-			                        message="Nummer %s existiert bereits!" % number,
-			                        message_type="error"), 409
+			return self.upload_reply ("Nummer %s existiert bereits!"
+			                          % number, "error", 409,
+			                          number=requested_number)
 
 		# e.g. the SD card is full, nothing was written
 		except OSError as error:
@@ -353,14 +395,13 @@ class TelefonoWebApp (Flask):
 			else:
 				message = "Speichern fehlgeschlagen."
 
-			return render_template ("upload.html",
-			                        diskSpace=getFreeDiskSpace (),
-			                        message=message,
-			                        message_type="error"), 500
+			return self.upload_reply (message, "error", 500,
+			                          number=requested_number)
 
 		self.ipc.upload ()
 
-		print("test")
-		return render_template("upload.html",
-			message="erfolgreich unter %s gespeichert!" % file_path,
-			message_type="success")
+		self.logger.info ("uploaded %s", file_path)
+		return self.finish (url_for ("upload_page"),
+		                    "Aufnahme unter Nummer %s gespeichert." % number,
+		                    "success",
+		                    diskSpace=getFreeDiskSpace ())

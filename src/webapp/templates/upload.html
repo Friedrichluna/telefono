@@ -1,43 +1,60 @@
 {% extends "base.html" %}
 
 {% block style %}
-
-		form {
-			padding-left: 15px;
-		}
-		form > * {
-			display: block;
-			margin-top: 0;
-			margin-bottom: 1rem;
+		#number {
+			max-width: 12rem;
 		}
 
-		p.instruction {
-			font-weight: bolder;
-		}
-
-		label {
-			display: block;
-			margin-bottom: .5rem !important;
-			font-weight: bolder;
-		}
-
-		footer {
-			position: fixed;
-			bottom: 0;
-			margin-bottom: 1rem;
-			padding-left: 15px;
+		progress {
+			width: 100%;
+			height: .75rem;
 		}
 {% endblock %}
 
-{% block title %} Telefono Home Page {% endblock %}
+{% block title %}Upload{% endblock %}
 
-{% block content%}
-	<form method="post" enctype="multipart/form-data">
-		<p class="instruction">Hier kann eine .wav Datei hochgeladen werden (h&ouml;chstens {{upload_max}} MiB)</p>
-		<input type=file name=file accept=".wav,audio/wav">
-		<label for="number">gew&uuml;nschte Nummer:</label>
-		<input type="text" inputmode="numeric" pattern="[0-9]+" title="nur Ziffern (0-9)" id="number" name="requestedNumber">
+{% block content %}
+	<h2>Aufnahme hochladen</h2>
+	<form method="post" enctype="multipart/form-data" class="stacked" data-async data-reset>
+		<label for="file">.wav Datei (höchstens {{ upload_max }} MiB):</label>
+		<input type="file" id="file" name="file" accept=".wav,audio/wav" required>
+		<label for="number">Gewünschte Nummer:</label>
+		<input type="text" inputmode="numeric" pattern="[0-9]+" title="nur Ziffern (0-9)" id="number" name="requestedNumber" value="{{ number }}" autocomplete="off" required>
+		<progress max="1" value="0" hidden></progress>
 		<input type="submit" class="button blue" value="Hochladen">
+		<p class="hint">Freier Speicher: <span id="disk-space">{{ diskSpace }}</span> GiB</p>
 	</form>
-	<footer>Freier Speicher: {{diskSpace}} GiB</footer>
+{% endblock %}
+
+{% block script %}
+<script>
+(function () {
+	"use strict";
+
+	const form = document.querySelector ("form");
+	const file = document.getElementById ("file");
+	const maxSize = {{ upload_max }} * 1024 * 1024;
+
+	// no need to send a file the phone refuses anyway
+	form.addEventListener ("check", function (event) {
+		const selected = file.files[0];
+		if (!selected)
+			return;
+
+		if (!selected.name.toLowerCase ().endsWith (".wav")) {
+			event.preventDefault ();
+			showMessage ("Bitte nur .wav hochladen!", "error");
+		}
+		else if (selected.size > maxSize) {
+			event.preventDefault ();
+			showMessage ("Datei zu groß, höchstens {{ upload_max }} MiB erlaubt.", "error");
+		}
+	});
+
+	form.addEventListener ("answer", function (event) {
+		if (undefined !== event.detail.diskSpace)
+			document.getElementById ("disk-space").textContent = event.detail.diskSpace;
+	});
+}) ();
+</script>
 {% endblock %}

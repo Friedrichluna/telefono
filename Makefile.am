@@ -61,6 +61,7 @@ dist_template_DATA += src/webapp/templates/base.html
 dist_template_DATA += src/webapp/templates/edit.html
 dist_template_DATA += src/webapp/templates/index.html
 dist_template_DATA += src/webapp/templates/list.html
+dist_template_DATA += src/webapp/templates/message.html
 dist_template_DATA += src/webapp/templates/say.html
 dist_template_DATA += src/webapp/templates/upload.html
 

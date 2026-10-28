@@ -1,47 +1,36 @@
 <!DOCTYPE html>
-<html>
+<html lang="de">
 <head>
 	<!-- Required meta tags -->
 	<meta charset="utf-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
 
 	<link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
+
+	<!-- the menu is only collapsed if the script runs -->
+	<script>document.documentElement.classList.add ("js");</script>
 
 	<style>
 		:root {
 			color: #212529;
 			background-color: white;
 
-			--blue: #007bff;
-			--indigo: #6610f2;
-			--purple: #6f42c1;
-			--pink: #e83e8c;
-			--red: #dc3545;
-			--orange: #fd7e14;
-			--yellow: #ffc107;
-			--green: #28a745;
-			--teal: #20c997;
-			--cyan: #17a2b8;
-			--gray: #6c757d;
-			--gray-dark: #343a40;
-
-			--primary: var(--blue);
-			--secondary: var(--gray);
-
-			--success: var(--green);
-			--info: var(--info);
-			--warning: var(--yellow);
-			--danger: var(--red);
+			--primary: #007bff;
+			--primary-hover: #0069d9;
+			--secondary: #6c757d;
+			--secondary-hover: #5a6268;
+			--border: #ced4da;
 			--light: #f8f9fa;
-			--dark: var(--gray-dark);
 
-			--breakpoint-xs: 0;
-			--breakpoint-sm: 576px;
-			--breakpoint-md: 768px;
-			--breakpoint-lg: 992px;
-			--breakpoint-xl: 1200px;
 			--font-family-sans-serif: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans",sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol","Noto Color Emoji";
-			--font-family-monospace: SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;
+		}
+
+		* {
+			box-sizing: border-box;
+		}
+
+		[hidden] {
+			display: none !important;
 		}
 
 		body {
@@ -53,194 +42,268 @@
 			line-height: 1.5;
 		}
 
-		h1 {
-			position: relative;
-			top: 1px;
-			margin: .3125rem 16px .3125rem 0;
-			display: inline;
-			font-size: 1.25rem;
-			font-weight: 400;
-			line-height: 1.5;
+		main {
+			max-width: 720px;
+			margin: 0 auto;
+			padding: 1rem 16px 2rem;
 		}
 
-		h1::before {
+		h1 {
+			margin: 0;
+			font-size: 1.25rem;
+			font-weight: 400;
+			white-space: nowrap;
+		}
+
+		h1 a {
+			color: inherit;
+			text-decoration: none;
+		}
+
+		h1 a::before {
 			margin-right: 5px;
 			content: " ";
 			display: inline-block;
 			width: 30px;
 			height: 24px;
-			background-image: url("/static/favicon.ico");
+			background-image: url("{{ url_for('static', filename='favicon.ico') }}");
 			background-size: 100% 100%;
 			vertical-align: text-top;
 		}
 
-		input {
+		h2 {
+			margin: 0 0 1rem;
+			font-size: 1.5rem;
+			font-weight: 500;
+			line-height: 1.2;
+		}
+
+		/* forms */
+		form.stacked > * {
+			display: block;
+			margin-top: 0;
+			margin-bottom: 1rem;
+		}
+
+		form.stacked > label {
+			margin-bottom: .5rem;
+			font-weight: 500;
+		}
+
+		input, textarea, button {
 			font-family: inherit;
 			font-size: inherit;
 			line-height: inherit;
 		}
 
-		#message {
-			margin: 10px 15px;
-			padding: 10px;
-			border-radius: 3px;
+		input[type="text"], input[type="search"], textarea {
+			width: 100%;
+			padding: .375rem .75rem;
+
+			color: #495057;
+			background-color: white;
+
+			border: 1px solid var(--border);
+			border-radius: .25rem;
+			transition: border-color .15s ease-in-out, box-shadow .15s ease-in-out;
 		}
 
-		#message:target {
-			display:none;
+		input[type="text"]:focus, input[type="search"]:focus, textarea:focus {
+			border-color: #80bdff;
+			outline: 0;
+			box-shadow: 0 0 0 .2rem rgba(0,123,255,.25);
 		}
 
-		#message > a {
-			float: right;
+		textarea {
+			min-height: 8rem;
+			resize: vertical;
+		}
+
+		input[type="file"] {
+			max-width: 100%;
+		}
+
+		.hint {
+			color: var(--secondary);
+			font-size: .875rem;
+		}
+
+		/* messages, shown at the top, also when scrolled down */
+		#messages {
+			position: fixed;
+			z-index: 10;
+			top: .5rem;
+			left: 0;
+			right: 0;
+
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			gap: .5rem;
+			padding: 0 16px;
+
+			pointer-events: none;
+		}
+
+		.message {
+			display: flex;
+			align-items: flex-start;
+			gap: .5rem;
+			width: 100%;
+			max-width: 688px;
+			margin: 0;
+			padding: .625rem .75rem;
+
+			border-radius: .25rem;
+			box-shadow: 0 .25rem .75rem rgba(0,0,0,.15);
+
+			pointer-events: auto;
+			transition: opacity .3s ease, transform .3s ease;
+		}
+
+		.message.hiding {
+			opacity: 0;
+			transform: translateY(-.5rem);
+		}
+
+		.message > span {
+			flex: 1;
+		}
+
+		.message > button {
+			padding: 0 .25rem;
+
 			color: inherit;
-			text-decoration: inherit;
+			background: none;
+			border: 0;
+			opacity: .6;
+			cursor: pointer;
 		}
 
-		#message.info {
+		.message > button:hover {
+			opacity: 1;
+		}
+
+		.message.info {
 			color: #059;
 			background-color: #BEF;
 		}
 
-		#message.info::before {
-		  content: "\1F6C8 ";
+		.message.info::before {
+			content: "\1F6C8";
 		}
 
-		#message.success {
+		.message.success {
 			color: #270;
 			background-color: #DFF2BF;
 		}
 
-		#message.success::before {
-		  content: "\2714 ";
+		.message.success::before {
+			content: "\2714";
 		}
 
-		#message.warning {
+		.message.warning {
 			color: #9F6000;
 			background-color: #FEEFB3;
 		}
 
-		#message.warning::before {
-		  content: "\26A0 ";
+		.message.warning::before {
+			content: "\26A0";
 		}
 
-		#message.error {
+		.message.error {
 			color: #D8000C;
 			background-color: #FFBABA;
 		}
 
-		#message.error::before {
-		  content: "\274C ";
-		}
-
-		[type="submit"] {
-			cursor: pointer;
+		.message.error::before {
+			content: "\274C";
 		}
 
 		/* primary navbar */
 		nav {
-			display: grid;
-			grid-template-columns: repeat(2, auto);
+			display: flex;
+			flex-wrap: wrap;
+			align-items: center;
 			justify-content: space-between;
 			padding: 8px 16px;
-			background-color: #f8f9fa;
+			background-color: var(--light);
 		}
 
-		nav a {
-			display: block;
-			padding: 8px 0;
+		#menu-button {
+			display: none;
+			padding: .25rem .5rem;
 
-			color: rgba(0,0,0,.5);
-			text-decoration: none;
-		}
-
-		nav a.active {
-			color: rgba(0,0,0,.9);
-		}
-
-		nav a:focus:not(.active), nav a:hover:not(.active) {
-			color: rgba(0,0,0,.7);
-		}
-
-		details {
-			display: contents;
-		}
-
-		summary {
-			display: block;
-			width: 1.5em;
-			height: 1.5em;
-			padding: .25rem .75rem;
-
-			border-style: solid;
-			border-width: 1px;
+			background: none;
+			border: 1px solid rgba(0,0,0,.1);
 			border-radius: .25rem;
-			border-color: rgba(0,0,0,.1);
-
-			font-size: 1.25rem;
-			appearance: button;
 			cursor: pointer;
 		}
 
-		details > *:not(summary) {
-			grid-column: 1;
+		#menu-button svg {
+			display: block;
+			width: 1.5em;
+			height: 1.5em;
 		}
 
-		@media not (prefers-reduced-motion:reduce)
-		{
-			@keyframes menu-open {
-				from {
-					max-height: 0;
-				}
+		#menu a {
+			display: inline-block;
+			padding: 8px;
 
-				to {
-					max-height: 200px;
-				}
-			}
-
-			div {
-				overflow: hidden;
-			}
-
-			details[open] > div {
-				animation-name: menu-open;
-				animation-duration: .4375s;
-				animation-timing-function: ease;
-				animation-fill-mode: forwards;
-			}
+			color: rgba(0,0,0,.55);
+			text-decoration: none;
 		}
 
-		@media screen and (min-width: 900px) {
-			summary {
-				display: none;
-			}
+		#menu a.active {
+			color: rgba(0,0,0,.9);
+		}
 
-			nav {
+		#menu a:focus:not(.active), #menu a:hover:not(.active) {
+			color: rgba(0,0,0,.75);
+		}
+
+		@media screen and (max-width: 699px) {
+			.js #menu-button {
 				display: block;
 			}
 
-			nav div {
-				display: contents;
+			#menu {
+				flex-basis: 100%;
 			}
 
-			nav a {
-				display: inline-block;
-				padding: 8px;
+			#menu a {
+				display: block;
+				padding: 8px 0;
 			}
 
-			#menu-details[open] {
-				open: true;
+			.js #menu {
+				display: grid;
+				grid-template-rows: 0fr;
+				visibility: hidden;
+				transition: grid-template-rows .25s ease, visibility .25s;
+			}
+
+			.js nav.open #menu {
+				grid-template-rows: 1fr;
+				visibility: visible;
+			}
+
+			#menu > div {
+				overflow: hidden;
 			}
 		}
 
-		@media screen and (max-width: 899px) {
-			#menu-details {
-				open: false;
+		@media (prefers-reduced-motion: reduce) {
+			* {
+				transition: none !important;
+				animation: none !important;
 			}
 		}
 
 		/* general buttons */
 		.button {
 			display: inline-block;
+			padding: .375rem .75rem;
 
 			text-decoration: none;
 			text-align: center;
@@ -250,80 +313,225 @@
 			color: white;
 
 			border: 1px solid transparent;
-			transition: color .15s ease-in-out,background-color .15s ease-in-out,border-color .15s ease-in-out,box-shadow .15s ease-in-out;
+			border-radius: .25rem;
+			cursor: pointer;
+			transition: color .15s ease-in-out,background-color .15s ease-in-out,border-color .15s ease-in-out,box-shadow .15s ease-in-out,opacity .15s ease-in-out;
+		}
+
+		.button:disabled {
+			opacity: .65;
+			cursor: progress;
 		}
 
 		.button.blue {
 			background-color: var(--primary);
 			border-color: var(--primary);
 		}
-		.button.blue:hover {
-			background-color: #0069d9;
-			border-color: #0062cc;
+		.button.blue:hover:not(:disabled) {
+			background-color: var(--primary-hover);
 		}
-		.button.blue:focus {
-			box-shadow: 0 0 0 .2rem rgba(0,123,255,.25);
-		}
-		.button.blue:active {
-			background-color: #0062cc;
-			border-color: #005cbf;
+		.button.blue:focus-visible {
+			outline: 0;
+			box-shadow: 0 0 0 .2rem rgba(0,123,255,.4);
 		}
 
-		input.button.blue[type=submit] {
-			padding: .375rem .75rem;
-			font-size: 1rem;
-			line-height: 1.5;
-			border-radius: .25rem;
+		.button.gray {
+			background-color: var(--secondary);
+			border-color: var(--secondary);
+		}
+		.button.gray:hover:not(:disabled) {
+			background-color: var(--secondary-hover);
+		}
+		.button.gray:focus-visible {
+			outline: 0;
+			box-shadow: 0 0 0 .2rem rgba(130,138,145,.5);
+		}
+
+		.button.light {
+			color: #212529;
+			background-color: var(--light);
+			border-color: var(--border);
+		}
+		.button.light:hover {
+			background-color: #e2e6ea;
 		}
 {% block style %}
 {% endblock %}
 	</style>
-	<title>{% block title%}{% endblock %}</title>
+	<title>{% block title %}{% endblock %} – Telefono</title>
 </head>
 <body>
+	<div id="messages" aria-live="polite">
+{% for message_type, text in get_flashed_messages (with_categories=true) %}
+		<p class="message {{ message_type }}"><span>{{ text }}</span><button type="button" title="Schließen">&#10006;</button></p>
+{% endfor %}
 {% if message %}
-	<p id="message" class="{{ message_type }} ">{{ message }}
-		<a href="#message">&#10006;</a>
-	</p>
+		<p class="message {{ message_type }}"><span>{{ message }}</span><button type="button" title="Schließen">&#10006;</button></p>
 {% endif %}
-{% if request.endpoint != 'edit_value' %}
+	</div>
 	<nav>
-		<h1>Telefono-Webapp</h1>
-		<details id="menu-details">
-			<summary>
-				<svg viewBox='0 0 30 30' xmlns='http://www.w3.org/2000/svg'>
-					<path stroke='rgba(0, 0, 0, 0.5)' stroke-width='2' stroke-linecap='round' stroke-miterlimit='10' d='M4 7h22M4 15h22M4 23h22'/>
-				</svg>
-			</summary>
+		<h1><a href="{{ url_for('home') }}">Telefono</a></h1>
+		<button type="button" id="menu-button" aria-controls="menu" aria-expanded="false" title="Menü">
+			<svg viewBox="0 0 30 30" xmlns="http://www.w3.org/2000/svg">
+				<path stroke="rgba(0, 0, 0, 0.5)" stroke-width="2" stroke-linecap="round" stroke-miterlimit="10" d="M4 7h22M4 15h22M4 23h22"/>
+			</svg>
+		</button>
+		<div id="menu">
 			<div>
-				<a {% if request.path == url_for('home') %}class="active" {% endif %}href={{ url_for('home') }}>Nummernfeld </a>
-				<a {% if request.path == url_for('list') %}class="active" {% endif %}href={{ url_for('list') }}>Liste</a>
-				<a {% if request.path == url_for('upload_page') %}class="active" {% endif %}href={{ url_for('upload_page') }}>Upload</a>
-				<a {% if request.path == url_for('say') %}class="active" {% endif %}href={{ url_for('say') }}>Text ansagen</a>
+{% set active_page = request.endpoint %}
+{% if active_page == 'edit_value' %}{% set active_page = 'list' %}{% endif %}
+{% if active_page == 'upload_file' %}{% set active_page = 'upload_page' %}{% endif %}
+{% for endpoint, title in [('home', 'Anrufen'), ('list', 'Liste'), ('upload_page', 'Upload'), ('say', 'Text ansagen')] %}
+				<a {% if active_page == endpoint %}class="active" aria-current="page" {% endif %}href="{{ url_for(endpoint) }}">{{ title }}</a>
+{% endfor %}
 			</div>
-		</details>
+		</div>
 	</nav>
-{% endif %}
+	<main>
 	{% block content %}
 	{% endblock %}
-</body>
+	</main>
 <script>
-	document.addEventListener("DOMContentLoaded", function() {
-		const details = document.getElementById("menu-details");
-	    
-		if (window.innerWidth >= 900) {
-		    details.setAttribute("open", true);
-		} else {
-		    details.removeAttribute("open");
-		}
-	    
-		window.addEventListener("resize", function() {
-		    if (window.innerWidth >= 900) {
-			details.setAttribute("open", true);
-		    } else {
-			details.removeAttribute("open");
-		    }
+(function () {
+	"use strict";
+
+	/* menu (only collapsed on small screens, see CSS) */
+	const nav = document.querySelector ("nav");
+	const menuButton = document.getElementById ("menu-button");
+
+	menuButton.addEventListener ("click", function () {
+		const open = nav.classList.toggle ("open");
+		menuButton.setAttribute ("aria-expanded", open);
+	});
+
+	/* messages */
+	const messages = document.getElementById ("messages");
+
+	function hideMessage (message) {
+		if (message.classList.contains ("hiding"))
+			return;
+
+		message.classList.add ("hiding");
+		setTimeout (function () { message.remove (); }, 300);
+	}
+
+	function setupMessage (message) {
+		message.querySelector ("button").addEventListener ("click", function () {
+			hideMessage (message);
 		});
-	    });
+
+		// errors and warnings stay until they are closed
+		if (message.classList.contains ("success")
+		||  message.classList.contains ("info"))
+			setTimeout (function () { hideMessage (message); }, 4000);
+	}
+
+	function showMessage (text, type) {
+		// only the newest message, older ones are outdated
+		for (const old of messages.querySelectorAll (".message"))
+			hideMessage (old);
+
+		const message = document.createElement ("p");
+		message.className = "message " + type;
+
+		const span = document.createElement ("span");
+		span.textContent = text;
+		message.appendChild (span);
+
+		const button = document.createElement ("button");
+		button.type = "button";
+		button.title = "Schließen";
+		button.textContent = "✖";
+		message.appendChild (button);
+
+		messages.appendChild (message);
+		setupMessage (message);
+	}
+
+	messages.querySelectorAll (".message").forEach (setupMessage);
+
+	/* forms with data-async are sent in the background, so the
+	   page (scroll position, input) stays as it is; without the
+	   script they are sent normally */
+	function sendForm (form, submitter) {
+		const data = new FormData (form);
+		if (submitter && submitter.name)
+			data.append (submitter.name, submitter.value);
+
+		const buttons = form.querySelectorAll ("[type=submit]");
+		buttons.forEach (function (button) { button.disabled = true; });
+		form.setAttribute ("aria-busy", "true");
+
+		const progress = form.querySelector ("progress");
+		const request = new XMLHttpRequest ();
+
+		if (progress) {
+			progress.value = 0;
+			progress.hidden = false;
+
+			request.upload.addEventListener ("progress", function (event) {
+				if (event.lengthComputable)
+					progress.value = event.loaded / event.total;
+			});
+		}
+
+		function done () {
+			buttons.forEach (function (button) { button.disabled = false; });
+			form.removeAttribute ("aria-busy");
+
+			if (progress)
+				progress.hidden = true;
+		}
+
+		request.addEventListener ("load", function () {
+			done ();
+
+			let answer;
+			try {
+				answer = JSON.parse (request.responseText);
+			}
+			catch (error) {
+				showMessage ("Unerwartete Antwort vom Telefon (" + request.status + ").", "error");
+				return;
+			}
+
+			showMessage (answer.message, answer.type);
+
+			if ("success" === answer.type) {
+				if (form.hasAttribute ("data-reset"))
+					form.reset ();
+
+				form.dispatchEvent (new CustomEvent ("answer", { detail: answer }));
+			}
+		});
+
+		request.addEventListener ("error", function () {
+			done ();
+			showMessage ("Keine Verbindung zum Telefon.", "error");
+		});
+
+		request.open ("POST", form.getAttribute ("action") || location.pathname);
+		request.setRequestHeader ("X-Requested-With", "XMLHttpRequest");
+		request.send (data);
+	}
+
+	document.querySelectorAll ("form[data-async]").forEach (function (form) {
+		form.addEventListener ("submit", function (event) {
+			event.preventDefault ();
+
+			if (form.hasAttribute ("aria-busy"))
+				return;
+
+			const check = new CustomEvent ("check", { cancelable: true });
+			if (form.dispatchEvent (check))
+				sendForm (form, event.submitter);
+		});
+	});
+
+	window.showMessage = showMessage;
+}) ();
 </script>
+{% block script %}
+{% endblock %}
+</body>
 </html>

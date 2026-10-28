@@ -1,62 +1,123 @@
 {% extends "base.html" %}
 
 {% block style %}
-		section {
-			display: flex;
-			align-items: center; /* Center vertically */
-			padding: .75rem 1.25rem;
-
-			border-width: 1px;
-			border-top-width: 0;
-			border-color: rgba(0,0,0,.125);
-			border-style: solid;
+		#filter {
+			margin-bottom: 1rem;
 		}
 
-		section > form {
+		ul {
+			margin: 0;
+			padding: 0;
+			list-style: none;
+
+			border: 1px solid rgba(0,0,0,.125);
+			border-radius: .25rem;
+		}
+
+		li {
+			display: flex;
+			align-items: center;
+			gap: 1rem;
+			padding: .5rem .75rem;
+
+			border-top: 1px solid rgba(0,0,0,.125);
+			scroll-margin-top: 4rem;
+		}
+
+		li:first-child {
+			border-top: 0;
+		}
+
+		@keyframes highlight {
+			from {
+				background-color: #fff3bf;
+			}
+
+			to {
+				background-color: transparent;
+			}
+		}
+
+		li:target {
+			animation: highlight 2s ease;
+		}
+
+		li > form {
 			display: contents;
 		}
 
-
-		section .button {
+		li .button {
 			padding: .25rem .5rem;
 			font-size: .875rem;
-			line-height: 1.5;
 			border-radius: .2rem;
 		}
 
-		.button.gray {
-			background-color: var(--secondary);
-			border-color: var(--secondary);
-			margin-right: 1rem;
-		}
-		.button.gray:hover {
-			background-color: #5a6268;
-			border-color: #545b62;
-		}
-		.button.gray:active {
-			background-color: #545b62;
-			border-color: #4e555b;
-		}
-		.button.gray:focus {
-			box-shadow: 0 0 0 .2rem rgba(130,138,145,.5);
+		li .button.gray {
+			min-width: 3.5rem;
+			font-variant-numeric: tabular-nums;
 		}
 
-		a.button {
-			margin-left: auto;
+		li > span {
+			flex: 1;
+			overflow-wrap: anywhere;
+		}
+
+		#no-match {
+			color: var(--secondary);
 		}
 {% endblock %}
 
-{% block title %} Telefono Home Page {% endblock %}
+{% block title %}Liste{% endblock %}
 
-{% block content%}
+{% block content %}
+	<input type="search" id="filter" placeholder="Nummer oder Beschreibung suchen …" aria-label="Liste durchsuchen" hidden>
+	<ul>
 {% for number, description in network_list %}
-	<section>
-		<form method="post">
-			<input type="submit" name="selected_value" value="{{ number }}" class="button gray">
-		</form>
-		{{ description }}
-		<a href="/edit/{{ number }}" class="button blue">&#9998;</a>
-	</section>
+		<li id="n{{ number }}">
+			<form method="post" data-async>
+				<button type="submit" name="selected_value" value="{{ number }}" class="button gray" title="Nummer {{ number }} anrufen lassen">{{ number }}</button>
+			</form>
+			<span>{{ description }}</span>
+			<a href="{{ url_for('edit_value', number=number) }}" class="button blue" title="Beschreibung bearbeiten">&#9998;</a>
+		</li>
 {% endfor %}
+	</ul>
+	<p id="no-match" hidden>Keine passenden Nummern.</p>
+{% endblock %}
 
+{% block script %}
+<script>
+(function () {
+	"use strict";
+
+	const filter = document.getElementById ("filter");
+	const items = Array.from (document.querySelectorAll ("li"));
+	const noMatch = document.getElementById ("no-match");
+
+	// the filter needs the script, so it is only shown with it
+	filter.hidden = false;
+
+	function apply () {
+		const words = filter.value.toLowerCase ().split (/\s+/).filter (Boolean);
+		let shown = 0;
+
+		for (const item of items) {
+			const text = item.textContent.toLowerCase ();
+			const match = words.every (function (word) { return text.includes (word); });
+
+			item.hidden = !match;
+			if (match)
+				shown++;
+		}
+
+		noMatch.hidden = 0 !== shown;
+	}
+
+	filter.addEventListener ("input", apply);
+
+	// e.g. the browser restored the text on "back"
+	if (filter.value)
+		apply ();
+}) ();
+</script>
 {% endblock %}

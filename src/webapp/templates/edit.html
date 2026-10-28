@@ -1,84 +1,15 @@
 {% extends "base.html" %}
 
-{% block style %}
-		body {
-			width: 100%;
-			box-sizing: border-box;
-			padding-right: 15px;
-			padding-left: 15px;
-			margin-top: 3rem !important;
-			margin-right: auto;
-			margin-left: auto;
-		}
+{% block title %}Nummer {{ number }} bearbeiten{% endblock %}
 
-		@media (min-width:576px){
-			body {
-				max-width:540px;
-			}
-		}
-		@media (min-width:768px){
-			body {
-				max-width:720px;
-			}
-		}
-		@media (min-width:992px){
-			body {
-				max-width:960px;
-			}
-		}
-		@media (min-width:1200px){
-			body {
-				max-width:1140px;
-			}
-		}
-
-		h1 {
-			display: none;
-		}
-
-		h2 {
-			font-size: 2rem;
-
-			margin-top: 0;
-			margin-bottom: .5rem;
-			font-weight: 500;
-			line-height: 1.2;
-		}
-
-		label {
-			display: inline-block;
-			margin-bottom: .5rem;
-		}
-
-		input {
-			margin-bottom: 1rem;
-		}
-
-		[type="text"] {
-			display: block;
-
-			width: 100%;
-			box-sizing: border-box;
-			padding: .375rem .75rem;
-
-			font-size: 1rem;
-			line-height: 1.5;
-
-			color: #495057;
-
-			border: 1px solid #ced4da;
-			border-radius: .25rem;
-			transition: border-color .15s ease-in-out,box-shadow .15s ease-in-out;
-		}
-{% endblock %}
-
-{% block title %} Edit Value {% endblock %}
-
-{% block content%}
-	<h2>Namen Bearbeiten</h2>
-	<form method="post">
-		<label for="new_value">Neuer Name:</label>
-		<input type="text" id="new_value" name="new_value" value="{{ value }}" maxlength="{{ description_max }}" required>
-		<input type="submit" class="button blue" value="Speichern">
+{% block content %}
+	<h2>Nummer {{ number }} bearbeiten</h2>
+	<form method="post" class="stacked">
+		<label for="new_value">Beschreibung:</label>
+		<input type="text" id="new_value" name="new_value" value="{{ value }}" maxlength="{{ description_max }}" required autofocus>
+		<div>
+			<input type="submit" class="button blue" value="Speichern">
+			<a href="{{ url_for('list') }}#n{{ number }}" class="button light">Abbrechen</a>
+		</div>
 	</form>
 {% endblock %}
