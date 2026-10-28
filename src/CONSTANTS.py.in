@@ -94,7 +94,7 @@ SOX_CALL_WAIT = (*SOX_BASE,
                  "synth", "0.2",
                  "sin", "425",
                  "sin", "425",
-                 "delay", "0" "0.4"
+                 "delay", "0", "0.4",
                  "pad", "0", "9",
                  *SOX_VOL, *SOX_REMIX, *SOX_REPEAT)
 
