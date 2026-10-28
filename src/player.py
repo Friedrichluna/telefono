@@ -431,7 +431,7 @@ class Player ():
 			          "Aufnahme %s gespeichert." \
 			        % recording_number
 
-		elif RECORDER_RESULT.END:
+		elif RECORDER_RESULT.END == result:
 			message = "Aufnahme %s gespeichert." \
 			        % recording_number
 
