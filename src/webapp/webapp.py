@@ -4,6 +4,7 @@
 import errno
 import os
 import shutil
+import subprocess
 import wave
 
 from flask import Flask, flash, jsonify, redirect, render_template, request, url_for
@@ -22,6 +23,8 @@ from ..CONSTANTS import RECORD_SUFFIX
 from ..CONSTANTS import UPLOAD_DIR
 from ..CONSTANTS import UPLOAD_MAX_SIZE
 from ..CONSTANTS import UPLOAD_CHECK_FRAMES
+from ..CONSTANTS import UPLOAD_CONVERT_CMD
+from ..CONSTANTS import UPLOAD_CONVERT_TIMEOUT
 
 from ..ipc import IPC_DESCRIPTION_MAX_BYTES
 from ..ipc import IPC_StringTooLong
@@ -64,16 +67,18 @@ def parse_number (text:str):
 
 
 # like Recorder.save: the file only becomes visible once it is complete
-# and on the disk, an existing file is never replaced (FileExistsError)
-def save_file (stream, filename:str):
+# and on the disk, an existing file is never replaced (FileExistsError);
+# write (f) fills the file, it may raise (e.g. InvalidUpload) to discard it
+def save_file (filename:str, write):
 	directory = os.path.dirname (filename)
 
 	# create temporary file, closing it without
 	# linking it discards it, so errors leave nothing behind
-	fd = os.open (directory, os.O_TMPFILE | os.O_WRONLY, mode=0o600)
+	# (read and write: a converted file is checked before it is linked)
+	fd = os.open (directory, os.O_TMPFILE | os.O_RDWR, mode=0o600)
 
-	with os.fdopen (fd, "wb") as f:
-		shutil.copyfileobj (stream, f)
+	with os.fdopen (fd, "w+b") as f:
+		write (f)
 		f.flush ()
 
 		# make sure the data is on the disk before the
@@ -88,6 +93,11 @@ def save_file (stream, filename:str):
 	# make the link durable
 	sync_dir (directory)
 	return
+
+
+# the upload can not be used, the message is shown to the user
+class InvalidUpload (Exception):
+	pass
 
 
 # the page's own script sends forms in the background
@@ -326,6 +336,42 @@ class TelefonoWebApp (Flask):
 
 		return None
 
+	# ffmpeg writes the wav into f (the temporary file of save_file),
+	# opened again through /proc, so it can seek back and fill in the
+	# sizes in the header; stream is a file in /tmp (werkzeug spools
+	# uploads), so ffmpeg reads it directly
+	def convert_mp3 (self, stream, f):
+		stream.seek (0)
+
+		try:
+			result = subprocess.run ((*UPLOAD_CONVERT_CMD,
+			                          "/proc/self/fd/%d" % f.fileno ()),
+			                         stdin=stream,
+			                         stdout=subprocess.DEVNULL,
+			                         stderr=subprocess.PIPE,
+			                         pass_fds=(f.fileno (), ),
+			                         timeout=UPLOAD_CONVERT_TIMEOUT)
+
+		except subprocess.TimeoutExpired:
+			self.logger.error ("converting the upload took more than %d s",
+			                   UPLOAD_CONVERT_TIMEOUT)
+			raise InvalidUpload ("Umwandeln der .mp3 Datei dauert zu lange.")
+
+		if 0 != result.returncode:
+			errors = result.stderr.decode (errors="replace").strip ()
+			self.logger.warning ("converting the upload failed (%d): %s",
+			                     result.returncode, errors)
+
+			if "No space left on device" in errors:
+				raise OSError (errno.ENOSPC, os.strerror (errno.ENOSPC))
+
+			raise InvalidUpload ("Keine gültige .mp3 Datei.")
+
+		if self.check_wav (f):
+			raise InvalidUpload ("Die .mp3 Datei enthält keine Audiodaten.")
+
+		return
+
 	# the upload page again, with the number that was entered
 	# (not read from request.form here: too_large can not parse it)
 	def upload_reply (self, message:str, message_type:str,
@@ -364,20 +410,34 @@ class TelefonoWebApp (Flask):
 			                          % number, "error", 409,
 			                          number=requested_number)
 
-		if not uploaded_file.filename.lower ().endswith (".wav"):
-			return self.upload_reply ("Bitte nur .wav hochladen!",
-			                          "error", 400,
-			                          number=requested_number)
+		stream = uploaded_file.stream
+		file_type = uploaded_file.filename.lower ()
 
-		message = self.check_wav (uploaded_file.stream)
-		if message:
-			return self.upload_reply (message, "error", 400,
+		if file_type.endswith (".wav"):
+			message = self.check_wav (stream)
+			if message:
+				return self.upload_reply (message, "error", 400,
+				                          number=requested_number)
+
+			write = lambda f: shutil.copyfileobj (stream, f)
+
+		# saved as wav like all recordings
+		elif file_type.endswith (".mp3"):
+			write = lambda f: self.convert_mp3 (stream, f)
+
+		else:
+			return self.upload_reply ("Bitte nur .wav oder .mp3 hochladen!",
+			                          "error", 400,
 			                          number=requested_number)
 
 		# same name as Subscriber.register_file, e.g. recording007.wav
 		file_path = UPLOAD_DIR + "/" + RECORD_PREFIX + str(number) + RECORD_SUFFIX
 		try:
-			save_file (uploaded_file.stream, file_path)
+			save_file (file_path, write)
+
+		except InvalidUpload as error:
+			return self.upload_reply (str (error), "error", 400,
+			                          number=requested_number)
 
 		# a file the main process does not know yet (e.g. copied
 		# there by hand, or a second upload at the same time)

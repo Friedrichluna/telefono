@@ -63,9 +63,9 @@
 {% block content %}
 	<h2>Aufnahme hochladen</h2>
 	<form method="post" enctype="multipart/form-data" class="stacked" data-async data-reset>
-		<label for="file">.wav Datei (höchstens {{ upload_max }} MiB):</label>
+		<label for="file">.wav oder .mp3 Datei (höchstens {{ upload_max }} MiB):</label>
 		<div id="file-picker">
-			<input type="file" id="file" name="file" accept=".wav,audio/wav" required>
+			<input type="file" id="file" name="file" accept=".wav,.mp3,audio/wav,audio/mpeg" required>
 			<label for="file" id="file-button" class="button gray">Datei auswählen</label>
 			<span id="file-name" class="empty">Keine Datei ausgewählt</span>
 		</div>
@@ -110,9 +110,9 @@
 		if (!selected)
 			return;
 
-		if (!selected.name.toLowerCase ().endsWith (".wav")) {
+		if (!/\.(wav|mp3)$/i.test (selected.name)) {
 			event.preventDefault ();
-			showMessage ("Bitte nur .wav hochladen!", "error");
+			showMessage ("Bitte nur .wav oder .mp3 hochladen!", "error");
 		}
 		else if (selected.size > maxSize) {
 			event.preventDefault ();

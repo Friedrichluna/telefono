@@ -31,6 +31,16 @@ UPLOAD_MAX_SIZE = 50 * 1024 * 1024
 # frames read at once while checking an uploaded wav file
 UPLOAD_CHECK_FRAMES = 4096
 
+# uploaded mp3 files are converted to PCM wav (same channels and rate),
+# the output file is appended; 16 bit wav is about 11 times larger than
+# a 128 kbit/s mp3 (50 MiB mp3: about 55 min, 550 MiB wav)
+UPLOAD_CONVERT_CMD = ("ffmpeg", "-hide_banner", "-loglevel", "error",
+                      "-i", "pipe:0",
+                      "-map", "0:a:0", "-map_metadata", "-1",
+                      "-c:a", "pcm_s16le", "-f", "wav", "-y")
+# a 4 min mp3 takes about 3.5 s on the Pi Zero 2W, 50 MiB about 45 s
+UPLOAD_CONVERT_TIMEOUT = 180
+
 WEBAPP_EXEC = ("python3", "-m", "telefono.webapp")
 
 FLASK_DEBUG = DEBUG
