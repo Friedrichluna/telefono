@@ -3,6 +3,7 @@
 
 import enum
 import logging
+import select
 import socket
 import threading
 
@@ -347,6 +348,12 @@ class IPC:
 		# no queued call
 		except BlockingIOError:
 			return b""
+
+	# sleep for at most timeout seconds, but wake up as soon as a
+	# message arrives (the main loop answers the webapp at once)
+	def wait (self, timeout:float):
+		select.select ((self.__socket, ), (), (), timeout)
+		return
 
 
 

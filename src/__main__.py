@@ -271,7 +271,7 @@ def main ():
 
 		queue.process (player)
 
-		time.sleep (MAINLOOP_DELAY)
+		ipc.wait (MAINLOOP_DELAY)
 
 	log.info ("shutting down")
 	player.play_system_sound (SHUTDOWN_FILE)
