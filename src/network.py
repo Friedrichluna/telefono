@@ -545,6 +545,13 @@ class Network ():
 		subscribers.sort (key=lambda s: int (s.number))
 
 		for subscriber in subscribers:
+			# only recordings and described numbers belong
+			# into the file, other types (unassigned, reserved,
+			# lists, callbacks) are created at runtime
+			if SubscriberType.RECORDING != subscriber.type \
+			and SubscriberType.UNUSED != subscriber.type:
+				continue
+
 			name = subscriber.description.strip ()
 
 			# ignore empty names
