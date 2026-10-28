@@ -631,9 +631,11 @@ class Network ():
 
 	def compact (self):
 		self.log.debug ("compact subscriber list")
-		# remove useless entries
-		for subscriber in self.__subscribers:
-			if SubscriberType.UNASSIGNED == subscriber.__type:
+		# remove useless entries (unassigned numbers, which
+		# are created on access), iterate over a copy because
+		# the list is modified in the loop
+		for subscriber in self.__subscribers.copy ():
+			if SubscriberType.UNASSIGNED == subscriber.type:
 				self.log.debug ("remove %r", subscriber)
 				self.__subscribers.remove (subscriber)
 
