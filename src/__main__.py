@@ -22,6 +22,7 @@ from .CONSTANTS import SHUTDOWN_FILE
 from .CONSTANTS import WEBAPP_EXEC
 
 from .CONSTANTS import MAINLOOP_DELAY
+from .CONSTANTS import MENU_DELAY
 from .CONSTANTS import SHUTDOWN_BUTTON_DELAY
 
 from .ipc import IPC_Server
@@ -99,7 +100,12 @@ def do_menu (off_hook, dial, network, player, led, log):
 	player.start_secondary_dial_tone ()
 
 	while not dial.is_used ():
-		pass
+		if not running or not off_hook ():
+			# hang up
+			player.stop_tone ()
+			return
+
+		time.sleep (MENU_DELAY)
 
 	player.stop_tone ()
 	option = dial.get_digit (abort, led, player)
