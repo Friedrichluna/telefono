@@ -37,6 +37,9 @@ from .CONSTANTS import FFPLAY_CMD
 from .CONSTANTS import FFPLAY_START
 from .CONSTANTS import FFPLAY_VOLUME
 from .CONSTANTS import FFPLAY_POLL_DELAY
+from .CONSTANTS import FFPLAY_STALL_TIMEOUT
+from .CONSTANTS import FFPLAY_STALL_RETRIES
+from .CONSTANTS import FFPLAY_KILL_TIMEOUT
 
 from .CONSTANTS import FFPLAY_ENV
 
@@ -112,6 +115,23 @@ class Player ():
 
 		return process
 
+	def __stop_ffplay (self, process):
+		# terminate ffplay, kill it if it doesn't exit and reap it
+		process.terminate ()
+		try:
+			process.wait (FFPLAY_KILL_TIMEOUT)
+		except subprocess.TimeoutExpired:
+			self.log.warning ("ffplay didn't terminate, killing it")
+			process.kill ()
+			try:
+				process.wait (FFPLAY_KILL_TIMEOUT)
+			except subprocess.TimeoutExpired:
+				self.log.error ("failed to kill ffplay (pid %d)",
+				                process.pid)
+
+		process.stderr.close ()
+		return
+
 	@staticmethod
 	def __parse_ffplay_output (buffer) -> float:
 		end = buffer.rfind (b" M-A:")
@@ -158,12 +178,17 @@ class Player ():
 		buffer = bytearray ()
 		start = 0
 
+		# watchdog: last time the position changed
+		progress = time.monotonic ()
+		stalls = 0
+
 		while process.poll () is None:
 			time.sleep (FFPLAY_POLL_DELAY)
 
 			if abort ():
-				process.terminate ()
+				self.__stop_ffplay (process)
 				aborted = True
+				break
 
 			# parse current timestamp
 			data = process.stderr.read ()
@@ -174,28 +199,55 @@ class Player ():
 
 				_pos = self.__parse_ffplay_output (buffer)
 				if _pos is not None:
+					if _pos != start:
+						progress = time.monotonic ()
 					start = _pos
 					buffer.clear ()
 					self.log.debug ("duration: %f", start)
 
+			# Sometimes ffplay starts, but neither produces output nor
+			# exits (that's what pygame was initialised for once).
+			if FFPLAY_STALL_TIMEOUT < time.monotonic () - progress:
+				self.__stop_ffplay (process)
+
+				if FFPLAY_STALL_RETRIES <= stalls:
+					self.log.error ("ffplay stalled %d times, "
+					                "giving up on %s",
+					                stalls + 1, filename)
+					break
+
+				stalls += 1
+				self.log.warning ("ffplay stalled at %f in %s, "
+				                  "restarting (%d/%d)",
+				                  start, filename, stalls,
+				                  FFPLAY_STALL_RETRIES)
+				buffer.clear ()
+				process = self.__ffplay (filename,
+				                         start,
+				                         volume)
+				progress = time.monotonic ()
+				continue
+
 			if wind and self.__back ():
-				process.terminate ()
+				self.__stop_ffplay (process)
 				start -= WIND_TIME
 
 				self.log.debug ("wind back to %d", start)
 				process = self.__ffplay (filename,
 				                         start,
 				                         volume)
+				progress = time.monotonic ()
 
 
 			if wind and self.__forward ():
-				process.terminate ()
+				self.__stop_ffplay (process)
 				start += WIND_TIME
 
 				self.log.debug ("wind forward to %d", start)
 				process = self.__ffplay (filename,
 				                         start,
 				                         volume)
+				progress = time.monotonic ()
 
 		if aloud:
 			self.__speaker.deactivate ()

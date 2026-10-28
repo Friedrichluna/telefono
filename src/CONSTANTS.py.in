@@ -139,6 +139,11 @@ FFPLAY_CMD = ("ffplay", "-nodisp", "-autoexit", "-i")
 FFPLAY_START = ("-ss", )
 FFPLAY_VOLUME = ("-volume", )
 FFPLAY_POLL_DELAY = 0.01
+# restart ffplay, if its position doesn't change for this many seconds
+# (startup takes 1 s, with a cold cache after boot 4.5 s)
+FFPLAY_STALL_TIMEOUT = 10
+FFPLAY_STALL_RETRIES = 3
+FFPLAY_KILL_TIMEOUT = 1
 
 FFPLAY_ENV = {
 	"XDG_RUNTIME_DIR": "/run/user/1000",
