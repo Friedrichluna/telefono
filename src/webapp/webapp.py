@@ -13,6 +13,7 @@ from ..CONSTANTS import RECORD_SUFFIX
 
 from ..CONSTANTS import UPLOAD_DIR
 
+from ..ipc import IPC_Timeout
 from ..number import Number
 
 
@@ -33,7 +34,23 @@ class TelefonoWebApp (Flask):
 		self.add_url_rule ("/say", "say", self.say, methods=["GET", "POST"])
 		self.add_url_rule ("/upload", "upload_page", self.upload_page)
 		self.add_url_rule ("/upload", "upload_file", self.upload_file, methods=["POST"])
+
+		self.register_error_handler (IPC_Timeout, self.busy)
 		return
+
+	# the main process did not answer, e.g. while a recording plays
+	def busy (self, error):
+		self.logger.warning ("telefono busy: %s %s",
+		                     request.method, request.path)
+
+		if error.queued:
+			message = "Telefon beschäftigt, die Anfrage wird ausgeführt, sobald es wieder frei ist."
+		else:
+			message = "Telefon beschäftigt, bitte später nochmal versuchen."
+
+		return render_template ("index.html",
+		                        message=message,
+		                        message_type="warning"), 503
 
 	def home(self):
 		if request.method == "POST":
