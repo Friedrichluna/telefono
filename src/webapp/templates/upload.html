@@ -9,6 +9,53 @@
 			width: 100%;
 			height: .75rem;
 		}
+
+		/* the browser's own file button speaks the browser's language, so with
+		   the script it is replaced by a German one styled like the list numbers */
+		#file-picker {
+			position: relative;
+			display: flex;
+			align-items: center;
+			gap: 1rem;
+		}
+
+		#file-button, #file-name {
+			display: none;
+		}
+
+		.js #file {
+			position: absolute;
+			left: 0;
+			bottom: 0;
+			width: 1px;
+			height: 1px;
+			opacity: 0;
+			overflow: hidden;
+		}
+
+		.js #file-button {
+			display: inline-block;
+			min-width: 3.5rem;
+			padding: .25rem .5rem;
+			font-size: .875rem;
+			border-radius: .2rem;
+			white-space: nowrap;
+		}
+
+		#file:focus-visible + #file-button {
+			outline: 0;
+			box-shadow: 0 0 0 .2rem rgba(130,138,145,.5);
+		}
+
+		.js #file-name {
+			display: block;
+			min-width: 0;
+			overflow-wrap: anywhere;
+		}
+
+		#file-name.empty {
+			color: var(--secondary);
+		}
 {% endblock %}
 
 {% block title %}Upload{% endblock %}
@@ -17,7 +64,11 @@
 	<h2>Aufnahme hochladen</h2>
 	<form method="post" enctype="multipart/form-data" class="stacked" data-async data-reset>
 		<label for="file">.wav Datei (höchstens {{ upload_max }} MiB):</label>
-		<input type="file" id="file" name="file" accept=".wav,audio/wav" required>
+		<div id="file-picker">
+			<input type="file" id="file" name="file" accept=".wav,audio/wav" required>
+			<label for="file" id="file-button" class="button gray">Datei auswählen</label>
+			<span id="file-name" class="empty">Keine Datei ausgewählt</span>
+		</div>
 		<label for="number">Gewünschte Nummer:</label>
 		<input type="text" inputmode="numeric" pattern="[0-9]+" title="nur Ziffern (0-9)" id="number" name="requestedNumber" value="{{ number }}" autocomplete="off" required>
 		<progress max="1" value="0" hidden></progress>
@@ -33,7 +84,25 @@
 
 	const form = document.querySelector ("form");
 	const file = document.getElementById ("file");
+	const fileName = document.getElementById ("file-name");
 	const maxSize = {{ upload_max }} * 1024 * 1024;
+
+	function showFileName () {
+		const selected = file.files[0];
+
+		fileName.textContent = selected ? selected.name : "Keine Datei ausgewählt";
+		fileName.classList.toggle ("empty", !selected);
+	}
+
+	file.addEventListener ("change", showFileName);
+
+	// "reset" fires before the form is cleared
+	form.addEventListener ("reset", function () {
+		setTimeout (showFileName);
+	});
+
+	// e.g. the browser restored the file on "back"
+	showFileName ();
 
 	// no need to send a file the phone refuses anyway
 	form.addEventListener ("check", function (event) {
