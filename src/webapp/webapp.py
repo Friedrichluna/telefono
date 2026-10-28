@@ -95,6 +95,7 @@ class TelefonoWebApp (Flask):
 		self.add_url_rule ("/say", "say", self.say, methods=["GET", "POST"])
 		self.add_url_rule ("/upload", "upload_page", self.upload_page)
 		self.add_url_rule ("/upload", "upload_file", self.upload_file, methods=["POST"])
+		self.add_url_rule ("/help", "help", self.help)
 
 		self.register_error_handler (IPC_Timeout, self.busy)
 		self.register_error_handler (IPC_StringTooLong, self.too_long)
@@ -270,6 +271,12 @@ class TelefonoWebApp (Flask):
 			return self.finish (url_for ("say"), message, message_type)
 
 		return render_template ("say.html")
+
+	# static, does not ask the main process, so it
+	# also works while the phone is busy
+	def help (self):
+		return render_template ("help.html")
+
 	# ffmpeg encodes any channels, rate or sample width to mp3, but the
 	# file must be complete; only PCM can be checked with the wave
 	# module, so that is required

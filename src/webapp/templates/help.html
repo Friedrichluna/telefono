@@ -1,0 +1,233 @@
+{% extends "base.html" %}
+
+{% block style %}
+		#contents {
+			display: flex;
+			flex-wrap: wrap;
+			gap: .5rem;
+			margin: 0 0 1.5rem;
+			padding: 0;
+			list-style: none;
+		}
+
+		#contents a {
+			padding: .25rem .5rem;
+			font-size: .875rem;
+			border-radius: .2rem;
+		}
+
+		section {
+			margin-bottom: 2rem;
+			scroll-margin-top: 1rem;
+		}
+
+		h3 {
+			margin: 0 0 .75rem;
+			padding-bottom: .25rem;
+			font-size: 1.25rem;
+			font-weight: 500;
+			line-height: 1.2;
+			border-bottom: 1px solid rgba(0,0,0,.125);
+		}
+
+		h4 {
+			margin: 1.25rem 0 .25rem;
+			font-size: 1rem;
+			font-weight: 600;
+		}
+
+		p, ul, ol {
+			margin: 0 0 .75rem;
+		}
+
+		ul, ol {
+			padding-left: 1.5rem;
+		}
+
+		section li + li {
+			margin-top: .25rem;
+		}
+
+		/* numbers look like the number buttons of the list */
+		.number {
+			display: inline-block;
+			min-width: 2.25rem;
+			padding: 0 .375rem;
+
+			color: white;
+			background-color: var(--secondary);
+			border-radius: .2rem;
+
+			font-size: .875rem;
+			font-variant-numeric: tabular-nums;
+			text-align: center;
+			white-space: nowrap;
+		}
+
+		.table {
+			margin: 0 0 .75rem;
+			overflow-x: auto;
+		}
+
+		table {
+			width: 100%;
+			border-collapse: collapse;
+			font-size: .9375rem;
+		}
+
+		th, td {
+			padding: .375rem .5rem;
+			text-align: left;
+			vertical-align: top;
+			border-top: 1px solid rgba(0,0,0,.125);
+		}
+
+		thead th {
+			border-top: 0;
+			border-bottom: 2px solid rgba(0,0,0,.125);
+			font-weight: 500;
+		}
+
+		tbody th {
+			font-weight: 500;
+		}
+
+		/* first column only as wide as its content */
+		table.keys th {
+			width: 1%;
+			white-space: nowrap;
+		}
+
+		.note {
+			padding: .5rem .75rem;
+			background-color: var(--light);
+			border-left: 3px solid var(--primary);
+			border-radius: .25rem;
+		}
+{% endblock %}
+
+{% block title %}Anleitung{% endblock %}
+
+{% block content %}
+	<h2>Anleitung</h2>
+	<p>Telefono ist ein altes Wählscheibentelefon, das Aufnahmen abspielt und neue aufnimmt. Jede Aufnahme hat eine Nummer, die man am Telefon wählen kann. Mit dieser Webseite kann man das Telefon klingeln lassen, Aufnahmen hochladen und Beschreibungen ändern.</p>
+
+	<ul id="contents">
+		<li><a class="button light" href="#telefon">Am Telefon</a></li>
+		<li><a class="button light" href="#anrufe">Wenn es klingelt</a></li>
+		<li><a class="button light" href="#webseite">Die Webseite</a></li>
+		<li><a class="button light" href="#toene">Töne</a></li>
+	</ul>
+
+	<section id="telefon">
+		<h3>Am Telefon</h3>
+		<p>Hörer abnehmen: Man hört einen Dauerton (Freiton). Jetzt kann man wählen, aufnehmen oder das Menü öffnen.</p>
+
+		<h4>Aufnahme anhören</h4>
+		<ol>
+			<li>Nummer mit der Wählscheibe wählen. Bei jeder Ziffer piept es kurz, die Lampe blinkt.</li>
+			<li>Den <b>linken Knopf</b> drücken, dann wird sofort gewählt. Sonst wird 4 Sekunden nach der letzten Ziffer von selbst gewählt.</li>
+			<li>Die Aufnahme läuft. Mit dem <b>linken Knopf</b> springt man 10 Sekunden zurück, mit dem <b>mittleren Knopf</b> 10 Sekunden vor.</li>
+			<li>Auflegen beendet die Aufnahme jederzeit.</li>
+		</ol>
+		<p>Welche Nummern es gibt, steht in der <a href="{{ url_for('list') }}">Liste</a>. Bei einer Nummer ohne Aufnahme hört man drei aufsteigende Töne.</p>
+
+		<h4>Selbst etwas aufnehmen</h4>
+		<ol>
+			<li>Den <b>linken Knopf</b> drücken. Eine Stimme sagt z.&nbsp;B. „Aufnahme 70 wird gestartet“. Das ist die nächste freie Nummer.</li>
+			<li>In den Hörer sprechen (höchstens 2 Minuten).</li>
+			<li>Zum Speichern den <b>linken Knopf</b> nochmal drücken oder auflegen. Zum Verwerfen den <b>mittleren Knopf</b> drücken.</li>
+		</ol>
+		<p>Aufnahmen unter 2 Sekunden werden nicht gespeichert. Die neue Aufnahme hat noch keine Beschreibung, die kann man in der <a href="{{ url_for('list') }}">Liste</a> mit dem Stift eintragen.</p>
+
+		<h4>Menü</h4>
+		<p>Den <b>mittleren Knopf</b> drücken. Nach „Menü wird geöffnet“ eine Ziffer wählen:</p>
+		<div class="table">
+			<table class="keys">
+				<tbody>
+					<tr><th><span class="number">0</span></th><td>Uhrzeit und Datum ansagen</td></tr>
+					<tr><th><span class="number">1</span></th><td>ein zufälliges Tischlied</td></tr>
+					<tr><th><span class="number">2</span></th><td>ein zufälliges Tischgebet</td></tr>
+					<tr><th><span class="number">3</span></th><td>ein zufälliges Pater-Zitat</td></tr>
+				</tbody>
+			</table>
+		</div>
+		<p>Dasselbe bekommt man auch, wenn man <span class="number">0</span>, <span class="number">100</span>, <span class="number">200</span> oder <span class="number">300</span> ganz normal wählt.</p>
+
+		<h4>Die Knöpfe auf einen Blick</h4>
+		<div class="table">
+			<table>
+				<thead>
+					<tr><th>Wann</th><th>Linker Knopf</th><th>Mittlerer Knopf</th></tr>
+				</thead>
+				<tbody>
+					<tr><th>Freiton</th><td>Aufnahme starten</td><td>Menü öffnen</td></tr>
+					<tr><th>Beim Wählen</th><td>sofort wählen</td><td>–</td></tr>
+					<tr><th>Beim Abspielen</th><td>10 s zurück</td><td>10 s vor</td></tr>
+					<tr><th>Beim Aufnehmen</th><td>speichern</td><td>verwerfen</td></tr>
+					<tr><th>Hörer aufgelegt</th><td>–</td><td>5 s halten: Neustart</td></tr>
+				</tbody>
+			</table>
+		</div>
+
+		<h4>Lautsprecher</h4>
+		<p>Mit dem <b>Kippschalter rechts</b> schaltet man den Lautsprecher ein, dann hören alle im Raum mit. Die Klingel ist immer laut.</p>
+	</section>
+
+	<section id="anrufe">
+		<h3>Wenn es klingelt</h3>
+		<p>Das Telefon klingelt etwa 20 Sekunden lang. Wer abnimmt, hört eine Aufnahme. Es klingelt, wenn</p>
+		<ul>
+			<li>jemand auf dieser Webseite <a href="{{ url_for('home') }}">anrufen lässt</a>,</li>
+			<li>einmal am Tag zu einer zufälligen Zeit zwischen 15 und 21 Uhr, mit einer zufälligen Aufnahme.</li>
+		</ul>
+
+		<h4>Durchsagen</h4>
+		<p>Zu festen Zeiten spielt das Telefon eine Aufnahme ohne Klingeln über den Lautsprecher ab:</p>
+		<div class="table">
+			<table>
+				<thead>
+					<tr><th>Uhrzeit</th><th>Nummer</th><th>Tage</th></tr>
+				</thead>
+				<tbody>
+					<tr><td>18:30</td><td><span class="number">1830</span></td><td>Dienstag bis Donnerstag</td></tr>
+					<tr><td>19:30</td><td><span class="number">1930</span></td><td>Dienstag bis Donnerstag</td></tr>
+					<tr><td>20:00</td><td><span class="number">2014</span></td><td>jeden Tag</td></tr>
+					<tr><td>22:00</td><td><span class="number">59</span></td><td>jeden Tag (nur wenn es die Aufnahme gibt)</td></tr>
+				</tbody>
+			</table>
+		</div>
+		<p>Was dabei abgespielt wird, steht in der <a href="{{ url_for('list') }}">Liste</a> bei der Nummer.</p>
+	</section>
+
+	<section id="webseite">
+		<h3>Die Webseite</h3>
+		<h4><a href="{{ url_for('home') }}">Anrufen</a></h4>
+		<p>Nummer eingeben und „Anrufen“ drücken. Das Telefon klingelt, und wer abnimmt, hört die Aufnahme dieser Nummer.</p>
+
+		<h4><a href="{{ url_for('list') }}">Liste</a></h4>
+		<p>Alle Nummern mit Beschreibung. Ein Klick auf die graue Nummer lässt das Telefon damit klingeln, der Stift ändert die Beschreibung. Oben kann man nach Nummer oder Beschreibung suchen.</p>
+
+		<h4><a href="{{ url_for('upload_page') }}">Upload</a></h4>
+		<p>Eine .mp3 oder .wav Datei (höchstens {{ upload_max }} MiB) unter einer freien Nummer speichern. Danach kann man sie am Telefon wählen. Nullen am Anfang zählen mit: <span class="number">007</span> ist eine andere Nummer als <span style="white-space: nowrap"><span class="number">7</span>.</span></p>
+
+		<h4><a href="{{ url_for('say') }}">Text ansagen</a></h4>
+		<p>Eine Computerstimme liest den Text sofort vor, ohne vorher zu klingeln. Man hört ihn also nur, wenn der Hörer abgenommen ist oder der Lautsprecher eingeschaltet ist.</p>
+
+		<p class="note">„Telefon beschäftigt“: Solange jemand telefoniert oder eine Aufnahme läuft, kann das Telefon nicht antworten. Anrufe, Texte und Änderungen werden dann ausgeführt, sobald es wieder frei ist. Bitte nicht mehrmals abschicken.</p>
+	</section>
+
+	<section id="toene">
+		<h3>Töne</h3>
+		<div class="table">
+			<table class="keys">
+				<tbody>
+					<tr><th>Dauerton</th><td>Freiton: bereit zum Wählen, Aufnehmen oder für das Menü.</td></tr>
+					<tr><th>Langsames Tuten</th><td>Besetztton: fertig, bitte auflegen.</td></tr>
+					<tr><th>Schnelles Tuten</th><td>Nach 2 Minuten Besetztton: Der Hörer liegt noch nicht auf.</td></tr>
+					<tr><th>Drei aufsteigende Töne</th><td>Unter dieser Nummer gibt es keine Aufnahme.</td></tr>
+				</tbody>
+			</table>
+		</div>
+	</section>
+{% endblock %}
