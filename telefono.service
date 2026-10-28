@@ -1,13 +1,17 @@
 [Unit]
 Description=Telefono Application
-After=multi-user.target
+After=multi-user.target sound.target
 
 [Service]
 Type=idle
 User=pi
 ExecStart=python3 -m telefono
 Environment=XDG_RUNTIME_DIR=/run/user/1000
+# lgpio creates its notification pipes in the working directory
+RuntimeDirectory=telefono
+WorkingDirectory=%t/telefono
 Restart=always
+RestartSec=5
 
 [Install]
 WantedBy=multi-user.target
