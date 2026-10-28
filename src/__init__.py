@@ -7,7 +7,6 @@ from .recorder import Recorder
 from .speaker import SpeakerThread
 from .network import Network
 from .event_queue import EventQueue
-from .invButton import InvButton
 
 __all__ = [
 	"Button",
@@ -16,5 +15,4 @@ __all__ = [
 	"SpeakerThread",
 	"Network",
 	"EventQueue",
-	"InvButton",
 ]

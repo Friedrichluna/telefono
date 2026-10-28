@@ -23,6 +23,10 @@ BACKUP_EXT = ".bak"
 
 UPLOAD_DIR = RECORD_DIR
 
+# hardware configuration of this phone (which inputs are inverted),
+# see telefono.conf.example
+CONFIG_FILE = "@sysconfdir@/telefono.conf"
+
 # largest accepted request (HTTP 413 above), uploads are kept in /tmp
 # (tmpfs, i.e. RAM) until they are saved: 50 MiB are about 50 min of
 # 128 kbit/s mp3 or 4:30 min of 48 kHz stereo wav

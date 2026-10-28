@@ -27,6 +27,7 @@ from .CONSTANTS import OFF_HOOK_DELAY
 from .CONSTANTS import SHUTDOWN_BUTTON_DELAY
 
 from .audio import convert_legacy_recordings
+from .config import read_inverted
 from .ipc import IPC_Server
 from .player import Player
 
@@ -218,12 +219,15 @@ def main ():
 	# pater quotes
 	network["300"].list = ["2", "10", "11", "19", "22", "26", "30", "88"]
 
-	DialCounter = Button(2) #Zähler für die gewählte Zahl (rot)
-	DialInUse = Button(26) #Wählscheibe wird benutzt (grau)(weiß im Tel)
-	Hook = InvButton(18) #wenn der Hörer aufgenommen ist (Orange, mit Blauem Kabel aus dem Telefon)
-	ButtonLeft = InvButton(3) #Linker knopf (violett)red = Button(2) #Zähler für die gewählte Zahl (rot)(grün Gestr.)
-	ButtonMiddle = InvButton(27) #Mittlerer Knopf
-	SpeakerSwitch = Button(17) #Rechter Kippschalter (grüner Anschluss)
+	# the wiring differs between the phones, see telefono.conf
+	inverted = read_inverted ()
+
+	DialCounter = Button(2, inverted=inverted["dial_counter"]) #Zähler für die gewählte Zahl (rot)
+	DialInUse = Button(26, inverted=inverted["dial_in_use"]) #Wählscheibe wird benutzt (grau)(weiß im Tel)
+	Hook = Button(18, inverted=inverted["hook"]) #wenn der Hörer aufgenommen ist (Orange, mit Blauem Kabel aus dem Telefon)
+	ButtonLeft = Button(3, inverted=inverted["left"]) #Linker knopf (violett)red = Button(2) #Zähler für die gewählte Zahl (rot)(grün Gestr.)
+	ButtonMiddle = Button(27, inverted=inverted["middle"]) #Mittlerer Knopf
+	SpeakerSwitch = Button(17, inverted=inverted["speaker_switch"]) #Rechter Kippschalter (grüner Anschluss)
 	led = gpiozero.LED (20)
 
 	dial = Dial (DialInUse, DialCounter)

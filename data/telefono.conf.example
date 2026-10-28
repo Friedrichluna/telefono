@@ -1,0 +1,26 @@
+# telefono hardware configuration of one phone
+#
+# Copy this file to telefono.conf in the same directory (usually
+# /etc/telefono.conf) and adjust it there, it is not overwritten by
+# updates. Without the file no input is inverted.
+#
+# The phones are wired differently: an input that reads "pressed" at
+# rest (handset on the hook, buttons released, dial not turned) has to
+# be inverted. Values: yes or no, a missing entry means no.
+#
+# After a change: sudo systemctl restart telefono
+# The journal shows what was read: journalctl -u telefono | grep inverted
+
+[inverted]
+# handset lifted (GPIO 18)
+hook = no
+# left button (GPIO 3)
+left = no
+# middle button (GPIO 27), held for 5 s it shuts telefono down
+middle = no
+# dial pulse counter (GPIO 2)
+dial_counter = no
+# dial is turned (GPIO 26)
+dial_in_use = no
+# loudspeaker switch (GPIO 17), inverting swaps loud and quiet
+speaker_switch = no

@@ -5,9 +5,9 @@ pkgpython_PYTHON += src/__init__.py
 pkgpython_PYTHON += src/__main__.py
 pkgpython_PYTHON += src/audio.py
 pkgpython_PYTHON += src/button.py
+pkgpython_PYTHON += src/config.py
 pkgpython_PYTHON += src/dial.py
 pkgpython_PYTHON += src/event_queue.py
-pkgpython_PYTHON += src/invButton.py
 pkgpython_PYTHON += src/ipc.py
 pkgpython_PYTHON += src/network.py
 pkgpython_PYTHON += src/number.py
@@ -32,6 +32,7 @@ edit = sed -e 's|@pkgdatadir[@]|$(pkgdatadir)|g' \
            -e 's|@pkglocalstatedir[@]|$(pkglocalstatedir)|g' \
            -e 's|@templatedir[@]|$(templatedir)|g' \
            -e 's|@staticdir[@]|$(staticdir)|g' \
+           -e 's|@sysconfdir[@]|$(sysconfdir)|g' \
            -e 's|@vcs_version[@]|'`cat vcs_version`'|g'
 
 all: CONSTANTS.py
@@ -74,6 +75,12 @@ dist_static_DATA += src/webapp/static/favicon.ico
 pkglocalstatedir = $(localstatedir)/$(PACKAGE)
 dist_pkglocalstate_DATA =
 dist_pkglocalstate_DATA += data/records.list.example
+
+# the hardware configuration of a phone is $(sysconfdir)/telefono.conf,
+# made from this example (only the example is installed, so updates
+# never overwrite it)
+dist_sysconf_DATA =
+dist_sysconf_DATA += data/telefono.conf.example
 
 dist_doc_DATA =
 dist_doc_DATA += README.md
