@@ -21,6 +21,13 @@ BACKUP_EXT = ".bak"
 
 UPLOAD_DIR = RECORD_DIR
 
+# largest accepted request (HTTP 413 above), uploads are kept in /tmp
+# (tmpfs, i.e. RAM) until they are saved: a recording made on the
+# phone is at most 21 MB (RECORD_TIME_MAX: 120 s, 44.1 kHz, stereo,
+# 16 bit), the largest existing one 39 MB (3:24 min, 48 kHz stereo),
+# 50 MiB are about 4:30 min of 48 kHz stereo
+UPLOAD_MAX_SIZE = 50 * 1024 * 1024
+
 WEBAPP_EXEC = ("python3", "-m", "telefono.webapp")
 
 FLASK_DEBUG = DEBUG

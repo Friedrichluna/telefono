@@ -5,6 +5,8 @@ from flask import Flask, redirect, render_template, request
 
 import psutil
 
+from werkzeug.exceptions import RequestEntityTooLarge
+
 from ..CONSTANTS import FLASK_TEMPLATES
 from ..CONSTANTS import FLASK_STATIC
 
@@ -12,6 +14,7 @@ from ..CONSTANTS import RECORD_PREFIX
 from ..CONSTANTS import RECORD_SUFFIX
 
 from ..CONSTANTS import UPLOAD_DIR
+from ..CONSTANTS import UPLOAD_MAX_SIZE
 
 from ..ipc import IPC_DESCRIPTION_MAX_BYTES
 from ..ipc import IPC_StringTooLong
@@ -41,6 +44,9 @@ class TelefonoWebApp (Flask):
 
 		self.ipc = ipc
 
+		# larger requests are refused before they are read
+		self.config["MAX_CONTENT_LENGTH"] = UPLOAD_MAX_SIZE
+
 		self.add_url_rule ("/", "home", self.home, methods=["POST", "GET"])
 		self.add_url_rule ("/list", "list", self.list, methods=["POST", "GET"])
 		self.add_url_rule ("/edit/<int:index>", "edit_value", self.edit_value, methods=["GET", "POST"])
@@ -50,12 +56,14 @@ class TelefonoWebApp (Flask):
 
 		self.register_error_handler (IPC_Timeout, self.busy)
 		self.register_error_handler (IPC_StringTooLong, self.too_long)
+		self.register_error_handler (RequestEntityTooLarge, self.too_large)
 
 		# maxlength hints for the templates (counts characters,
 		# so the byte limit is still checked here)
 		self.jinja_env.globals.update (
 		        description_max=IPC_DESCRIPTION_MAX_BYTES,
-		        text_max=IPC_TTS_MESSAGE_MAX_BYTES)
+		        text_max=IPC_TTS_MESSAGE_MAX_BYTES,
+		        upload_max=UPLOAD_MAX_SIZE // 2**20)
 		return
 
 	# the main process did not answer, e.g. while a recording plays
@@ -81,6 +89,24 @@ class TelefonoWebApp (Flask):
 		return render_template ("index.html",
 		                        message="Eingabe zu lang.",
 		                        message_type="error"), 400
+
+	# request larger than UPLOAD_MAX_SIZE (or a form field larger
+	# than Flask's MAX_FORM_MEMORY_SIZE)
+	def too_large (self, error):
+		self.logger.warning ("request too large: %s %s: %s bytes",
+		                     request.method, request.path,
+		                     request.content_length)
+
+		if "upload_file" != request.endpoint:
+			return render_template ("index.html",
+			                        message="Eingabe zu groß.",
+			                        message_type="error"), 413
+
+		return render_template ("upload.html",
+		                        diskSpace=getFreeDiskSpace (),
+		                        message="Datei zu groß, höchstens %d MiB erlaubt."
+		                                % (UPLOAD_MAX_SIZE // 2**20),
+		                        message_type="error"), 413
 
 	def home(self):
 		if request.method == "POST":
