@@ -23,6 +23,7 @@ from .CONSTANTS import WEBAPP_EXEC
 
 from .CONSTANTS import MAINLOOP_DELAY
 from .CONSTANTS import MENU_DELAY
+from .CONSTANTS import OFF_HOOK_DELAY
 from .CONSTANTS import SHUTDOWN_BUTTON_DELAY
 
 from .ipc import IPC_Server
@@ -166,6 +167,8 @@ def off_hook_loop (network, player, off_hook, dial, ButtonLeft, ButtonMiddle, le
 			player.stop_tone ()
 			return do_menu (off_hook, dial, network, player,
 			                led, log)
+
+		time.sleep (OFF_HOOK_DELAY)
 
 	player.stop_tone ()
 	return
