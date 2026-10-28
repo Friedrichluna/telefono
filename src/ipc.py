@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import enum
+import logging
 import socket
 import threading
 
@@ -26,7 +27,13 @@ class IPC_MESSAGE (enum.IntEnum):
 IPC_INT_SIZE = 4
 IPC_NUMBER_SIZE = 32
 
+# a string field holds the UTF-8 encoded string and a terminating NUL,
+# the *_SIZE of a string field counts both,
+# *_MAX_BYTES is the longest string (in bytes, umlauts take two)
+
+# TTS datagram: message type + text field
 IPC_TTS_MESSAGE_SIZE = IPC_MAX_DATA -1
+IPC_TTS_MESSAGE_MAX_BYTES = IPC_TTS_MESSAGE_SIZE -1
 
 
 class IPC_ANSWER (enum.IntEnum):
@@ -37,8 +44,24 @@ class IPC_ANSWER (enum.IntEnum):
 	LIST = 4
 
 IPC_DESCRIPTION_SIZE = 128
+IPC_DESCRIPTION_MAX_BYTES = IPC_DESCRIPTION_SIZE -1
 
 IPC_ANSWER_SIZE = 1048576
+
+
+# string does not fit into its field, raised instead of sending it
+class IPC_StringTooLong (ValueError):
+	def __init__ (self, size:int, max_size:int):
+		super ().__init__ ("string too long: %d bytes, at most %d"
+		                   % (size, max_size -1))
+		self.size = size
+		self.max_bytes = max_size -1
+		return
+
+
+# received message does not have the expected layout
+class IPC_Malformed (ValueError):
+	pass
 
 
 # the main process did not answer within IPC_TIMEOUT
@@ -54,6 +77,7 @@ class IPC_Timeout (TimeoutError):
 class IPC:
 	def __init__ (self, socket):
 		self.__socket = socket
+		self.log = logging.getLogger ("IPC")
 		return
 
 	def __serialize_int (self, integer:int) -> bytes:
@@ -70,11 +94,13 @@ class IPC:
 
 	@staticmethod
 	def serialize_str (string:str, max_size:int) -> bytes:
-		if len (string) >= max_size:
-			print ("string too long")
-			return b""
+		data = string.encode ()
 
-		return string.encode () + b"\0"
+		# the terminating NUL has to fit as well
+		if len (data) >= max_size:
+			raise IPC_StringTooLong (len (data), max_size)
+
+		return data + b"\0"
 
 	@staticmethod
 	def deserialize_str (message:bytes, max_size) -> (str, bytes):
@@ -84,7 +110,28 @@ class IPC:
 		and message[size] != 0:
 			size += 1
 
-		return message[:size].decode (), message[size+1:]
+		if max_size == size or len (message) == size:
+			raise IPC_Malformed ("no NUL within %d bytes"
+			                     % max_size)
+
+		try:
+			return message[:size].decode (), message[size+1:]
+
+		except UnicodeDecodeError as error:
+			raise IPC_Malformed (str (error))
+
+	# for strings the main process sends from its own data
+	# (records.list may be edited by hand): shorten at a character
+	# boundary rather than sending nothing
+	def _shorten_str (self, string:str, max_size:int) -> str:
+		data = string.encode ()
+		if len (data) < max_size:
+			return string
+
+		self.log.warning ("%d bytes too long for IPC, shortened: %r",
+		                  len (data), string)
+
+		return data[:max_size -1].decode (errors="ignore")
 
 	def _serialize_call (self, number:Number) -> bytearray:
 		data = bytearray ()
@@ -100,8 +147,6 @@ class IPC:
 		data.append (IPC_MESSAGE.TTS)
 
 		text = IPC.serialize_str (message, IPC_TTS_MESSAGE_SIZE)
-		if not text:
-			return bytearray ()
 
 		data.extend (text)
 		return data
@@ -234,6 +279,9 @@ class IPC:
 			return answer, payload
 
 	def _serialize_description (self, description:str) -> bytes:
+		description = self._shorten_str (description,
+		                                 IPC_DESCRIPTION_SIZE)
+
 		return IPC.serialize_str (description,
 		                          IPC_DESCRIPTION_SIZE)
 
@@ -243,19 +291,25 @@ class IPC:
 
 	def _serialize_list (self, network) -> bytes:
 		data = bytearray ()
-
-		data.extend (self.__serialize_int (len (network)))
+		length = 0
 
 		for number in network:
-			data.extend (number.to_bytes (IPC_NUMBER_SIZE,
-			                              self))
+			try:
+				key = number.to_bytes (IPC_NUMBER_SIZE, self)
 
-			value = IPC.serialize_str (
-			                        network[number].description,
-			                        IPC_DESCRIPTION_SIZE)
+			except IPC_StringTooLong:
+				self.log.warning ("number %s too long for IPC,"
+				                  " not listed", number)
+				continue
+
+			data.extend (key)
+
+			value = self._serialize_description (
+			                        network[number].description)
 			data.extend (value)
+			length += 1
 
-		return data
+		return self.__serialize_int (length) + data
 
 	def __deserialize_list (self, message:bytes) -> list:
 		records = list ()
@@ -263,7 +317,7 @@ class IPC:
 		length = self.__deserialize_int (message)
 		message = message[IPC_INT_SIZE:]
 
-		while True:
+		while message:
 			number, message = Number.from_bytes (message,
 			                                     IPC_NUMBER_SIZE,
 			                                     self)
@@ -395,9 +449,6 @@ class IPC_Client (IPC):
 
 	def queue_message (self, message:str):
 		data = self._serialize_tts (message)
-		if not data:
-			return "Ein Fehler ist aufgetreten.", "error"
-
 		data = self.__request (data, queued=True)
 		answer, _ = self._deserialize_answer (data)
 
@@ -433,7 +484,14 @@ class IPC_Server (IPC):
 		if b"" == data:
 			return
 
-		message_type, payload = self._deserialize (data)
+		try:
+			message_type, payload = self._deserialize (data)
+
+		# answer with an error rather than storing a broken value
+		except ValueError as error:
+			self.log.error ("malformed request %r: %s",
+			                data[:40], error)
+			message_type, payload = IPC_MESSAGE.ERROR, None
 
 		if IPC_MESSAGE.ERROR == message_type:
 			data = self._serialize_answer (IPC_ANSWER.ERROR)
