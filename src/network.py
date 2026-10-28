@@ -19,6 +19,17 @@ from .CONSTANTS import BACKUP_EXT
 from .number import Number
 
 
+def sync_dir (path:str):
+	# fsync a directory, so new, renamed or linked
+	# entries survive a power loss
+	fd = os.open (path, os.O_RDONLY | os.O_DIRECTORY)
+	try:
+		os.fsync (fd)
+	finally:
+		os.close (fd)
+	return
+
+
 class SubscriberType (enum.IntEnum):
 	UNASSIGNED = 0
 	UNUSED = 1
@@ -588,6 +599,10 @@ class Network ():
 			# file is only touched once the new one is complete
 			self.__store (f)
 
+			# make sure the data is on the disk before the
+			# file becomes visible (power loss)
+			os.fsync (fd)
+
 			# create backup file
 			if os.path.exists (self.__filename):
 				self.log.debug ("rename existing file %s -> %s",
@@ -602,6 +617,9 @@ class Network ():
 			linkat.link_at (linkat.AT_FDCWD, b"/proc/self/fd/%d" % fd,
 			                linkat.AT_FDCWD, self.__filename.encode(),
 			                linkat.AT_SYMLINK_FOLLOW)
+
+			# make rename and link durable
+			sync_dir (os.path.dirname (self.__filename))
 
 		return
 
