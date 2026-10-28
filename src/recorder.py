@@ -14,6 +14,8 @@ from .CONSTANTS import RECORD_DELAY
 from .CONSTANTS import RECORD_TIME_MIN
 from .CONSTANTS import RECORD_TIME_MAX
 
+from .network import sync_dir
+
 class RECORDER_RESULT (enum.IntEnum):
 	ERROR = 0
 	ABORT = 1
@@ -53,7 +55,10 @@ class Recorder ():
 		                   os.O_TMPFILE | os.O_WRONLY,
 		                   mode=0o600)
 
-		self.wavefile = wave.open (os.fdopen (self.fd, "wb"), "w")
+		# keep the file object, wave does not close files it
+		# did not open, so self.fd stays valid after wave is done
+		self.file = os.fdopen (self.fd, "wb")
+		self.wavefile = wave.open (self.file, "w")
 		self.wavefile.setnchannels (channels)
 		self.wavefile.setsampwidth (self._pa.get_sample_size (pyaudio.paInt16))
 		self.wavefile.setframerate (rate)
@@ -66,11 +71,22 @@ class Recorder ():
 	def save (self):
 		self.log.debug ("saving recording file")
 
+		# finish the file before it becomes visible: stop the
+		# input so nothing is written after the fsync, let wave
+		# finish the header and make sure everything is on the
+		# disk (power loss)
+		self._stream.stop_stream ()
+		self.wavefile.close ()
+		os.fsync (self.fd)
+
 		# atomically link file
 		filename = self.__subscriber.filename.encode()
 		linkat.link_at (linkat.AT_FDCWD, b"/proc/self/fd/%d" % self.fd,
 		                linkat.AT_FDCWD, filename,
 		                linkat.AT_SYMLINK_FOLLOW)
+
+		# make the link durable
+		sync_dir (os.path.dirname (self.__subscriber.filename))
 
 		# register created file
 		return self.__subscriber.register_file ()
@@ -92,6 +108,7 @@ class Recorder ():
 		self._stream.close ()
 		self._pa.terminate ()
 		self.wavefile.close ()
+		self.file.close ()
 		return False
 
 
