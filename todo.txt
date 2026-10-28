@@ -19,9 +19,6 @@ Network:
 	- better reserving mechanism for assigning
 	- make whole network loadable from file
 
-Player:
-	- get rid of pygame
-
 Speaker:
 	- get rid of activation delay
 	- defer activation delay on startup
