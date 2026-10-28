@@ -151,6 +151,10 @@ WIND_TIME = 10
 
 MAINLOOP_DELAY = 0.5
 
+# how long the webapp waits for an answer of the main process,
+# which only answers between phone actions (one message per main loop)
+IPC_TIMEOUT = 3
+
 NO_NUMBER_DELAY = 0.01
 NO_NUMBER_TIMEOUT = 40 / NO_NUMBER_DELAY
 

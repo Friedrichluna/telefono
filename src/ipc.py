@@ -3,6 +3,9 @@
 
 import enum
 import socket
+import threading
+
+from .CONSTANTS import IPC_TIMEOUT
 
 from .number import Number
 
@@ -36,6 +39,16 @@ class IPC_ANSWER (enum.IntEnum):
 IPC_DESCRIPTION_SIZE = 128
 
 IPC_ANSWER_SIZE = 1048576
+
+
+# the main process did not answer within IPC_TIMEOUT
+# queued: the request was sent and changes something (call, text,
+#         description, upload), it is still executed later
+class IPC_Timeout (TimeoutError):
+	def __init__ (self, queued:bool):
+		super ().__init__ ("no answer within %s s" % IPC_TIMEOUT)
+		self.queued = queued
+		return
 
 
 class IPC:
@@ -285,14 +298,41 @@ class IPC:
 
 class IPC_Client (IPC):
 	def __init__ (self, fd):
-		super ().__init__ (socket.socket (fileno=fd))
+		client = socket.socket (fileno=fd)
+		client.settimeout (IPC_TIMEOUT)
+		super ().__init__ (client)
+
+		# all webapp threads share this socket,
+		# so only one request/answer pair at a time
+		self.__lock = threading.Lock ()
+
+		# requests that timed out: the server still answers them
+		# later, in order, before the answer of the next request
+		self.__pending = 0
 		return
+
+	def __request (self, data, queued:bool=False) -> bytes:
+		with self.__lock:
+			try:
+				self._send (data)
+			except TimeoutError:
+				raise IPC_Timeout (False)
+
+			try:
+				# skip the late answers of timed out requests
+				while self.__pending:
+					self._recv (IPC_ANSWER_SIZE)
+					self.__pending -= 1
+
+				return self._recv (IPC_ANSWER_SIZE)
+
+			except TimeoutError:
+				self.__pending += 1
+				raise IPC_Timeout (queued)
 
 	def get_description (self, number:Number):
 		data = self._serialize_record_get (number)
-		self._send (data)
-
-		data = self._recv (IPC_ANSWER_SIZE)
+		data = self.__request (data)
 		answer, data = self._deserialize_answer (data)
 
 		if IPC_ANSWER.DESCRIPTION == answer:
@@ -302,9 +342,7 @@ class IPC_Client (IPC):
 
 	def set_description (self, number:Number, description:str):
 		data = self._serialize_record_set (number, description)
-		self._send (data)
-
-		data = self._recv (IPC_ANSWER_SIZE)
+		data = self.__request (data, queued=True)
 		answer, _ = self._deserialize_answer (data)
 
 		if IPC_ANSWER.OK == answer:
@@ -317,18 +355,14 @@ class IPC_Client (IPC):
 
 	def get_list (self):
 		data = self._serialize_record_list ()
-		self._send (data)
-
-		data = self._recv (IPC_ANSWER_SIZE)
+		data = self.__request (data)
 		_, network_list = self._deserialize_answer (data)
 
 		return network_list
 
 	def is_free (self, number:Number):
 		data = self._serialize_free (number)
-		self._send (data)
-
-		data = self._recv (IPC_ANSWER_SIZE)
+		data = self.__request (data)
 		answer, _ = self._deserialize_answer (data)
 
 		if IPC_ANSWER.OK == answer:
@@ -337,17 +371,13 @@ class IPC_Client (IPC):
 
 	def upload (self):
 		data = self._serialize_upload ()
-		self._send (data)
-
-		data = self._recv (IPC_ANSWER_SIZE)
+		data = self.__request (data, queued=True)
 		answer, _ = self._deserialize_answer (data)
 		return
 
 	def queue_call (self, number:Number):
 		data = self._serialize_call (number)
-		self._send (data)
-
-		data = self._recv (IPC_ANSWER_SIZE)
+		data = self.__request (data, queued=True)
 		answer, _ = self._deserialize_answer (data)
 
 		if IPC_ANSWER.OK == answer:
@@ -368,9 +398,7 @@ class IPC_Client (IPC):
 		if not data:
 			return "Ein Fehler ist aufgetreten.", "error"
 
-		self._send (data)
-
-		data = self._recv (IPC_ANSWER_SIZE)
+		data = self.__request (data, queued=True)
 		answer, _ = self._deserialize_answer (data)
 
 		if IPC_ANSWER.OK == answer:
