@@ -232,7 +232,7 @@ class Subscriber ():
 					self.log.debug ("skipping duplicate"
 					                " subscriber %r",
 					                subscriber)
-					return
+					continue
 
 				self.log.debug ("add number %r",
 				                subscriber)
