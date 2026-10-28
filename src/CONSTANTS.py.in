@@ -27,6 +27,23 @@ UPLOAD_DIR = RECORD_DIR
 # see telefono.conf.example
 CONFIG_FILE = "@sysconfdir@/telefono.conf"
 
+# hardware test page (/diagnose): the GPIO registers are read from
+# DIAGNOSE_GPIO_MEM (read-only, nothing is claimed or changed); while
+# the page is open, a thread samples the inputs every
+# DIAGNOSE_SAMPLE_DELAY (the dial pulses are 60 ms long) and stops
+# DIAGNOSE_SAMPLE_IDLE s after the page's last update, which comes
+# every DIAGNOSE_POLL_INTERVAL s while the page is visible
+DIAGNOSE_GPIO_MEM = "/dev/gpiomem"
+DIAGNOSE_COMPATIBLE_FILE = "/proc/device-tree/compatible"
+DIAGNOSE_SAMPLE_DELAY = 0.01
+DIAGNOSE_SAMPLE_IDLE = 3
+DIAGNOSE_POLL_INTERVAL = 0.2
+# test of the outputs (through the main process, only when it is idle):
+# the LED blinks DIAGNOSE_LED_BLINKS times, the relay is switched on
+# for SPEAKER_POWERON_DELAY s
+DIAGNOSE_LED_BLINKS = 5
+DIAGNOSE_LED_BLINK_TIME = 0.2
+
 # largest accepted request (HTTP 413 above), uploads are kept in /tmp
 # (tmpfs, i.e. RAM) until they are saved: 50 MiB are about 50 min of
 # 128 kbit/s mp3 or 4:30 min of 48 kHz stereo wav

@@ -5,6 +5,7 @@ import errno
 import logging
 import os
 import shutil
+import time
 import wave
 
 from flask import Flask, flash, jsonify, redirect, render_template, request, send_file, url_for
@@ -15,6 +16,10 @@ from werkzeug.exceptions import RequestEntityTooLarge
 
 from ..CONSTANTS import FLASK_TEMPLATES
 from ..CONSTANTS import FLASK_STATIC
+
+from ..CONSTANTS import CONFIG_FILE
+from ..CONSTANTS import DIAGNOSE_POLL_INTERVAL
+from ..CONSTANTS import SPEAKER_POWERON_DELAY
 
 from ..CONSTANTS import RECORD_DIR
 from ..CONSTANTS import RECORD_PREFIX
@@ -28,7 +33,18 @@ from ..audio import EncodeError
 from ..audio import encode_mp3
 from ..audio import probe_mp3
 from ..audio import save_file
+from ..config import PINS
+from ..config import load_inverted
+from ..diagnose import GpioError
+from ..diagnose import GpioRegisters
+from ..diagnose import INPUTS as DIAGNOSE_INPUTS
+from ..diagnose import OUTPUTS as DIAGNOSE_OUTPUTS
+from ..diagnose import Sampler
+from ..diagnose import all_pins
+from ..diagnose import evaluate_inputs
+from ..diagnose import evaluate_outputs
 from ..ipc import IPC_DESCRIPTION_MAX_BYTES
+from ..ipc import IPC_OUTPUT
 from ..ipc import IPC_StringTooLong
 from ..ipc import IPC_Timeout
 from ..ipc import IPC_TTS_MESSAGE_MAX_BYTES
@@ -100,6 +116,71 @@ def recorded_numbers () -> set:
 	return numbers
 
 
+# start time of the main process (the webapp's parent), to see whether
+# telefono.conf was changed after it read it; None if unknown
+def telefono_start_time ():
+	try:
+		return psutil.Process (os.getppid ()).create_time ()
+
+	except psutil.Error:
+		return None
+
+
+# CONFIG_FILE as the hardware test page shows it (German): status, the
+# problems found, and whether it is newer than the running telefono
+def config_state (config, started) -> dict:
+	problems = list ()
+
+	if config.error:
+		status = "fehlerhaft, kein Eingang ist invertiert"
+		problems.append ("Die Datei kann nicht gelesen werden: %s"
+		                 % config.error)
+
+	elif not config.found:
+		if os.path.exists (config.path):
+			status = "nicht lesbar, kein Eingang ist invertiert"
+		else:
+			status = "nicht vorhanden, kein Eingang ist invertiert"
+
+	else:
+		status = "vorhanden"
+
+	for section in config.unknown_sections:
+		problems.append ("Unbekannter Abschnitt [%s] wird ignoriert."
+		                 % section)
+
+	for key in config.unknown_inputs:
+		problems.append ("Unbekannter Eingang „%s“ wird ignoriert." % key)
+
+	for key, value in config.invalid.items ():
+		problems.append ("„%s = %s“: nur yes oder no erlaubt, %s ist "
+		                 "nicht invertiert." % (key, value, key))
+
+	changed = False
+	if started is not None:
+		try:
+			changed = os.stat (config.path).st_mtime > started
+		except OSError:
+			pass
+
+	return {
+		"path": config.path,
+		"found": config.found,
+		"status": status,
+		"problems": problems,
+		"changed": changed,
+	}
+
+
+# the outputs the hardware test page can switch through the main process
+TEST_OUTPUTS = {
+	"led": (IPC_OUTPUT.LED, "Die LED blinkt."),
+	"speaker": (IPC_OUTPUT.SPEAKER,
+	            "Das Lautsprecher-Relais ist für %d s eingeschaltet."
+	            % SPEAKER_POWERON_DELAY),
+}
+
+
 # the upload can not be used, the message is shown to the user
 class InvalidUpload (Exception):
 	pass
@@ -133,6 +214,19 @@ class TelefonoWebApp (Flask):
 		self.add_url_rule ("/help", "help", self.help)
 		self.add_url_rule ("/recording/<number>", "recording", self.recording)
 		self.add_url_rule ("/download/<number>", "download", self.download)
+		self.add_url_rule ("/diagnose", "diagnose", self.diagnose, methods=["GET", "POST"])
+		self.add_url_rule ("/diagnose/data", "diagnose_data", self.diagnose_data)
+
+		# hardware test: GPIO registers read directly, not through
+		# the main process (it does not answer while the phone is used)
+		self.gpio = GpioRegisters ()
+		self.sampler = Sampler (self.gpio)
+		self.telefono_started = telefono_start_time ()
+
+		# the test page updates several times a second,
+		# that does not belong into the journal
+		logging.getLogger ("werkzeug").addFilter (
+		        lambda record: "/diagnose/data" not in record.getMessage ())
 
 		self.register_error_handler (IPC_Timeout, self.busy)
 		self.register_error_handler (IPC_StringTooLong, self.too_long)
@@ -317,6 +411,64 @@ class TelefonoWebApp (Flask):
 	# also works while the phone is busy
 	def help (self):
 		return render_template ("help.html")
+
+	# what the hardware test page shows; reads the GPIO registers and
+	# telefono.conf on every call, never asks the main process
+	def diagnose_state (self) -> dict:
+		config = load_inverted (CONFIG_FILE)
+
+		state = {
+			"time": time.strftime ("%H:%M:%S"),
+			"config": config_state (config, self.telefono_started),
+			"error": None,
+			"inputs": [],
+			"outputs": [],
+			"sampler": None,
+		}
+
+		try:
+			snapshot = self.gpio.read (all_pins ())
+			state["inputs"] = evaluate_inputs (snapshot, config)
+			state["outputs"] = evaluate_outputs (snapshot)
+			state["sampler"] = self.sampler.poll (config.inverted)
+
+		except GpioError as error:
+			state["error"] = "GPIO kann nicht gelesen werden: %s" % error
+
+		# the page shows the error instead of the values
+		except Exception as error:
+			self.logger.exception ("reading the GPIO failed")
+			state["error"] = "GPIO kann nicht gelesen werden: %r" % error
+
+		return state
+
+	def diagnose_data (self):
+		response = jsonify (self.diagnose_state ())
+		response.cache_control.no_store = True
+		return response
+
+	def diagnose (self):
+		if "POST" == request.method:
+			output = TEST_OUTPUTS.get (request.form.get ("output"))
+			if output is None:
+				return self.finish (url_for ("diagnose"),
+				                    "Unbekannter Ausgang.", "error")
+
+			# IPC_Timeout: busy message, done later
+			if not self.ipc.test_output (output[0]):
+				return self.finish (url_for ("diagnose"),
+				                    "Ein Fehler ist aufgetreten.",
+				                    "error")
+
+			return self.finish (url_for ("diagnose"), output[1],
+			                    "success")
+
+		return render_template ("diagnose.html",
+		                        state=self.diagnose_state (),
+		                        specs=DIAGNOSE_INPUTS,
+		                        pins=PINS,
+		                        output_specs=DIAGNOSE_OUTPUTS,
+		                        poll_interval=int (DIAGNOSE_POLL_INTERVAL * 1000))
 
 	# the recording file itself, read from RECORD_DIR without asking
 	# the main process, so it can also be heard while the phone is

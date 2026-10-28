@@ -24,6 +24,12 @@ class IPC_MESSAGE (enum.IntEnum):
 	LIST = 5
 	FREE = 6
 	UPLOAD = 7
+	TEST_OUTPUT = 8
+
+# the outputs the hardware test page can switch (TEST_OUTPUT payload)
+class IPC_OUTPUT (enum.IntEnum):
+	LED = 0
+	SPEAKER = 1
 
 IPC_INT_SIZE = 4
 IPC_NUMBER_SIZE = 32
@@ -180,6 +186,9 @@ class IPC:
 		elif IPC_MESSAGE.UPLOAD == message_type:
 			payload = self.__deserialize_upload (message[1:])
 
+		elif IPC_MESSAGE.TEST_OUTPUT == message_type:
+			payload = self.__deserialize_test_output (message[1:])
+
 		if payload is None:
 			return (IPC_MESSAGE.ERROR, None)
 
@@ -247,6 +256,19 @@ class IPC:
 
 	def __deserialize_upload (self, message:bytes):
 		return b""
+
+	def _serialize_test_output (self, output:IPC_OUTPUT) -> bytearray:
+		data = bytearray ()
+		data.append (IPC_MESSAGE.TEST_OUTPUT)
+		data.append (output)
+		return data
+
+	# raises ValueError for an unknown output (answered with ERROR)
+	def __deserialize_test_output (self, message:bytes) -> IPC_OUTPUT:
+		if 1 != len (message):
+			raise IPC_Malformed ("output: %d bytes" % len (message))
+
+		return IPC_OUTPUT (message[0])
 
 
 	def _serialize_answer (self, answer:IPC_ANSWER,
@@ -454,6 +476,14 @@ class IPC_Client (IPC):
 
 		return "Ein Fehler ist aufgetreten.", "error"
 
+	# the main process answers before it switches the output
+	def test_output (self, output:IPC_OUTPUT):
+		data = self._serialize_test_output (output)
+		data = self.__request (data, queued=True)
+		answer, _ = self._deserialize_answer (data)
+
+		return IPC_ANSWER.OK == answer
+
 	def queue_message (self, message:str):
 		data = self._serialize_tts (message)
 		data = self.__request (data, queued=True)
@@ -485,7 +515,9 @@ class IPC_Server (IPC):
 	def get_client_fd (self):
 		return self.__client.fileno ()
 
-	def handle_message (self, queue, network):
+	# outputs: {IPC_OUTPUT: function} for TEST_OUTPUT, called after
+	# the answer was sent (it may take a while)
+	def handle_message (self, queue, network, outputs:dict=None):
 
 		data = self._recv (IPC_MAX_DATA, blocking=False)
 		if b"" == data:
@@ -568,6 +600,15 @@ class IPC_Server (IPC):
 			network.sync_fs ()
 			data = self._serialize_answer (IPC_ANSWER.OK)
 			self._send (data)
+			return
+
+		elif IPC_MESSAGE.TEST_OUTPUT == message_type \
+		and payload in (outputs or {}):
+			data = self._serialize_answer (IPC_ANSWER.OK)
+			self._send (data)
+
+			self.log.info ("testing output %s", payload.name)
+			outputs[payload] ()
 			return
 
 		data = self._serialize_answer (IPC_ANSWER.ERROR)

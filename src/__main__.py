@@ -26,8 +26,14 @@ from .CONSTANTS import MENU_DELAY
 from .CONSTANTS import OFF_HOOK_DELAY
 from .CONSTANTS import SHUTDOWN_BUTTON_DELAY
 
+from .CONSTANTS import DIAGNOSE_LED_BLINKS
+from .CONSTANTS import DIAGNOSE_LED_BLINK_TIME
+
 from .audio import convert_legacy_recordings
+from .config import LED_PIN
+from .config import PINS
 from .config import read_inverted
+from .ipc import IPC_OUTPUT
 from .ipc import IPC_Server
 from .player import Player
 
@@ -222,13 +228,13 @@ def main ():
 	# the wiring differs between the phones, see telefono.conf
 	inverted = read_inverted ()
 
-	DialCounter = Button(2, inverted=inverted["dial_counter"]) #Zähler für die gewählte Zahl (rot)
-	DialInUse = Button(26, inverted=inverted["dial_in_use"]) #Wählscheibe wird benutzt (grau)(weiß im Tel)
-	Hook = Button(18, inverted=inverted["hook"]) #wenn der Hörer aufgenommen ist (Orange, mit Blauem Kabel aus dem Telefon)
-	ButtonLeft = Button(3, inverted=inverted["left"]) #Linker knopf (violett)red = Button(2) #Zähler für die gewählte Zahl (rot)(grün Gestr.)
-	ButtonMiddle = Button(27, inverted=inverted["middle"]) #Mittlerer Knopf
-	SpeakerSwitch = Button(17, inverted=inverted["speaker_switch"]) #Rechter Kippschalter (grüner Anschluss)
-	led = gpiozero.LED (20)
+	DialCounter = Button(PINS["dial_counter"], inverted=inverted["dial_counter"]) #Zähler für die gewählte Zahl (rot)
+	DialInUse = Button(PINS["dial_in_use"], inverted=inverted["dial_in_use"]) #Wählscheibe wird benutzt (grau)(weiß im Tel)
+	Hook = Button(PINS["hook"], inverted=inverted["hook"]) #wenn der Hörer aufgenommen ist (Orange, mit Blauem Kabel aus dem Telefon)
+	ButtonLeft = Button(PINS["left"], inverted=inverted["left"]) #Linker knopf (violett)red = Button(2) #Zähler für die gewählte Zahl (rot)(grün Gestr.)
+	ButtonMiddle = Button(PINS["middle"], inverted=inverted["middle"]) #Mittlerer Knopf
+	SpeakerSwitch = Button(PINS["speaker_switch"], inverted=inverted["speaker_switch"]) #Rechter Kippschalter (grüner Anschluss)
+	led = gpiozero.LED (LED_PIN)
 
 	dial = Dial (DialInUse, DialCounter)
 
@@ -266,6 +272,20 @@ def main ():
 	def off_hook ():
 		return Hook.is_pressed
 
+	# the webapp's hardware test (only when idle, like all requests)
+	def test_speaker ():
+		# switched on for SPEAKER_POWERON_DELAY
+		speakerThread.activate ()
+		speakerThread.deactivate ()
+
+	test_outputs = {
+		IPC_OUTPUT.LED: lambda: led.blink (on_time=DIAGNOSE_LED_BLINK_TIME,
+		                                   off_time=DIAGNOSE_LED_BLINK_TIME,
+		                                   n=DIAGNOSE_LED_BLINKS,
+		                                   background=True),
+		IPC_OUTPUT.SPEAKER: test_speaker,
+	}
+
 	log.info ("startup finished")
 	while running and not turn_off (ButtonMiddle, log):
 
@@ -275,7 +295,7 @@ def main ():
 			               log)
 			log.debug ("leaving off-hook loop")
 
-		ipc.handle_message (queue, network)
+		ipc.handle_message (queue, network, test_outputs)
 
 		queue.process (player)
 

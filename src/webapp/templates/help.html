@@ -214,6 +214,9 @@
 		<h4><a href="{{ url_for('say') }}">Text ansagen</a></h4>
 		<p>Eine Computerstimme liest den Text sofort vor, ohne vorher zu klingeln. Man hört ihn also nur, wenn der Hörer abgenommen ist oder der Lautsprecher eingeschaltet ist.</p>
 
+		<h4><a href="{{ url_for('diagnose') }}">Hardware-Test</a></h4>
+		<p>Zeigt live, was das Telefon an Hörer, Knöpfen, Wählscheibe und Lautsprecherschalter liest, auch bei abgehobenem Hörer. In Ruhe (Hörer aufgelegt, nichts gedrückt) muss alles grün „in Ruhe“ zeigen, sonst steht dort, was in <code>/etc/telefono.conf</code> umzustellen ist. Die gewählte Ziffer zeigt, ob die Wählscheibe richtig gezählt wird. LED und Lautsprecher-Relais lassen sich testen, wenn das Telefon frei ist.</p>
+
 		<p class="note">„Telefon beschäftigt“: Solange jemand telefoniert oder eine Aufnahme läuft, kann das Telefon nicht antworten. Anrufe, Texte und Änderungen werden dann ausgeführt, sobald es wieder frei ist. Bitte nicht mehrmals abschicken.</p>
 	</section>
 

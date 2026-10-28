@@ -1,0 +1,406 @@
+{% extends "base.html" %}
+
+{% block style %}
+		h3 {
+			margin: 1.5rem 0 .5rem;
+			font-size: 1.125rem;
+			font-weight: 500;
+		}
+
+		p {
+			margin: 0 0 .75rem;
+		}
+
+		code {
+			padding: 0 .25rem;
+			font-size: .875em;
+			background-color: var(--light);
+			border: 1px solid rgba(0,0,0,.1);
+			border-radius: .2rem;
+			overflow-wrap: anywhere;
+		}
+
+		#status {
+			display: flex;
+			flex-wrap: wrap;
+			align-items: center;
+			gap: .25rem .75rem;
+		}
+
+		#status::before {
+			content: "";
+			width: .625rem;
+			height: .625rem;
+			background-color: var(--secondary);
+			border-radius: 50%;
+		}
+
+		#status.live::before {
+			background-color: #28a745;
+		}
+
+		#status.error::before {
+			background-color: #D8000C;
+		}
+
+		.js #reload {
+			display: none;
+		}
+
+		.alert {
+			margin: 0 0 .75rem;
+			padding: .5rem .75rem;
+			border-radius: .25rem;
+		}
+
+		.alert.error {
+			color: #D8000C;
+			background-color: #FFBABA;
+		}
+
+		.alert.warning {
+			color: #9F6000;
+			background-color: #FEEFB3;
+		}
+
+		#config-problems {
+			margin: 0 0 .75rem;
+			padding-left: 1.5rem;
+		}
+
+		ul.devices {
+			margin: 0;
+			padding: 0;
+			list-style: none;
+
+			border: 1px solid rgba(0,0,0,.125);
+			border-radius: .25rem;
+		}
+
+		ul.devices > li {
+			padding: .5rem .75rem;
+			border-top: 1px solid rgba(0,0,0,.125);
+		}
+
+		ul.devices > li:first-child {
+			border-top: 0;
+		}
+
+		.head {
+			display: flex;
+			flex-wrap: wrap;
+			align-items: center;
+			justify-content: space-between;
+			gap: .25rem .75rem;
+		}
+
+		.name {
+			font-weight: 500;
+		}
+
+		.badge {
+			display: inline-block;
+			min-width: 6.5rem;
+			padding: .125rem .5rem;
+
+			text-align: center;
+			font-size: .875rem;
+			font-weight: 500;
+			font-variant-numeric: tabular-nums;
+
+			color: #495057;
+			background-color: #e9ecef;
+			border-radius: .2rem;
+			transition: background-color .1s, color .1s;
+		}
+
+		.badge.rest {
+			color: #270;
+			background-color: #DFF2BF;
+		}
+
+		.badge.active {
+			color: #9F6000;
+			background-color: #FEEFB3;
+		}
+
+		.badge.on {
+			color: #059;
+			background-color: #BEF;
+		}
+
+		.details {
+			margin: .125rem 0 0;
+			font-variant-numeric: tabular-nums;
+		}
+
+		.fix {
+			margin: .375rem 0 0;
+			padding: .25rem .5rem;
+			font-size: .875rem;
+
+			color: #9F6000;
+			background-color: #FEEFB3;
+			border-radius: .2rem;
+		}
+
+		.fix::before {
+			content: "\26A0  ";
+		}
+
+		/* output test buttons */
+		.head form {
+			margin: 0;
+		}
+
+		.head .button {
+			padding: .25rem .5rem;
+			font-size: .875rem;
+			border-radius: .2rem;
+		}
+
+		.outputs .badge {
+			min-width: 3.5rem;
+		}
+
+		.outputs .head > span:first-child {
+			flex: 1;
+		}
+{% endblock %}
+
+{% block title %}Hardware-Test{% endblock %}
+
+{% macro ago (seconds) %}{% if seconds is none %}–{% else %}vor {{ ("%.1f" % seconds) | replace (".", ",") }} s{% endif %}{% endmacro %}
+
+{% block content %}
+	<h2>Hardware-Test</h2>
+
+	<p id="status" class="hint" aria-live="polite"><span id="status-text">Stand {{ state.time }}</span> <a id="reload" href="{{ url_for('diagnose') }}">Neu laden</a></p>
+
+	<p id="gpio-error" class="alert error"{% if not state.error %} hidden{% endif %}>{{ state.error or "" }}</p>
+
+	<p class="hint">Ein Eingang ist richtig eingestellt, wenn er in Ruhe (Hörer aufgelegt, Knöpfe losgelassen, Wählscheibe nicht gedreht) grün „in Ruhe“ zeigt. Sonst steht darunter, was in der Konfiguration zu ändern ist; danach <code>sudo systemctl restart telefono</code>. Die Werte werden direkt gelesen, das geht auch bei abgehobenem Hörer.</p>
+
+	<p>Konfiguration: <code>{{ state.config.path }}</code> <span id="config-status">{{ state.config.status }}</span></p>
+	<ul id="config-problems"{% if not state.config.problems %} hidden{% endif %}>
+{% for problem in state.config.problems %}
+		<li>{{ problem }}</li>
+{% endfor %}
+	</ul>
+	<p id="config-changed" class="alert warning"{% if not state.config.changed %} hidden{% endif %}>Die Datei wurde nach dem Start von telefono geändert. Die Seite zeigt schon die neuen Einstellungen, das Telefon verwendet sie erst nach <code>sudo systemctl restart telefono</code>.</p>
+
+	<h3>Eingänge</h3>
+	<ul class="devices">
+{% for spec in specs %}
+{% set item = state.inputs[loop.index0] if state.inputs else none %}
+{% set changes = state.sampler.changes[spec.key] if state.sampler else none %}
+		<li id="in-{{ spec.key }}">
+			<div class="head">
+				<span class="name">{{ spec.name }}</span>
+				<span class="badge{% if item and item.at_rest %} rest{% elif item and item.at_rest is false %} active{% elif item and item.pressed %} on{% endif %}" data-f="state">{% if item %}{% if item.at_rest %}in Ruhe: {% endif %}{{ item.state }}{% else %}–{% endif %}</span>
+			</div>
+			<div class="details hint">GPIO {{ pins[spec.key] }} · Pegel <span data-f="level">{{ item.level if item else "–" }}</span> · invertiert: <span data-f="inverted">{% if item %}{{ "ja" if item.inverted else "nein" }}{% else %}–{% endif %}</span> · {% if spec.rest is none %}keine Ruhestellung{% else %}in Ruhe: {{ spec.pressed if spec.rest else spec.released }}{% endif %}</div>
+			<div class="details hint">Wechsel: <span data-f="count">{{ changes.count if changes else 0 }}</span>, zuletzt <span data-f="ago">{{ ago (changes.ago if changes else none) }}</span></div>
+{% if spec.condition %}
+			<p class="fix" data-f="fix-box"{% if not (item and item.fix) %} hidden{% endif %}>Wenn {{ spec.condition }}, ist die Einstellung falsch: in der Konfiguration <code data-f="fix">{{ item.fix if item and item.fix else "" }}</code> setzen.</p>
+{% else %}
+			<p class="hint details">Umlegen: muss zwischen laut und leise wechseln, sonst <code>speaker_switch</code> umstellen.</p>
+{% endif %}
+			<p class="fix" data-f="not-input"{% if not item or item.is_input %} hidden{% endif %}>GPIO ist kein Eingang. Läuft telefono?</p>
+		</li>
+{% endfor %}
+		<li id="dial">
+			<div class="head">
+				<span class="name">Gewählte Ziffer</span>
+				<span class="badge" data-f="digit">{% if state.sampler and state.sampler.last_digit is not none %}{{ state.sampler.last_digit }}{% else %}–{% endif %}</span>
+			</div>
+			<div class="details hint">Impulse: <span data-f="pulses">{{ state.sampler.last_pulses if state.sampler and state.sampler.last_pulses is not none else "–" }}</span> · Ziffern seit Öffnen der Seite: <span data-f="digits">{{ state.sampler.digits if state.sampler else 0 }}</span></div>
+			<div class="details hint">So liest telefono die Wählscheibe mit den Einstellungen oben (1 bis 9 Impulse, 10 = 0).</div>
+		</li>
+	</ul>
+
+	<h3>Ausgänge</h3>
+	<ul class="devices outputs">
+{% for spec in output_specs %}
+{% set item = state.outputs[loop.index0] if state.outputs else none %}
+		<li id="out-{{ spec.key }}">
+			<div class="head">
+				<span class="name">{{ spec.name }}</span>
+				<span class="badge{% if item and item.on %} on{% endif %}" data-f="state">{% if item %}{{ "an" if item.on else "aus" }}{% else %}–{% endif %}</span>
+				<form method="post" data-async>
+					<input type="hidden" name="output" value="{{ spec.key }}">
+					<button type="submit" class="button light">{{ "Blinken lassen" if "led" == spec.key else "2 s einschalten" }}</button>
+				</form>
+			</div>
+			<div class="details hint">GPIO {{ spec.pin }} · Pegel <span data-f="level">{{ item.level if item else "–" }}</span> · {{ "high" if spec.active_high else "low" }} ist an</div>
+			<p class="fix" data-f="not-output"{% if not item or item.is_output %} hidden{% endif %}>GPIO ist kein Ausgang. Läuft telefono?</p>
+		</li>
+{% endfor %}
+	</ul>
+	<p class="hint">Die Test-Knöpfe gehen über das Telefon und nur, wenn es nicht beschäftigt ist (Hörer aufgelegt).</p>
+{% endblock %}
+
+{% block script %}
+<script>
+(function () {
+	"use strict";
+
+	const INTERVAL = {{ poll_interval }};
+	const RETRY = 2000;
+
+	const status = document.getElementById ("status");
+	const statusText = document.getElementById ("status-text");
+
+	let timer = null;
+	let running = false;
+
+	function field (row, name) {
+		return row.querySelector ("[data-f='" + name + "']");
+	}
+
+	function ago (seconds) {
+		if (null === seconds)
+			return "–";
+
+		return "vor " + seconds.toFixed (1).replace (".", ",") + " s";
+	}
+
+	function setBadge (badge, text, type) {
+		badge.textContent = text;
+		badge.className = "badge" + (type ? " " + type : "");
+	}
+
+	function show (state) {
+		const error = document.getElementById ("gpio-error");
+		error.textContent = state.error || "";
+		error.hidden = !state.error;
+
+		document.getElementById ("config-status").textContent = state.config.status;
+		document.getElementById ("config-changed").hidden = !state.config.changed;
+
+		const problems = document.getElementById ("config-problems");
+		problems.replaceChildren ();
+		for (const problem of state.config.problems) {
+			const li = document.createElement ("li");
+			li.textContent = problem;
+			problems.appendChild (li);
+		}
+		problems.hidden = !state.config.problems.length;
+
+		const sampler = state.sampler;
+
+		document.querySelectorAll ("li[id^='in-']").forEach (function (row, index) {
+			const item = state.inputs[index];
+			const changes = sampler ? sampler.changes[row.id.slice (3)] : null;
+
+			if (!item) {
+				setBadge (field (row, "state"), "–");
+				field (row, "level").textContent = "–";
+				field (row, "inverted").textContent = "–";
+			}
+			else {
+				let type = null;
+				if (true === item.at_rest)
+					type = "rest";
+				else if (false === item.at_rest)
+					type = "active";
+				else if (item.pressed)
+					type = "on";
+
+				setBadge (field (row, "state"),
+				          (item.at_rest ? "in Ruhe: " : "") + item.state, type);
+				field (row, "level").textContent = item.level;
+				field (row, "inverted").textContent = item.inverted ? "ja" : "nein";
+			}
+
+			field (row, "count").textContent = changes ? changes.count : 0;
+			field (row, "ago").textContent = ago (changes ? changes.ago : null);
+
+			const fixBox = field (row, "fix-box");
+			if (fixBox) {
+				fixBox.hidden = !(item && item.fix);
+				field (row, "fix").textContent = item && item.fix ? item.fix : "";
+			}
+
+			field (row, "not-input").hidden = !item || item.is_input;
+		});
+
+		const dial = document.getElementById ("dial");
+		if (sampler && sampler.dialing)
+			setBadge (field (dial, "digit"), "… " + sampler.pulses, "active");
+		else
+			setBadge (field (dial, "digit"),
+			          sampler && null !== sampler.last_digit ? String (sampler.last_digit) : "–",
+			          sampler && null !== sampler.last_digit ? "on" : null);
+		field (dial, "pulses").textContent =
+			sampler && null !== sampler.last_pulses ? sampler.last_pulses : "–";
+		field (dial, "digits").textContent = sampler ? sampler.digits : 0;
+
+		document.querySelectorAll ("li[id^='out-']").forEach (function (row, index) {
+			const item = state.outputs[index];
+
+			if (item)
+				setBadge (field (row, "state"), item.on ? "an" : "aus", item.on ? "on" : null);
+			else
+				setBadge (field (row, "state"), "–");
+
+			field (row, "level").textContent = item ? item.level : "–";
+			field (row, "not-output").hidden = !item || item.is_output;
+		});
+	}
+
+	function setStatus (text, type) {
+		statusText.textContent = text;
+		status.className = "hint" + (type ? " " + type : "");
+	}
+
+	function schedule (delay) {
+		clearTimeout (timer);
+		timer = null;
+
+		if (!document.hidden)
+			timer = setTimeout (update, delay);
+	}
+
+	/* one request at a time, the next one after the answer;
+	   nothing while the page is hidden (spares the Pi) */
+	function update () {
+		timer = null;
+		if (running || document.hidden)
+			return;
+
+		running = true;
+		fetch ("{{ url_for('diagnose_data') }}", { cache: "no-store" })
+			.then (function (response) {
+				if (!response.ok)
+					throw new Error (response.status);
+
+				return response.json ();
+			})
+			.then (function (state) {
+				running = false;
+				show (state);
+				setStatus ("Live, Stand " + state.time, state.error ? "error" : "live");
+				schedule (INTERVAL);
+			})
+			.catch (function () {
+				running = false;
+				setStatus ("Keine Verbindung zum Telefon, neuer Versuch …", "error");
+				schedule (RETRY);
+			});
+	}
+
+	document.addEventListener ("visibilitychange", function () {
+		if (document.hidden) {
+			clearTimeout (timer);
+			timer = null;
+			setStatus ("Pausiert (Seite nicht sichtbar)");
+		}
+		else
+			schedule (0);
+	});
+
+	schedule (0);
+}) ();
+</script>
+{% endblock %}

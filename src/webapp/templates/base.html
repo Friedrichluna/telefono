@@ -381,7 +381,7 @@
 {% set active_page = request.endpoint %}
 {% if active_page == 'edit_value' %}{% set active_page = 'list' %}{% endif %}
 {% if active_page == 'upload_file' %}{% set active_page = 'upload_page' %}{% endif %}
-{% for endpoint, title in [('home', 'Anrufen'), ('list', 'Liste'), ('upload_page', 'Upload'), ('say', 'Text ansagen'), ('help', 'Anleitung')] %}
+{% for endpoint, title in [('home', 'Anrufen'), ('list', 'Liste'), ('upload_page', 'Upload'), ('say', 'Text ansagen'), ('diagnose', 'Hardware-Test'), ('help', 'Anleitung')] %}
 				<a {% if active_page == endpoint %}class="active" aria-current="page" {% endif %}href="{{ url_for(endpoint) }}">{{ title }}</a>
 {% endfor %}
 			</div>

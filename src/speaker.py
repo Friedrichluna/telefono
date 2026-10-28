@@ -10,7 +10,10 @@ import RPi.GPIO as GPIO
 from .CONSTANTS import SPEAKER_DELAY
 from .CONSTANTS import SPEAKER_POWERON_DELAY
 
-RELAIS_1_GPIO = 4
+from .config import SPEAKER_RELAY_PIN
+
+# low is on
+RELAIS_1_GPIO = SPEAKER_RELAY_PIN
 
 class SpeakerThread (threading.Thread):
 	def __init__ (self, switch, gpio=RELAIS_1_GPIO):
