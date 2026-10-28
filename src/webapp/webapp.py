@@ -13,13 +13,26 @@ from ..CONSTANTS import RECORD_SUFFIX
 
 from ..CONSTANTS import UPLOAD_DIR
 
+from ..ipc import IPC_DESCRIPTION_MAX_BYTES
+from ..ipc import IPC_StringTooLong
 from ..ipc import IPC_Timeout
+from ..ipc import IPC_TTS_MESSAGE_MAX_BYTES
 from ..number import Number
 
 
 def getFreeDiskSpace():
 	hdd = psutil.disk_usage (UPLOAD_DIR)
 	return round(hdd.free / (2**30), 2)
+
+
+# the IPC limits are in bytes (UTF-8), not characters
+def too_long_message (name:str, text:str, max_bytes:int):
+	size = len (text.encode ())
+	if size <= max_bytes:
+		return None
+
+	return "%s zu lang: %d Bytes, höchstens %d erlaubt " \
+	       "(Umlaute zählen doppelt)." % (name, size, max_bytes)
 
 
 class TelefonoWebApp (Flask):
@@ -36,6 +49,13 @@ class TelefonoWebApp (Flask):
 		self.add_url_rule ("/upload", "upload_file", self.upload_file, methods=["POST"])
 
 		self.register_error_handler (IPC_Timeout, self.busy)
+		self.register_error_handler (IPC_StringTooLong, self.too_long)
+
+		# maxlength hints for the templates (counts characters,
+		# so the byte limit is still checked here)
+		self.jinja_env.globals.update (
+		        description_max=IPC_DESCRIPTION_MAX_BYTES,
+		        text_max=IPC_TTS_MESSAGE_MAX_BYTES)
 		return
 
 	# the main process did not answer, e.g. while a recording plays
@@ -51,6 +71,16 @@ class TelefonoWebApp (Flask):
 		return render_template ("index.html",
 		                        message=message,
 		                        message_type="warning"), 503
+
+	# input that does not fit into an IPC message (e.g. a very long
+	# number), the description and text are checked before sending
+	def too_long (self, error):
+		self.logger.warning ("input too long: %s %s: %s",
+		                     request.method, request.path, error)
+
+		return render_template ("index.html",
+		                        message="Eingabe zu lang.",
+		                        message_type="error"), 400
 
 	def home(self):
 		if request.method == "POST":
@@ -96,7 +126,24 @@ class TelefonoWebApp (Flask):
 
 		if request.method == "POST":
 			new_value = request.form["new_value"]
-			self.ipc.set_description (number, new_value)
+
+			message = too_long_message ("Beschreibung", new_value,
+			                            IPC_DESCRIPTION_MAX_BYTES)
+			if message:
+				return render_template ("edit.html",
+				                        value=new_value,
+				                        message=message,
+				                        message_type="error"), 400
+
+			message, message_type = \
+			        self.ipc.set_description (number, new_value)
+
+			# e.g. the main process refused it
+			if "error" == message_type:
+				return render_template ("edit.html",
+				                        value=new_value,
+				                        message=message,
+				                        message_type=message_type)
 
 			return redirect("/list")
 
@@ -106,6 +153,14 @@ class TelefonoWebApp (Flask):
 	def say (self):
 		if request.method == "POST":
 			text = request.form["text"]
+
+			message = too_long_message ("Text", text,
+			                            IPC_TTS_MESSAGE_MAX_BYTES)
+			if message:
+				return render_template ("say.html",
+				                        text=text,
+				                        message=message,
+				                        message_type="error"), 400
 
 			message, message_type = self.ipc.queue_message (text)
 		else:

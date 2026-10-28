@@ -78,7 +78,7 @@
 	<h2>Namen Bearbeiten</h2>
 	<form method="post">
 		<label for="new_value">Neuer Name:</label>
-		<input type="text" id="new_value" name="new_value" value="{{ value }}" required>
+		<input type="text" id="new_value" name="new_value" value="{{ value }}" maxlength="{{ description_max }}" required>
 		<input type="submit" class="button blue" value="Speichern">
 	</form>
 {% endblock %}

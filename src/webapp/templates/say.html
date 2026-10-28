@@ -17,7 +17,7 @@
 {% block content%}
 	<form method="post" enctype="multipart/form-data">
 		<label for="text">anzusagender Text:</label>
-		<textarea id="text" name="text"></textarea>
+		<textarea id="text" name="text" maxlength="{{ text_max }}">{{ text }}</textarea>
 		<input type="submit" class="button blue" value="Ansagen">
 	</form>
 {% endblock %}
