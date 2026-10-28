@@ -1,10 +1,14 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
+import errno
+import os
+import shutil
 import wave
 
 from flask import Flask, redirect, render_template, request
 
+import linkat
 import psutil
 
 from werkzeug.exceptions import RequestEntityTooLarge
@@ -23,6 +27,7 @@ from ..ipc import IPC_DESCRIPTION_MAX_BYTES
 from ..ipc import IPC_StringTooLong
 from ..ipc import IPC_Timeout
 from ..ipc import IPC_TTS_MESSAGE_MAX_BYTES
+from ..network import sync_dir
 from ..number import Number
 
 
@@ -39,6 +44,33 @@ def too_long_message (name:str, text:str, max_bytes:int):
 
 	return "%s zu lang: %d Bytes, höchstens %d erlaubt " \
 	       "(Umlaute zählen doppelt)." % (name, size, max_bytes)
+
+
+# like Recorder.save: the file only becomes visible once it is complete
+# and on the disk, an existing file is never replaced (FileExistsError)
+def save_file (stream, filename:str):
+	directory = os.path.dirname (filename)
+
+	# create temporary file, closing it without
+	# linking it discards it, so errors leave nothing behind
+	fd = os.open (directory, os.O_TMPFILE | os.O_WRONLY, mode=0o600)
+
+	with os.fdopen (fd, "wb") as f:
+		shutil.copyfileobj (stream, f)
+		f.flush ()
+
+		# make sure the data is on the disk before the
+		# file becomes visible (power loss)
+		os.fsync (fd)
+
+		# atomically link file
+		linkat.link_at (linkat.AT_FDCWD, b"/proc/self/fd/%d" % fd,
+		                linkat.AT_FDCWD, filename.encode (),
+		                linkat.AT_SYMLINK_FOLLOW)
+
+	# make the link durable
+	sync_dir (directory)
+	return
 
 
 class TelefonoWebApp (Flask):
@@ -219,7 +251,8 @@ class TelefonoWebApp (Flask):
 		# larger than the file
 		except (wave.Error, EOFError, RuntimeError) as error:
 			self.logger.warning ("upload is no PCM wav file: %s", error)
-			return "Keine gültige .wav Datei, bitte eine unkomprimierte " 			       "(PCM) .wav Datei hochladen."
+			return "Keine gültige .wav Datei, bitte eine " \
+			       "unkomprimierte (PCM) .wav Datei hochladen."
 
 		finally:
 			stream.seek (0)
@@ -273,7 +306,30 @@ class TelefonoWebApp (Flask):
 			                        message_type="error"), 400
 
 		file_path = UPLOAD_DIR + "/" + RECORD_PREFIX + str(number) + RECORD_SUFFIX
-		uploaded_file.save(file_path)
+		try:
+			save_file (uploaded_file.stream, file_path)
+
+		# a file the main process does not know yet (e.g. copied
+		# there by hand, or a second upload at the same time)
+		except FileExistsError:
+			return render_template ("upload.html",
+			                        diskSpace=getFreeDiskSpace (),
+			                        message="Nummer %s existiert bereits!" % number,
+			                        message_type="error"), 409
+
+		# e.g. the SD card is full, nothing was written
+		except OSError as error:
+			self.logger.error ("saving %s failed: %s", file_path, error)
+
+			if errno.ENOSPC == error.errno:
+				message = "Speichern fehlgeschlagen, nicht genug freier Speicher."
+			else:
+				message = "Speichern fehlgeschlagen."
+
+			return render_template ("upload.html",
+			                        diskSpace=getFreeDiskSpace (),
+			                        message=message,
+			                        message_type="error"), 500
 
 		self.ipc.upload ()
 
