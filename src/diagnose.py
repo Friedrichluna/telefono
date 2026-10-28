@@ -142,7 +142,7 @@ INPUTS = (
 	       "der Knopf nicht gedrückt ist"),
 	Input ("middle", "Mittlerer Knopf", "gedrückt", "losgelassen", False,
 	       "der Knopf nicht gedrückt ist"),
-	Input ("dial_in_use", "Wählscheibe gedreht", "gedreht", "in Ruhe",
+	Input ("dial_in_use", "Wählscheibe gedreht", "gedreht", "nicht gedreht",
 	       False, "die Wählscheibe nicht gedreht ist"),
 	# src/dial.py counts the "released" times while the dial
 	# runs back, the contact is closed at rest and between pulses
