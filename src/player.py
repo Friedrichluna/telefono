@@ -58,6 +58,10 @@ from .CONSTANTS import NO_NUMBER_TIMEOUT
 from .CONSTANTS import BUSY_DELAY
 from .CONSTANTS import BUSY_TIMEOUT
 
+from .CONSTANTS import TONE_DELAY
+from .CONSTANTS import RELEASE_DELAY
+from .CONSTANTS import SAY_DELAY
+
 from .CONSTANTS import TIME_FORMAT
 
 from .recorder import RECORDER_RESULT
@@ -239,7 +243,7 @@ class Player ():
 		self.start_tone (command)
 
 		while self.__process.poll () is None:
-			pass
+			time.sleep (TONE_DELAY)
 
 		self.stop_tone ()
 		return
@@ -277,7 +281,7 @@ class Player ():
 		self.start_release_tone ()
 
 		while self.__off_hook ():
-			pass
+			time.sleep (RELEASE_DELAY)
 
 		self.stop_tone ()
 		return
@@ -376,6 +380,8 @@ class Player ():
 			if abort ():
 				self.stop_tone ()
 				return False
+
+			time.sleep (SAY_DELAY)
 
 		self.stop_tone ()
 		return True
