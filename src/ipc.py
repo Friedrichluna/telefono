@@ -25,6 +25,7 @@ class IPC_MESSAGE (enum.IntEnum):
 	FREE = 6
 	UPLOAD = 7
 	TEST_OUTPUT = 8
+	NEXT_FREE = 9
 
 # the outputs the hardware test page can switch (TEST_OUTPUT payload)
 class IPC_OUTPUT (enum.IntEnum):
@@ -49,6 +50,7 @@ class IPC_ANSWER (enum.IntEnum):
 	NO_NUMBER = 2
 	DESCRIPTION = 3
 	LIST = 4
+	NUMBER = 5
 
 IPC_DESCRIPTION_SIZE = 128
 IPC_DESCRIPTION_MAX_BYTES = IPC_DESCRIPTION_SIZE -1
@@ -189,6 +191,9 @@ class IPC:
 		elif IPC_MESSAGE.TEST_OUTPUT == message_type:
 			payload = self.__deserialize_test_output (message[1:])
 
+		elif IPC_MESSAGE.NEXT_FREE == message_type:
+			payload = b""
+
 		if payload is None:
 			return (IPC_MESSAGE.ERROR, None)
 
@@ -249,13 +254,36 @@ class IPC:
 	def __deserialize_free (self, message:bytes) -> Number:
 		return Number.from_bytes (message, IPC_NUMBER_SIZE, self)[0]
 
-	def _serialize_upload (self) -> bytearray:
+	# number, description: optional, the description of the new
+	# recording (set after it was registered)
+	def _serialize_upload (self, number:Number=None,
+	                       description:str="") -> bytearray:
 		data = bytearray ()
 		data.append (IPC_MESSAGE.UPLOAD)
+
+		if number is not None:
+			data.extend (number.to_bytes (IPC_NUMBER_SIZE, self))
+			data.extend (IPC.serialize_str (description,
+			                                IPC_DESCRIPTION_SIZE))
+
 		return data
 
-	def __deserialize_upload (self, message:bytes):
-		return b""
+	def __deserialize_upload (self, message:bytes) -> (Number, str):
+		if not message:
+			return None, ""
+
+		number, message = Number.from_bytes (message,
+		                                     IPC_NUMBER_SIZE,
+		                                     self)
+
+		description = self.deserialize_str (message,
+		                                    IPC_DESCRIPTION_SIZE)[0]
+		return number, description
+
+	def _serialize_next_free (self) -> bytearray:
+		data = bytearray ()
+		data.append (IPC_MESSAGE.NEXT_FREE)
+		return data
 
 	def _serialize_test_output (self, output:IPC_OUTPUT) -> bytearray:
 		data = bytearray ()
@@ -299,6 +327,11 @@ class IPC:
 
 		if IPC_ANSWER.LIST == answer:
 			payload = self.__deserialize_list (message[1:])
+			return answer, payload
+
+		if IPC_ANSWER.NUMBER == answer:
+			payload = Number.from_bytes (message[1:],
+			                             IPC_NUMBER_SIZE, self)[0]
 			return answer, payload
 
 	def _serialize_description (self, description:str) -> bytes:
@@ -452,11 +485,25 @@ class IPC_Client (IPC):
 			return True
 		return False
 
-	def upload (self):
-		data = self._serialize_upload ()
+	# a new recording file was saved: the main process registers it
+	# (sync_fs) and sets the description, if a number is given
+	def upload (self, number:Number=None, description:str=""):
+		data = self._serialize_upload (number, description)
 		data = self.__request (data, queued=True)
 		answer, _ = self._deserialize_answer (data)
-		return
+		return IPC_ANSWER.OK == answer
+
+	# the number the phone would record to next (not taken),
+	# None on errors
+	def next_free (self):
+		data = self._serialize_next_free ()
+		data = self.__request (data)
+		answer, number = self._deserialize_answer (data)
+
+		if IPC_ANSWER.NUMBER == answer:
+			return number
+
+		return None
 
 	def queue_call (self, number:Number):
 		data = self._serialize_call (number)
@@ -598,7 +645,25 @@ class IPC_Server (IPC):
 
 		elif IPC_MESSAGE.UPLOAD == message_type:
 			network.sync_fs ()
+
+			number, description = payload
+			if number is not None and description:
+				if number in network:
+					network[number].description = description
+				else:
+					self.log.error ("uploaded %s missing,"
+					                " description not set",
+					                number)
+
 			data = self._serialize_answer (IPC_ANSWER.OK)
+			self._send (data)
+			return
+
+		elif IPC_MESSAGE.NEXT_FREE == message_type:
+			number = network.find_free ()
+			data = self._serialize_answer (
+			                IPC_ANSWER.NUMBER,
+			                number.to_bytes (IPC_NUMBER_SIZE, self))
 			self._send (data)
 			return
 

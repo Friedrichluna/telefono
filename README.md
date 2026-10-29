@@ -30,5 +30,8 @@ Ein Eingang muss invertiert werden (`yes`), wenn er in Ruhe (Hörer aufgelegt, K
 
 Einfacher geht es mit der Seite **Hardware-Test** der Webapp (`http://<telefon>:5000/diagnose`): Sie zeigt live für jeden Eingang den Pegel am GPIO, die Einstellung aus `telefono.conf` und was telefono daraus liest, und sagt, welche Zeile zu ändern ist, wenn ein Eingang in Ruhe falsch gelesen wird. Sie liest die GPIO-Register direkt (`/dev/gpiomem`, nur lesend), funktioniert also auch bei abgehobenem Hörer. Die gewählte Ziffer zeigt, ob die Wählscheibe richtig zählt; LED und Lautsprecher-Relais lassen sich testen, wenn das Telefon frei ist.
 
+## Aufnehmen im Browser (https)
+Auf der Seite **Aufnehmen** der Webapp nimmt man mit dem Mikrofon von Laptop oder Handy auf. Browser erlauben das Mikrofon nur über https (oder auf localhost), deshalb läuft die Webapp zusätzlich auf `https://<telefon>:5443` mit einem selbst ausgestellten Zertifikat. `sudo make install` erzeugt es einmalig mit `openssl` (`/etc/telefono.crt`, `/etc/telefono.key`, nur für root und die Gruppe des Dienst-Benutzers lesbar); ohne Zertifikat gibt es nur http. Neues Zertifikat (z. B. nach Änderung des Hostnamens): beide Dateien löschen, `sudo make install`, `sudo systemctl restart telefono`. Ohne https kann man auf dem Handy mit dessen Aufnahme-App aufnehmen und die Datei speichern. Hochgeladene Dateien (.m4a, .ogg, .opus, .webm, .3gp, .amr, .flac, .wav, ...) wandelt `ffmpeg` in .mp3 um.
+
 ## Schaltplan
 ![image](https://gitlab.mn.tu-dresden.de/josc941e/telefono/-/raw/master/docs/circuit_diagram.png)

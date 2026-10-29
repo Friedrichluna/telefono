@@ -1,0 +1,522 @@
+{% extends "base.html" %}
+
+{% block style %}
+		#number {
+			max-width: 12rem;
+		}
+
+		.alert {
+			margin: 0 0 1rem;
+			padding: .625rem .75rem;
+			border-radius: .25rem;
+		}
+
+		.alert p {
+			margin: 0 0 .5rem;
+		}
+
+		.alert p:last-child {
+			margin-bottom: 0;
+		}
+
+		.alert.info {
+			color: #059;
+			background-color: #BEF;
+		}
+
+		.alert.success {
+			color: #270;
+			background-color: #DFF2BF;
+		}
+
+		.alert a:not(.button) {
+			color: inherit;
+			font-weight: 500;
+		}
+
+		/* like the labels of the form */
+		#fallback > label {
+			display: block;
+			margin-bottom: .5rem;
+			font-weight: 500;
+		}
+
+		/* recorder: start/stop button, time and level */
+		#controls {
+			display: flex;
+			flex-wrap: wrap;
+			align-items: center;
+			gap: .5rem 1rem;
+		}
+
+		.button.red {
+			background-color: #dc3545;
+			border-color: #dc3545;
+		}
+		.button.red:hover:not(:disabled) {
+			background-color: #c82333;
+		}
+		.button.red:focus-visible {
+			outline: 0;
+			box-shadow: 0 0 0 .2rem rgba(220,53,69,.5);
+		}
+
+		/* a dot (record) or a square (stop) */
+		#record-button::before {
+			content: "";
+			display: inline-block;
+			width: .75em;
+			height: .75em;
+			margin-right: .5rem;
+			background-color: currentColor;
+			border-radius: 50%;
+			vertical-align: -.05em;
+		}
+
+		#record-button.recording::before {
+			border-radius: .1em;
+		}
+
+		#timer {
+			font-variant-numeric: tabular-nums;
+			white-space: nowrap;
+		}
+
+		#timer.recording {
+			color: #dc3545;
+		}
+
+		#level {
+			height: .5rem;
+			margin-top: .75rem;
+			overflow: hidden;
+			background-color: var(--light);
+			border: 1px solid var(--border);
+			border-radius: .25rem;
+		}
+
+		#level-bar {
+			width: 0;
+			height: 100%;
+			background-color: #28a745;
+		}
+
+		#level-bar.loud {
+			background-color: #fd7e14;
+		}
+
+		#playback {
+			display: flex;
+			flex-wrap: wrap;
+			align-items: center;
+			gap: .5rem 1rem;
+			margin-top: .75rem;
+		}
+
+		#playback audio {
+			flex: 1 1 16rem;
+			min-width: 0;
+		}
+
+		#recorder .hint {
+			margin: .5rem 0 0;
+		}
+{% endblock %}
+
+{% block title %}Aufnehmen{% endblock %}
+
+{% block content %}
+	<h2>Im Browser aufnehmen</h2>
+	<form method="post" action="{{ url_for('record_save') }}" enctype="multipart/form-data" class="stacked" id="record-form" data-async data-reset>
+		<div id="recorder" hidden>
+			<div id="controls">
+				<button type="button" id="record-button" class="button red">Aufnahme starten</button>
+				<span id="timer" role="timer">0:00 / {{ '%d:%02d' % (record_max // 60, record_max % 60) }}</span>
+			</div>
+			<div id="level" aria-hidden="true"><div id="level-bar"></div></div>
+			<div id="playback" hidden>
+				<audio id="preview" controls aria-label="Aufnahme anhören"></audio>
+				<button type="button" id="discard" class="button light">Verwerfen</button>
+			</div>
+			<p class="hint">Mit dem Mikrofon dieses Geräts, {{ record_min }} s bis {{ record_max // 60 }} min. Vor dem Speichern anhören oder verwerfen.</p>
+		</div>
+		<div id="fallback">
+			<div id="insecure" class="alert info" hidden>
+				<p>Direkt im Browser aufnehmen geht nur über eine sichere Verbindung (https).</p>
+{% if https_url %}
+				<p><a href="{{ https_url }}" class="button blue">Sichere Seite öffnen</a></p>
+				<p>Beim ersten Mal warnt der Browser, weil das Telefon sein Zertifikat selbst ausgestellt hat: „Erweitert“ (oder „Details“) und dann „Weiter zu …“ (oder „Diese Website besuchen“) wählen.</p>
+{% endif %}
+			</div>
+			<p id="unsupported" class="alert info" hidden>Dieser Browser kann nicht direkt aufnehmen.</p>
+			<label for="file">Mit der Aufnahme-App des Handys aufnehmen oder eine Audiodatei wählen ({{ record_min }} s bis {{ record_max // 60 }} min):</label>
+			<div id="file-picker">
+				<input type="file" id="file" name="file" accept="audio/*" capture required>
+				<label for="file" id="file-button" class="button gray">Aufnehmen / Datei wählen</label>
+				<span id="file-name" class="empty">Keine Aufnahme ausgewählt</span>
+			</div>
+		</div>
+		<label for="number">Nummer:</label>
+		<input type="text" inputmode="numeric" pattern="[0-9]+" title="nur Ziffern (0-9)" id="number" name="requestedNumber" value="{{ number }}" placeholder="nächste freie" autocomplete="off" aria-describedby="number-hint">
+		<p class="hint" id="number-hint">Leer lassen für die nächste freie Nummer<span id="free-number"></span>, wie bei einer Aufnahme am Telefon.</p>
+		<label for="description">Beschreibung (freiwillig):</label>
+		<input type="text" id="description" name="description" value="{{ description }}" maxlength="{{ description_max }}" autocomplete="off">
+		<progress max="1" value="0" hidden></progress>
+		<input type="submit" class="button blue" id="save" value="Speichern">
+		<p id="result" class="alert success" hidden aria-live="polite">Gespeichert unter Nummer <a id="result-link" href="{{ url_for('list') }}"></a>, in der Liste ansehen.</p>
+	</form>
+{% endblock %}
+
+{% block script %}
+<script>
+(function () {
+	"use strict";
+
+	const form = document.getElementById ("record-form");
+	const file = document.getElementById ("file");
+	const fileName = document.getElementById ("file-name");
+	const recorderBox = document.getElementById ("recorder");
+	const fallbackBox = document.getElementById ("fallback");
+	const recordButton = document.getElementById ("record-button");
+	const timer = document.getElementById ("timer");
+	const levelBar = document.getElementById ("level-bar");
+	const playback = document.getElementById ("playback");
+	const preview = document.getElementById ("preview");
+	const discardButton = document.getElementById ("discard");
+	const numberInput = document.getElementById ("number");
+	const freeNumber = document.getElementById ("free-number");
+	const result = document.getElementById ("result");
+	const resultLink = document.getElementById ("result-link");
+
+	const minTime = {{ record_min }};
+	const maxTime = {{ record_max }};
+	const maxSize = {{ upload_max }} * 1024 * 1024;
+
+	function format (seconds) {
+		seconds = Math.floor (seconds);
+		return Math.floor (seconds / 60) + ":" + String (seconds % 60).padStart (2, "0");
+	}
+
+	/* the number a recording gets if none is entered */
+	function loadFreeNumber () {
+		fetch ("{{ url_for('record_free') }}", { headers: { "X-Requested-With": "XMLHttpRequest" } })
+		.then (function (response) { return response.ok ? response.json () : null; })
+		.then (function (answer) {
+			const free = answer && answer.number;
+			freeNumber.textContent = free ? " (" + free + ")" : "";
+			numberInput.placeholder = free ? free + " (nächste freie)" : "nächste freie";
+		})
+		.catch (function () {});
+	}
+
+	/* fallback: the phone's recorder app or any audio file */
+	function showFileName () {
+		const selected = file.files[0];
+
+		fileName.textContent = selected ? selected.name : "Keine Aufnahme ausgewählt";
+		fileName.classList.toggle ("empty", !selected);
+	}
+
+	file.addEventListener ("change", showFileName);
+	showFileName ();
+
+	// the recording is handed to the form as its file
+	function canSetFiles () {
+		try {
+			return !!new DataTransfer ().files;
+		}
+		catch (error) {
+			return false;
+		}
+	}
+
+	const canRecord = window.isSecureContext
+	               && navigator.mediaDevices && navigator.mediaDevices.getUserMedia
+	               && window.MediaRecorder && canSetFiles ();
+
+	if (!canRecord)
+		document.getElementById (window.isSecureContext ? "unsupported" : "insecure").hidden = false;
+	else {
+		fallbackBox.hidden = true;
+		recorderBox.hidden = false;
+		file.required = false;
+	}
+
+	/* recorder */
+	let stream = null;
+	let mediaRecorder = null;
+	let chunks = [];
+	let startTime = 0;
+	let duration = 0;
+	let timerId = 0;
+	let audioContext = null;
+	let levelFrame = 0;
+	let recorded = null;
+	let previewUrl = null;
+
+	function chooseType () {
+		const types = ["audio/webm;codecs=opus", "audio/ogg;codecs=opus", "audio/mp4", "audio/webm"];
+
+		if (MediaRecorder.isTypeSupported)
+			for (const type of types)
+				if (MediaRecorder.isTypeSupported (type))
+					return type;
+
+		return "";
+	}
+
+	// the server converts any of them, the name only has to fit
+	function extension (type) {
+		if (/webm/.test (type)) return ".webm";
+		if (/ogg/.test (type)) return ".ogg";
+		if (/mp4|aac/.test (type)) return ".m4a";
+		if (/mpeg/.test (type)) return ".mp3";
+		if (/wav/.test (type)) return ".wav";
+		return ".webm";
+	}
+
+	function microphoneError (error) {
+		if ("NotAllowedError" === error.name || "SecurityError" === error.name)
+			return "Kein Zugriff auf das Mikrofon. Bitte im Browser erlauben (Symbol links neben der Adresse) und nochmal versuchen.";
+
+		if ("NotFoundError" === error.name || "OverconstrainedError" === error.name)
+			return "Kein Mikrofon gefunden.";
+
+		if ("NotReadableError" === error.name)
+			return "Das Mikrofon wird gerade von einem anderen Programm benutzt.";
+
+		return "Das Mikrofon kann nicht benutzt werden (" + (error.name || error) + ").";
+	}
+
+	function setFile (selected) {
+		const transfer = new DataTransfer ();
+		if (selected)
+			transfer.items.add (selected);
+
+		file.files = transfer.files;
+	}
+
+	function showTime (seconds, recording) {
+		timer.textContent = format (seconds) + " / " + format (maxTime);
+		timer.classList.toggle ("recording", recording);
+	}
+
+	function startLevel () {
+		const Context = window.AudioContext || window.webkitAudioContext;
+		if (!Context)
+			return;
+
+		let analyser;
+		try {
+			audioContext = new Context ();
+			analyser = audioContext.createAnalyser ();
+			analyser.fftSize = 1024;
+			audioContext.createMediaStreamSource (stream).connect (analyser);
+		}
+		catch (error) {
+			return;
+		}
+
+		const samples = new Float32Array (analyser.fftSize);
+
+		function draw () {
+			analyser.getFloatTimeDomainData (samples);
+
+			let peak = 0;
+			for (const sample of samples)
+				peak = Math.max (peak, Math.abs (sample));
+
+			// -60 .. 0 dB
+			const level = Math.max (0, Math.min (1, (20 * Math.log10 (peak || 1e-6) + 60) / 60));
+			levelBar.style.width = (level * 100) + "%";
+			levelBar.classList.toggle ("loud", peak > .9);
+
+			levelFrame = requestAnimationFrame (draw);
+		}
+
+		draw ();
+	}
+
+	function stopLevel () {
+		cancelAnimationFrame (levelFrame);
+		levelBar.style.width = "0";
+
+		if (audioContext) {
+			audioContext.close ().catch (function () {});
+			audioContext = null;
+		}
+	}
+
+	// the browser shows the microphone as used until the tracks are stopped
+	function stopStream () {
+		if (stream)
+			stream.getTracks ().forEach (function (track) { track.stop (); });
+
+		stream = null;
+	}
+
+	function discard () {
+		recorded = null;
+		setFile (null);
+
+		preview.pause ();
+		preview.removeAttribute ("src");
+		preview.load ();
+
+		if (previewUrl)
+			URL.revokeObjectURL (previewUrl);
+		previewUrl = null;
+
+		playback.hidden = true;
+		showTime (0, false);
+
+		if (!mediaRecorder)
+			setRecording (false);
+	}
+
+	function setRecording (recording) {
+		recordButton.classList.toggle ("recording", recording);
+		recordButton.textContent = recording ? "Aufnahme beenden"
+		                         : recorded ? "Neu aufnehmen" : "Aufnahme starten";
+		form.querySelector ("[type=submit]").disabled = recording;
+	}
+
+	function tick () {
+		const seconds = (performance.now () - startTime) / 1000;
+		showTime (Math.min (seconds, maxTime), true);
+
+		if (seconds >= maxTime) {
+			stop ();
+			showMessage ("Höchstlänge von " + format (maxTime) + " min erreicht, die Aufnahme ist beendet.", "info");
+		}
+	}
+
+	function finished () {
+		const type = mediaRecorder.mimeType || (chunks[0] && chunks[0].type) || "audio/webm";
+		const blob = new Blob (chunks, { type: type });
+
+		chunks = [];
+		mediaRecorder = null;
+		setRecording (false);
+
+		if (duration < minTime || !blob.size) {
+			showTime (0, false);
+			showMessage ("Aufnahme zu kurz, mindestens " + minTime + " s.", "error");
+			return;
+		}
+
+		recorded = new File ([blob], "aufnahme" + extension (type), { type: type });
+		setFile (recorded);
+		setRecording (false);
+
+		previewUrl = URL.createObjectURL (blob);
+		preview.src = previewUrl;
+		playback.hidden = false;
+		showTime (duration, false);
+	}
+
+	function start () {
+		recordButton.disabled = true;
+		result.hidden = true;
+
+		navigator.mediaDevices.getUserMedia ({ audio: true })
+		.then (function (microphone) {
+			stream = microphone;
+
+			const type = chooseType ();
+			mediaRecorder = new MediaRecorder (stream, type ? { mimeType: type } : undefined);
+
+			// an older recording is replaced
+			discard ();
+
+			chunks = [];
+			mediaRecorder.addEventListener ("dataavailable", function (event) {
+				if (event.data && event.data.size)
+					chunks.push (event.data);
+			});
+			mediaRecorder.addEventListener ("stop", finished);
+			mediaRecorder.start (1000);
+
+			startTime = performance.now ();
+			duration = 0;
+			timerId = setInterval (tick, 200);
+			startLevel ();
+			setRecording (true);
+		})
+		.catch (function (error) {
+			stopStream ();
+			mediaRecorder = null;
+			showMessage (microphoneError (error), "error");
+		})
+		.finally (function () {
+			recordButton.disabled = false;
+		});
+	}
+
+	function stop () {
+		if (!mediaRecorder || "inactive" === mediaRecorder.state)
+			return;
+
+		duration = Math.min ((performance.now () - startTime) / 1000, maxTime);
+
+		clearInterval (timerId);
+		stopLevel ();
+		mediaRecorder.stop ();
+		stopStream ();
+	}
+
+	recordButton.addEventListener ("click", function () {
+		if (mediaRecorder)
+			stop ();
+		else
+			start ();
+	});
+
+	discardButton.addEventListener ("click", discard);
+
+	/* saving */
+	form.addEventListener ("check", function (event) {
+		if (mediaRecorder) {
+			event.preventDefault ();
+			showMessage ("Bitte zuerst die Aufnahme beenden.", "error");
+			return;
+		}
+
+		const selected = file.files[0];
+		if (!selected) {
+			event.preventDefault ();
+			showMessage ("Keine Aufnahme vorhanden, bitte zuerst aufnehmen.", "error");
+		}
+		else if (selected.size > maxSize) {
+			event.preventDefault ();
+			showMessage ("Datei zu groß, höchstens {{ upload_max }} MiB erlaubt.", "error");
+		}
+	});
+
+	// "reset" fires before the form is cleared
+	form.addEventListener ("reset", function () {
+		setTimeout (showFileName);
+	});
+
+	form.addEventListener ("answer", function (event) {
+		discard ();
+
+		resultLink.textContent = event.detail.number;
+		resultLink.href = event.detail.list_url;
+		result.hidden = false;
+
+		loadFreeNumber ();
+	});
+
+	// a recording that is not saved yet would be lost
+	window.addEventListener ("beforeunload", function (event) {
+		if (mediaRecorder || recorded) {
+			event.preventDefault ();
+			event.returnValue = "";
+		}
+	});
+
+	loadFreeNumber ();
+}) ();
+</script>
+{% endblock %}

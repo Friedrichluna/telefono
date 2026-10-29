@@ -20,6 +20,9 @@ from .CONSTANTS import MP3_ENCODE_TIMEOUT
 from .CONSTANTS import MP3_PROBE_CMD
 from .CONSTANTS import MP3_PROBE_TIMEOUT
 
+from .CONSTANTS import AUDIO_INPUT_OPTIONS
+from .CONSTANTS import AUDIO_PROBE_CMD
+
 from .network import sync_dir
 
 
@@ -28,6 +31,16 @@ log = logging.getLogger ("Audio")
 
 # the file can not be encoded or is no usable mp3 file
 class EncodeError (Exception):
+	pass
+
+
+# the file is a supported container, but has no audio (e.g. a video)
+class NoAudioError (EncodeError):
+	pass
+
+
+# ffmpeg or ffprobe took too long (e.g. a very long file)
+class EncodeTimeout (EncodeError):
 	pass
 
 
@@ -53,50 +66,72 @@ def check_result (result, what:str):
 
 # ffmpeg writes the mp3 into the file f, opened again through /proc,
 # so it can seek back and write the VBR header; source is a path,
-# or "pipe:0" to read stdin (which must be a real file or a pipe)
+# or "pipe:0" to read stdin (which must be a real file or a pipe);
+# pass_fds: more files ffmpeg opens through /proc (e.g. the source)
 def encode_mp3 (source:str, f, stdin=subprocess.DEVNULL,
-                timeout:int=MP3_ENCODE_TIMEOUT):
+                timeout:int=MP3_ENCODE_TIMEOUT,
+                input_options:tuple=(), output_options:tuple=(),
+                pass_fds:tuple=()):
 	try:
-		result = subprocess.run ((*MP3_ENCODE_CMD (source), fd_path (f)),
+		result = subprocess.run ((*MP3_ENCODE_CMD (source,
+		                                           input_options,
+		                                           output_options),
+		                          fd_path (f)),
 		                         stdin=stdin,
 		                         stdout=subprocess.DEVNULL,
 		                         stderr=subprocess.PIPE,
-		                         pass_fds=(f.fileno (), ),
+		                         pass_fds=(f.fileno (), *pass_fds),
 		                         timeout=timeout)
 
 	except subprocess.TimeoutExpired:
-		raise EncodeError ("encoding took more than %d s" % timeout)
+		raise EncodeTimeout ("encoding took more than %d s" % timeout)
 
 	check_result (result, "encoding")
 	return
 
 
-# checks that the file f is mp3 and has audio frames (ffplay plays
-# anything, but all recordings are mp3), returns the number of frames
-def probe_mp3 (f) -> int:
+# runs the ffprobe command on the file f, returns its JSON output
+def run_probe (command:tuple, f) -> dict:
 	f.flush ()
 
 	try:
-		result = subprocess.run ((*MP3_PROBE_CMD, fd_path (f)),
+		result = subprocess.run ((*command, fd_path (f)),
 		                         stdin=subprocess.DEVNULL,
 		                         capture_output=True,
 		                         pass_fds=(f.fileno (), ),
 		                         timeout=MP3_PROBE_TIMEOUT)
 
 	except subprocess.TimeoutExpired:
-		raise EncodeError ("checking took more than %d s"
+		raise EncodeTimeout ("checking took more than %d s"
 		                   % MP3_PROBE_TIMEOUT)
 
 	check_result (result, "checking")
 
 	try:
 		info = json.loads (result.stdout)
+
+	except ValueError as error:
+		raise EncodeError ("checking failed: %r" % error)
+
+	if not isinstance (info, dict):
+		raise EncodeError ("checking failed: %r" % info)
+
+	return info
+
+
+# checks that the file f is mp3 and has audio frames (ffplay plays
+# anything, but all recordings are mp3), returns the number of frames
+# and the duration in s (0.0 if ffprobe does not know it)
+def probe_mp3_details (f) -> (int, float):
+	info = run_probe (MP3_PROBE_CMD, f)
+
+	try:
 		format_name = info["format"]["format_name"]
 		stream = info["streams"][0]
 		codec_name = stream["codec_name"]
 		frames = int (stream["nb_read_packets"])
 
-	except (ValueError, KeyError, IndexError) as error:
+	except (ValueError, TypeError, KeyError, IndexError) as error:
 		raise EncodeError ("no audio stream: %r" % error)
 
 	if "mp3" != format_name or "mp3" != codec_name:
@@ -106,14 +141,76 @@ def probe_mp3 (f) -> int:
 	if 0 == frames:
 		raise EncodeError ("no audio frames")
 
-	return frames
+	try:
+		duration = float (info["format"]["duration"])
+
+	except (ValueError, TypeError, KeyError):
+		duration = 0.0
+
+	return frames, duration
+
+
+def probe_mp3 (f) -> int:
+	return probe_mp3_details (f)[0]
+
+
+# checks that the file f is one of AUDIO_INPUT_FORMATS (else
+# EncodeError) with an audio stream (else NoAudioError),
+# returns its format and codec name
+def probe_audio (f) -> (str, str):
+	info = run_probe (AUDIO_PROBE_CMD, f)
+
+	try:
+		format_name = info["format"]["format_name"]
+
+	except (TypeError, KeyError) as error:
+		raise EncodeError ("unknown format: %r" % error)
+
+	try:
+		stream = info["streams"][0]
+		if "audio" == stream["codec_type"]:
+			return format_name, stream["codec_name"]
+
+	except (TypeError, KeyError, IndexError):
+		pass
+
+	raise NoAudioError ("no audio stream in %s" % format_name)
+
+
+# converts the first audio stream of the file source (one of
+# AUDIO_INPUT_FORMATS; a file, not a pipe: mp4 needs seeking) to mp3
+# into the file f; max_duration: only that many seconds are converted;
+# returns the duration of the mp3 in s
+def convert_audio (source, f, max_duration:float=None) -> float:
+	format_name, codec_name = probe_audio (source)
+	log.debug ("converting %s (%s) to mp3", format_name, codec_name)
+
+	output_options = ()
+	if max_duration is not None:
+		output_options = ("-t", "%g" % max_duration)
+
+	encode_mp3 (fd_path (source), f,
+	            input_options=AUDIO_INPUT_OPTIONS,
+	            output_options=output_options,
+	            pass_fds=(source.fileno (), ))
+
+	return probe_mp3_details (f)[1]
 
 
 # like Recorder.save: the file only becomes visible once it is complete
 # and on the disk, an existing file is never replaced (FileExistsError);
-# write (f) fills the file, it may raise (e.g. InvalidUpload) to discard it
-def save_file (filename:str, write):
-	directory = os.path.dirname (filename)
+# write (f) fills the file, it may raise (e.g. InvalidUpload) to discard it;
+# filename can also be a function that returns the name (in directory),
+# called once the file is written (e.g. to choose a free number only
+# then) and again, up to attempts times, while that name exists;
+# returns the name of the file
+def save_file (filename, write, directory:str=None,
+               attempts:int=1) -> str:
+	if callable (filename):
+		next_name = filename
+	else:
+		next_name = lambda: filename
+		directory = os.path.dirname (filename)
 
 	# create temporary file, closing it without
 	# linking it discards it, so errors leave nothing behind
@@ -128,14 +225,27 @@ def save_file (filename:str, write):
 		# file becomes visible (power loss)
 		os.fsync (fd)
 
-		# atomically link file
-		linkat.link_at (linkat.AT_FDCWD, b"/proc/self/fd/%d" % fd,
-		                linkat.AT_FDCWD, filename.encode (),
-		                linkat.AT_SYMLINK_FOLLOW)
+		for attempt in range (1, attempts +1):
+			name = next_name ()
+
+			# atomically link file
+			try:
+				linkat.link_at (linkat.AT_FDCWD,
+				                b"/proc/self/fd/%d" % fd,
+				                linkat.AT_FDCWD, name.encode (),
+				                linkat.AT_SYMLINK_FOLLOW)
+				break
+
+			except FileExistsError:
+				if attempt == attempts:
+					raise
+
+				log.warning ("%s exists, trying the next name",
+				             name)
 
 	# make the link durable
 	sync_dir (directory)
-	return
+	return name
 
 
 def convert_legacy_recording (path:str) -> bool:

@@ -67,6 +67,7 @@ dist_template_DATA += src/webapp/templates/help.html
 dist_template_DATA += src/webapp/templates/index.html
 dist_template_DATA += src/webapp/templates/list.html
 dist_template_DATA += src/webapp/templates/message.html
+dist_template_DATA += src/webapp/templates/record.html
 dist_template_DATA += src/webapp/templates/say.html
 dist_template_DATA += src/webapp/templates/upload.html
 
@@ -83,6 +84,43 @@ dist_pkglocalstate_DATA += data/records.list.example
 # never overwrite it)
 dist_sysconf_DATA =
 dist_sysconf_DATA += data/telefono.conf.example
+
+# browsers only allow the microphone (recording in the webapp) on https
+# pages, so the webapp is also served over https with a self-signed
+# certificate of this phone; it is made at the first install (openssl,
+# never in git, never replaced), the key is only readable by root and
+# the group of the service's user (User= in telefono.service)
+https_cert = $(sysconfdir)/telefono.crt
+https_key = $(sysconfdir)/telefono.key
+
+install-data-local:
+	@if test -e "$(DESTDIR)$(https_key)"; then \
+	  echo "keeping the https certificate $(DESTDIR)$(https_cert)"; \
+	elif ! command -v openssl >/dev/null; then \
+	  echo "WARNING: openssl is missing, the webapp has no https"; \
+	else \
+	  host=`hostname`; \
+	  group=`sed -n 's/^User=//p' $(srcdir)/telefono.service`; \
+	  $(MKDIR_P) "$(DESTDIR)$(sysconfdir)" && \
+	  (umask 077 && openssl req -x509 -newkey ec \
+	    -pkeyopt ec_paramgen_curve:prime256v1 -nodes -days 3650 \
+	    -subj "/CN=$$host" \
+	    -addext "subjectAltName=DNS:$$host,DNS:$$host.local" \
+	    -keyout "$(DESTDIR)$(https_key).tmp" \
+	    -out "$(DESTDIR)$(https_cert).tmp" 2>/dev/null) && \
+	  chmod 644 "$(DESTDIR)$(https_cert).tmp" && \
+	  { chgrp "$$group" "$(DESTDIR)$(https_key).tmp" && \
+	    chmod 640 "$(DESTDIR)$(https_key).tmp" || \
+	    echo "WARNING: $(DESTDIR)$(https_key) is not readable by $$group"; } && \
+	  mv "$(DESTDIR)$(https_cert).tmp" "$(DESTDIR)$(https_cert)" && \
+	  mv "$(DESTDIR)$(https_key).tmp" "$(DESTDIR)$(https_key)" && \
+	  echo "made the https certificate $(DESTDIR)$(https_cert)" || \
+	  { rm -f "$(DESTDIR)$(https_cert).tmp" "$(DESTDIR)$(https_key).tmp"; \
+	    echo "WARNING: making the https certificate failed, the webapp has no https"; }; \
+	fi
+
+uninstall-local:
+	rm -f "$(DESTDIR)$(https_cert)" "$(DESTDIR)$(https_key)"
 
 dist_doc_DATA =
 dist_doc_DATA += README.md

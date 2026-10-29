@@ -58,22 +58,58 @@ UPLOAD_CHECK_FRAMES = 4096
 # 48 kHz), VBR -q:a 2 is about 190 kbit/s for stereo, 1/7 of 16 bit wav
 MP3_ENCODE_OPTIONS = ("-map", "0:a:0", "-map_metadata", "-1",
                       "-c:a", "libmp3lame", "-q:a", "2", "-f", "mp3", "-y")
-MP3_ENCODE_CMD = lambda source: ("ffmpeg", "-hide_banner", "-loglevel", "error",
-                                 "-i", source, *MP3_ENCODE_OPTIONS)
+MP3_ENCODE_CMD = lambda source, input_options=(), output_options=(): \
+                 ("ffmpeg", "-hide_banner", "-loglevel", "error",
+                  *input_options, "-i", source,
+                  *output_options, *MP3_ENCODE_OPTIONS)
 # a 3:24 min wav takes about 24 s on the Pi Zero 2W, 50 MiB about 30 s
 MP3_ENCODE_TIMEOUT = 300
 
 # checks an mp3 file (appended) without decoding it, counts the frames
 MP3_PROBE_CMD = ("ffprobe", "-v", "error", "-select_streams", "a:0",
                  "-count_packets", "-of", "json",
-                 "-show_entries", "format=format_name:stream=codec_name,nb_read_packets")
+                 "-show_entries", "format=format_name,duration:stream=codec_name,nb_read_packets")
 MP3_PROBE_TIMEOUT = 60
+
+# other audio files (browser recordings: webm/opus, mp4/aac; recorder
+# apps of phones: m4a, 3gp, amr, ogg, ...) are converted to mp3 with
+# ffmpeg; only these demuxers are allowed (no playlists like hls, which
+# could open other files) and only the given file itself (file protocol)
+AUDIO_INPUT_FORMATS = "mov,matroska,ogg,amr,aac,flac,wav,mp3"
+AUDIO_INPUT_OPTIONS = ("-format_whitelist", AUDIO_INPUT_FORMATS,
+                       "-protocol_whitelist", "file")
+# finds the first audio stream of a file (appended)
+AUDIO_PROBE_CMD = ("ffprobe", "-v", "error", *AUDIO_INPUT_OPTIONS,
+                   "-select_streams", "a:0", "-of", "json",
+                   "-show_entries", "format=format_name:stream=codec_type,codec_name")
+# file name extensions the upload accepts (.mp3 is saved as it is,
+# everything else is converted)
+UPLOAD_EXTENSIONS = (".mp3", ".wav", ".m4a", ".aac", ".mp4", ".3gp", ".3ga",
+                     ".amr", ".ogg", ".oga", ".opus", ".webm", ".weba",
+                     ".flac")
+
+# recording in the browser (/record): same length as on the phone
+# (RECORD_TIME_MIN/MAX), the page stops at the maximum; the server
+# allows BROWSER_RECORD_TOLERANCE s more or less (the browser starts
+# and stops a bit late) and stops converting after the maximum
+BROWSER_RECORD_MIN = 2
+BROWSER_RECORD_MAX = 120
+BROWSER_RECORD_TOLERANCE = 1
 
 WEBAPP_EXEC = ("python3", "-m", "telefono.webapp")
 
 FLASK_DEBUG = DEBUG
 FLASK_IP = "0.0.0.0"
 FLASK_PORT = 5000
+# browsers only allow the microphone on https pages (or localhost), so
+# the webapp is also served over https with a self-signed certificate,
+# made by "make install" (openssl); no https without it; an https
+# connection is closed when nothing comes for FLASK_HTTPS_TIMEOUT s
+# (the TLS handshake runs in the connection's thread)
+FLASK_HTTPS_PORT = 5443
+FLASK_HTTPS_CERT = "@sysconfdir@/telefono.crt"
+FLASK_HTTPS_KEY = "@sysconfdir@/telefono.key"
+FLASK_HTTPS_TIMEOUT = 60
 FLASK_TEMPLATES = "@templatedir@"
 FLASK_STATIC = "@staticdir@"
 

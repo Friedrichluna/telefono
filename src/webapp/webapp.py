@@ -1,11 +1,14 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
+import contextlib
 import errno
 import logging
 import os
 import shutil
+import tempfile
 import time
+import urllib.parse
 import wave
 
 from flask import Flask, flash, jsonify, redirect, render_template, request, send_file, url_for
@@ -28,8 +31,17 @@ from ..CONSTANTS import RECORD_SUFFIX
 from ..CONSTANTS import UPLOAD_DIR
 from ..CONSTANTS import UPLOAD_MAX_SIZE
 from ..CONSTANTS import UPLOAD_CHECK_FRAMES
+from ..CONSTANTS import UPLOAD_EXTENSIONS
+from ..CONSTANTS import MP3_ENCODE_TIMEOUT
+
+from ..CONSTANTS import BROWSER_RECORD_MIN
+from ..CONSTANTS import BROWSER_RECORD_MAX
+from ..CONSTANTS import BROWSER_RECORD_TOLERANCE
 
 from ..audio import EncodeError
+from ..audio import EncodeTimeout
+from ..audio import NoAudioError
+from ..audio import convert_audio
 from ..audio import encode_mp3
 from ..audio import probe_mp3
 from ..audio import save_file
@@ -186,6 +198,52 @@ class InvalidUpload (Exception):
 	pass
 
 
+# the main process did not say which number is free
+class NoFreeNumber (Exception):
+	pass
+
+
+# the extensions for the templates, e.g. ".mp3, .wav, .m4a"
+UPLOAD_EXTENSIONS_TEXT = ", ".join (UPLOAD_EXTENSIONS)
+
+WRONG_EXTENSION = "Bitte nur Audiodateien hochladen (%s)!" \
+                  % UPLOAD_EXTENSIONS_TEXT
+
+
+# e.g. 2:05 min
+def minutes (seconds:float) -> str:
+	seconds = int (seconds)
+	return "%d:%02d min" % (seconds // 60, seconds % 60)
+
+
+# ffmpeg needs the upload as a file it can open through /proc and seek
+# in (mp4); werkzeug spools uploads in a SpooledTemporaryFile, whose
+# fileno () moves it from memory into /tmp; a stream without a file
+# (e.g. BytesIO) is copied into a temporary file (closed afterwards)
+@contextlib.contextmanager
+def upload_as_file (stream):
+	stream.seek (0)
+
+	try:
+		stream.fileno ()
+
+	# io.UnsupportedOperation is an OSError
+	except (OSError, AttributeError):
+		pass
+
+	else:
+		yield stream
+		return
+
+	with tempfile.TemporaryFile () as f:
+		shutil.copyfileobj (stream, f)
+		f.flush ()
+		f.seek (0)
+		yield f
+
+	return
+
+
 # the page's own script sends forms in the background
 # (data-async in the templates) and wants a JSON answer
 def is_async ():
@@ -197,6 +255,10 @@ class TelefonoWebApp (Flask):
 		super ().__init__ (__name__, template_folder=FLASK_TEMPLATES, static_folder=FLASK_STATIC)
 
 		self.ipc = ipc
+
+		# port of the https server, if there is one (set by main),
+		# the record page links to it from http
+		self.https_port = None
 
 		# larger requests are refused before they are read
 		self.config["MAX_CONTENT_LENGTH"] = UPLOAD_MAX_SIZE
@@ -211,6 +273,9 @@ class TelefonoWebApp (Flask):
 		self.add_url_rule ("/say", "say", self.say, methods=["GET", "POST"])
 		self.add_url_rule ("/upload", "upload_page", self.upload_page)
 		self.add_url_rule ("/upload", "upload_file", self.upload_file, methods=["POST"])
+		self.add_url_rule ("/record", "record_page", self.record_page)
+		self.add_url_rule ("/record", "record_save", self.record_save, methods=["POST"])
+		self.add_url_rule ("/record/free", "record_free", self.record_free)
 		self.add_url_rule ("/help", "help", self.help)
 		self.add_url_rule ("/recording/<number>", "recording", self.recording)
 		self.add_url_rule ("/download/<number>", "download", self.download)
@@ -237,7 +302,11 @@ class TelefonoWebApp (Flask):
 		self.jinja_env.globals.update (
 		        description_max=IPC_DESCRIPTION_MAX_BYTES,
 		        text_max=IPC_TTS_MESSAGE_MAX_BYTES,
-		        upload_max=UPLOAD_MAX_SIZE // 2**20)
+		        upload_max=UPLOAD_MAX_SIZE // 2**20,
+		        upload_extensions=UPLOAD_EXTENSIONS,
+		        upload_extensions_text=UPLOAD_EXTENSIONS_TEXT,
+		        record_min=BROWSER_RECORD_MIN,
+		        record_max=BROWSER_RECORD_MAX)
 		return
 
 	# answer that keeps the form as it is (e.g. an error): JSON for
@@ -301,14 +370,18 @@ class TelefonoWebApp (Flask):
 		                     request.method, request.path,
 		                     request.content_length)
 
-		if "upload_file" != request.endpoint:
-			return self.reply ("message.html", "Eingabe zu groß.",
-			                   "error", 413, back=request.path,
-			                   back_title="Zurück")
+		message = "Datei zu groß, höchstens %d MiB erlaubt." \
+		          % (UPLOAD_MAX_SIZE // 2**20)
 
-		return self.upload_reply ("Datei zu groß, höchstens %d MiB erlaubt."
-		                          % (UPLOAD_MAX_SIZE // 2**20),
-		                          "error", 413)
+		if "upload_file" == request.endpoint:
+			return self.upload_reply (message, "error", 413)
+
+		if "record_save" == request.endpoint:
+			return self.record_reply (message, "error", 413)
+
+		return self.reply ("message.html", "Eingabe zu groß.",
+		                   "error", 413, back=request.path,
+		                   back_title="Zurück")
 
 	def home(self):
 		if request.method == "POST":
@@ -547,19 +620,40 @@ class TelefonoWebApp (Flask):
 		return None
 
 	# ffmpeg encodes the wav into f (the temporary file of save_file);
-	# stream is a file in /tmp (werkzeug spools uploads), so ffmpeg
-	# reads it directly
+	# it reads the upload from stdin, which has to be a real file
 	def encode_wav (self, stream, f):
-		stream.seek (0)
-
 		try:
-			encode_mp3 ("pipe:0", f, stdin=stream)
+			with upload_as_file (stream) as source:
+				encode_mp3 ("pipe:0", f, stdin=source)
 
 		except EncodeError as error:
 			self.logger.warning ("encoding the upload failed: %s", error)
 			raise InvalidUpload ("Umwandeln der .wav Datei fehlgeschlagen.")
 
 		return
+
+	# any other audio file (AUDIO_INPUT_FORMATS) is converted to mp3
+	# into f; max_duration: longer files are cut there (the caller
+	# checks the returned duration of the mp3)
+	def convert_upload (self, stream, f, max_duration:float=None) -> float:
+		try:
+			with upload_as_file (stream) as source:
+				return convert_audio (source, f, max_duration)
+
+		except NoAudioError as error:
+			self.logger.warning ("upload has no audio: %s", error)
+			raise InvalidUpload ("Die Datei enthält keinen Ton.")
+
+		except EncodeTimeout as error:
+			self.logger.warning ("converting the upload failed: %s", error)
+			raise InvalidUpload ("Umwandeln dauert zu lange (mehr als %s), "
+			                     "bitte eine kürzere Datei hochladen."
+			                     % minutes (MP3_ENCODE_TIMEOUT))
+
+		except EncodeError as error:
+			self.logger.warning ("converting the upload failed: %s", error)
+			raise InvalidUpload ("Keine gültige Audiodatei, oder "
+			                     "Umwandeln fehlgeschlagen.")
 
 	# mp3 files are saved as they are, after a check that
 	# they really are mp3 with audio
@@ -628,9 +722,12 @@ class TelefonoWebApp (Flask):
 
 			write = lambda f: self.encode_wav (stream, f)
 
+		# e.g. m4a or ogg from a phone, checked and converted by ffmpeg
+		elif file_type.endswith (UPLOAD_EXTENSIONS):
+			write = lambda f: self.convert_upload (stream, f)
+
 		else:
-			return self.upload_reply ("Bitte nur .mp3 oder .wav hochladen!",
-			                          "error", 400,
+			return self.upload_reply (WRONG_EXTENSION, "error", 400,
 			                          number=requested_number)
 
 		# same name as Subscriber.register_file, e.g. recording007.mp3
@@ -668,3 +765,167 @@ class TelefonoWebApp (Flask):
 		                    "Aufnahme unter Nummer %s gespeichert." % number,
 		                    "success",
 		                    diskSpace=getFreeDiskSpace ())
+
+	# the page for recording in the browser: getUserMedia only works
+	# on https (or localhost), from http it links to the https server
+	def https_url (self):
+		if request.is_secure or self.https_port is None:
+			return None
+
+		host = urllib.parse.urlsplit ("//" + request.host).hostname
+		if not host:
+			return None
+
+		if ":" in host:
+			host = "[%s]" % host
+
+		return "https://%s:%d%s" % (host, self.https_port,
+		                            url_for ("record_page"))
+
+	# the record page again with the input (number, description), the
+	# recording itself is still in the page (script) or has to be
+	# chosen again (without script)
+	def record_reply (self, message:str, message_type:str,
+	                  status:int=200, number:str="", description:str=""):
+		return self.reply ("record.html", message, message_type,
+		                   status, https_url=self.https_url (),
+		                   number=number, description=description)
+
+	def record_page (self):
+		return render_template ("record.html",
+		                        https_url=self.https_url ())
+
+	# the number a recording without a chosen number gets,
+	# shown on the page (busy: 503 like everywhere)
+	def record_free (self):
+		number = self.ipc.next_free ()
+		response = jsonify (number=None if number is None
+		                           else str (number))
+		response.cache_control.no_store = True
+		return response
+
+	# converts the recording (whatever the browser or the phone's
+	# recorder app made) into f, checks its length
+	def convert_recording (self, stream, f):
+		maximum = BROWSER_RECORD_MAX + BROWSER_RECORD_TOLERANCE
+
+		# a bit more than allowed, to see that it is too long
+		duration = self.convert_upload (stream, f, maximum + 1)
+
+		self.logger.info ("recording: %.1f s", duration)
+
+		if duration > maximum:
+			raise InvalidUpload ("Aufnahme zu lang, höchstens %s erlaubt. "
+			                     "Längere Dateien bitte über „Upload“ "
+			                     "hochladen."
+			                     % minutes (BROWSER_RECORD_MAX))
+
+		if duration < BROWSER_RECORD_MIN - BROWSER_RECORD_TOLERANCE:
+			raise InvalidUpload ("Aufnahme zu kurz (%.1f s), mindestens "
+			                     "%d s." % (duration, BROWSER_RECORD_MIN))
+
+		return
+
+	# saves a recording made in the browser (or with the phone's
+	# recorder app) under the chosen or the next free number
+	def record_save (self):
+		uploaded_file = request.files.get ("file")
+		requested_number = request.form.get ("requestedNumber", "").strip ()
+		description = request.form.get ("description", "").strip ()
+
+		def error (message:str, status:int):
+			return self.record_reply (message, "error", status,
+			                          number=requested_number,
+			                          description=description)
+
+		if not uploaded_file or not uploaded_file.filename:
+			return error ("Keine Aufnahme vorhanden, bitte zuerst aufnehmen.",
+			              400)
+
+		message = too_long_message ("Beschreibung", description,
+		                            IPC_DESCRIPTION_MAX_BYTES)
+		if message:
+			return error (message, 400)
+
+		saved = []
+
+		# the next free number is only asked for once the recording
+		# is converted, and again if a file appeared there meanwhile
+		def next_name ():
+			number = self.ipc.next_free ()
+			if number is None:
+				raise NoFreeNumber ()
+
+			saved.append (number)
+			return recording_path (number)
+
+		if requested_number:
+			number = parse_number (requested_number)
+			if None is number:
+				return error (INVALID_NUMBER, 400)
+
+			if not self.ipc.is_free (number):
+				return error ("Nummer %s existiert bereits!" % number,
+				              409)
+
+			saved.append (number)
+			filename, attempts = recording_path (number), 1
+
+		else:
+			filename, attempts = next_name, 3
+
+		stream = uploaded_file.stream
+		write = lambda f: self.convert_recording (stream, f)
+
+		try:
+			file_path = save_file (filename, write,
+			                       directory=RECORD_DIR,
+			                       attempts=attempts)
+
+		except InvalidUpload as invalid:
+			return error (str (invalid), 400)
+
+		except FileExistsError:
+			return error ("Nummer %s existiert bereits!" % saved[-1],
+			              409)
+
+		except NoFreeNumber:
+			self.logger.error ("main process sent no free number")
+			return error ("Ein Fehler ist aufgetreten.", 500)
+
+		# asking for the free number, nothing was saved (busy
+		# message); a TimeoutError is an OSError, so before that
+		except IPC_Timeout:
+			raise
+
+		# e.g. the SD card is full, nothing was written
+		except OSError as failure:
+			self.logger.error ("saving a recording failed: %s", failure)
+
+			if errno.ENOSPC == failure.errno:
+				message = "Speichern fehlgeschlagen, nicht genug freier Speicher."
+			else:
+				message = "Speichern fehlgeschlagen."
+
+			return error (message, 500)
+
+		number = saved[-1]
+		self.logger.info ("recorded %s", file_path)
+
+		message = "Aufnahme unter Nummer %s gespeichert." % number
+
+		# the file is saved, the main process registers it (and sets
+		# the description) as soon as it is free; the page must not
+		# keep the recording, saving it again would add another number
+		try:
+			self.ipc.upload (number, description)
+
+		except IPC_Timeout:
+			self.logger.warning ("telefono busy, %s is registered later",
+			                     number)
+			message += " Das Telefon ist gerade beschäftigt, sie " \
+			           "erscheint in der Liste, sobald es frei ist."
+
+		return self.finish (url_for ("list") + "#n%s" % number,
+		                    message, "success", number=str (number),
+		                    list_url=url_for ("list") + "#n%s" % number)

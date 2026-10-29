@@ -683,3 +683,21 @@ class Network ():
 		# register subscriber
 		subscriber.filename = ""
 		return subscriber
+
+	# the number find_assignable would take, without taking it (the
+	# webapp saves the file itself, then sync_fs registers it); also
+	# skips numbers whose file exists but is not registered yet
+	def find_free (self, directory:str=RECORD_DIR) -> Number:
+		index = 0
+		while True:
+			number = Number.from_int (index)
+
+			filename = os.path.join (directory, RECORD_PREFIX
+			                         + str (number) + RECORD_SUFFIX)
+
+			if self[number].is_assignable () \
+			and not os.path.lexists (filename):
+				self.log.debug ("free number %s", number)
+				return number
+
+			index += 1
