@@ -5,24 +5,198 @@
 			max-width: 12rem;
 		}
 
+		/* the result of several files sent without the script */
+		#results {
+			margin: 0 0 1rem;
+			padding-left: 1.25rem;
+		}
+
+		#results .name {
+			font-weight: 500;
+			overflow-wrap: anywhere;
+		}
+
+		/* the chosen files (script): number, description and status each */
+		#files {
+			margin: 0 0 1rem;
+			padding: 0;
+			list-style: none;
+		}
+
+		.file-item {
+			margin-bottom: .5rem;
+			padding: .5rem .75rem .75rem;
+			border: 1px solid var(--border);
+			border-radius: .25rem;
+		}
+
+		.file-item.done {
+			background-color: #f3faee;
+			border-color: #c3e6b3;
+		}
+
+		.file-item.failed {
+			border-color: #f5a3a3;
+		}
+
+		.js #file:disabled + #file-button {
+			opacity: .65;
+			cursor: progress;
+		}
+
+		.file-head {
+			display: flex;
+			align-items: baseline;
+			gap: .5rem;
+		}
+
+		.file-head .name {
+			flex: 1;
+			min-width: 0;
+			font-weight: 500;
+			overflow-wrap: anywhere;
+		}
+
+		.file-head .size {
+			flex: none;
+			color: var(--secondary);
+			font-size: .875rem;
+			white-space: nowrap;
+		}
+
+		.file-head .remove {
+			flex: none;
+			align-self: center;
+			padding: 0 .4rem;
+			font-size: .875rem;
+			line-height: 1.5;
+		}
+
+		.file-fields {
+			display: grid;
+			grid-template-columns: minmax(5.5rem, 9rem) 1fr;
+			gap: .5rem .75rem;
+			margin-top: .25rem;
+		}
+
+		.file-fields label {
+			display: block;
+			margin-bottom: .125rem;
+			color: var(--secondary);
+			font-size: .875rem;
+		}
+
+		.file-fields input:disabled {
+			color: var(--secondary);
+			background-color: var(--light);
+		}
+
+		.file-fields input[aria-invalid="true"] {
+			border-color: #dc3545;
+		}
+
+		.file-item progress {
+			margin-top: .5rem;
+		}
+
+		.file-status {
+			margin: .5rem 0 0;
+			font-size: .875rem;
+			overflow-wrap: anywhere;
+		}
+
+		.file-status:empty {
+			display: none;
+		}
+
+		.file-status.info, #results .info {
+			color: var(--secondary);
+		}
+
+		.file-status.success, #results .success {
+			color: #270;
+		}
+
+		.file-status.warning, #results .warning {
+			color: #9F6000;
+		}
+
+		.file-status.error, #results .error {
+			color: #D8000C;
+		}
+
+		.file-status.success::before, #results .success::before {
+			content: "\2714\FE0E  ";
+		}
+
+		.file-status.warning::before, #results .warning::before {
+			content: "\26A0\FE0E  ";
+		}
+
+		.file-status.error::before, #results .error::before {
+			content: "\274C\FE0E  ";
+		}
+
+		.file-status a {
+			color: inherit;
+			font-weight: 500;
+		}
+
+		.alert {
+			margin: 0 0 1rem;
+			padding: .625rem .75rem;
+			border-radius: .25rem;
+		}
+
+		.alert.success {
+			color: #270;
+			background-color: #DFF2BF;
+		}
+
+		.alert.warning {
+			color: #9F6000;
+			background-color: #FEEFB3;
+		}
+
+		.alert.error {
+			color: #D8000C;
+			background-color: #FFBABA;
+		}
+
+		.alert a {
+			color: inherit;
+			font-weight: 500;
+		}
 {% endblock %}
 
 {% block title %}Upload{% endblock %}
 
 {% block content %}
-	<h2>Aufnahme hochladen</h2>
-	<form method="post" enctype="multipart/form-data" class="stacked" data-async data-reset>
-		<label for="file">Audiodatei (höchstens {{ upload_max }} MiB):</label>
+	<h2>Aufnahmen hochladen</h2>
+{% if results %}
+	<ul id="results">
+{% for result in results %}
+		<li><span class="name">{{ result.name }}</span>: <span class="{{ result.type }}">{{ result.message }}</span>{% if result.number %} <a href="{{ url_for('list') }}#n{{ result.number }}">In der Liste</a>{% endif %}</li>
+{% endfor %}
+	</ul>
+{% endif %}
+	<form method="post" enctype="multipart/form-data" class="stacked" id="upload-form">
+		<label for="file">Audiodateien (höchstens {{ upload_max }} MiB je Datei, mehrere auf einmal möglich):</label>
 		<div id="file-picker">
-			<input type="file" id="file" name="file" accept="{{ upload_extensions | join(',') }},audio/*" required aria-describedby="formats">
-			<label for="file" id="file-button" class="button gray">Datei auswählen</label>
+			<input type="file" id="file" name="file" accept="{{ upload_extensions | join(',') }},audio/*" multiple required aria-describedby="formats">
+			<label for="file" id="file-button" class="button gray">Dateien auswählen</label>
 			<span id="file-name" class="empty">Keine Datei ausgewählt</span>
 		</div>
 		<p class="hint" id="formats">.mp3 wird so gespeichert, wie es ist; {{ upload_extensions[1:] | join(', ') }} werden in .mp3 umgewandelt. Selbst aufnehmen: <a href="{{ url_for('record_page') }}">Aufnehmen</a>.</p>
-		<label for="number">Gewünschte Nummer:</label>
-		<input type="text" inputmode="numeric" pattern="[0-9]+" title="nur Ziffern (0-9)" id="number" name="requestedNumber" value="{{ number }}" autocomplete="off" required>
-		<progress max="1" value="0" hidden></progress>
-		<input type="submit" class="button blue" value="Hochladen">
+		<ol id="files" aria-label="Gewählte Dateien" hidden></ol>
+		<p class="hint" id="files-hint" hidden>Ohne Nummer bekommt eine Datei die nächste freie Nummer (in der Reihenfolge der Liste). Die Beschreibung ist mit dem Dateinamen vorausgefüllt und kann geändert oder gelöscht werden. Die Dateien werden nacheinander hochgeladen und umgewandelt, das dauert pro Datei einige Sekunden.</p>
+		<label for="number" class="no-script">Gewünschte Nummer:</label>
+		<input type="text" inputmode="numeric" pattern="[0-9]+" title="nur Ziffern (0-9)" id="number" name="requestedNumber" value="{{ number }}" placeholder="nächste freie" autocomplete="off" class="no-script" aria-describedby="number-hint">
+		<p class="hint no-script" id="number-hint">Leer lassen für die nächste freie Nummer. Bei mehreren Dateien leer lassen: sie bekommen die nächsten freien Nummern, alle zusammen höchstens {{ upload_max }} MiB.</p>
+		<label for="description" class="no-script">Beschreibung (freiwillig, bei mehreren Dateien für alle):</label>
+		<input type="text" id="description" name="description" value="{{ description }}" maxlength="{{ description_max }}" autocomplete="off" class="no-script">
+		<input type="submit" class="button blue" id="submit" value="Hochladen">
+		<p id="summary" class="alert" hidden aria-live="polite"></p>
 		<p class="hint">Freier Speicher: <span id="disk-space">{{ diskSpace }}</span> GiB</p>
 	</form>
 {% endblock %}
@@ -32,49 +206,436 @@
 (function () {
 	"use strict";
 
-	const form = document.querySelector ("form");
+	const form = document.getElementById ("upload-form");
 	const file = document.getElementById ("file");
 	const fileName = document.getElementById ("file-name");
+	const list = document.getElementById ("files");
+	const listHint = document.getElementById ("files-hint");
+	const submit = document.getElementById ("submit");
+	const summary = document.getElementById ("summary");
+	const diskSpace = document.getElementById ("disk-space");
+
 	const maxSize = {{ upload_max }} * 1024 * 1024;
 	const extensions = {{ upload_extensions | list | tojson }};
+	const descriptionMax = {{ description_max }};
+	const listUrl = {{ url_for('list') | tojson }};
+	const encoder = new TextEncoder ();
 
-	function showFileName () {
-		const selected = file.files[0];
+	// the files are sent one by one by this script, so the fields for
+	// the form without the script are not needed (one number and
+	// description for all files)
+	document.querySelectorAll (".no-script").forEach (function (element) {
+		element.hidden = true;
+	});
+	form.noValidate = true;
+	file.required = false;
 
-		fileName.textContent = selected ? selected.name : "Keine Datei ausgewählt";
-		fileName.classList.toggle ("empty", !selected);
+	// { file, element, number, description, remove, progress, status,
+	//   state: "ready" | "invalid" | "sending" | "done" | "failed" }
+	let items = [];
+	let sending = false;
+
+	function bytes (text) {
+		return encoder.encode (text).length;
 	}
 
-	file.addEventListener ("change", showFileName);
+	// the file name without its extension, cut to what fits
+	// (at a character, not in the middle of an umlaut)
+	function defaultDescription (name) {
+		const text = name.replace (/\.[^.]*$/, "").trim ();
 
-	// "reset" fires before the form is cleared
-	form.addEventListener ("reset", function () {
-		setTimeout (showFileName);
-	});
+		let result = "";
+		for (const character of text) {
+			if (bytes (result + character) > descriptionMax)
+				break;
+			result += character;
+		}
+		return result;
+	}
 
-	// e.g. the browser restored the file on "back"
-	showFileName ();
+	function sizeText (size) {
+		if (size < 1024 * 1024)
+			return Math.max (1, Math.round (size / 1024)) + " KiB";
 
-	// no need to send a file the phone refuses anyway
-	form.addEventListener ("check", function (event) {
-		const selected = file.files[0];
-		if (!selected)
+		return (size / 1024 / 1024).toLocaleString ("de-DE", { maximumFractionDigits: 1 }) + " MiB";
+	}
+
+	// the same checks as on the phone, no need to send what it refuses
+	function fileProblem (selected) {
+		const name = selected.name.toLowerCase ();
+
+		if (!extensions.some (function (extension) { return name.endsWith (extension); }))
+			return "Bitte nur Audiodateien hochladen ({{ upload_extensions_text }})!";
+
+		if (selected.size > maxSize)
+			return "Datei zu groß, höchstens {{ upload_max }} MiB erlaubt.";
+
+		return null;
+	}
+
+	function setStatus (item, text, type, link) {
+		item.status.className = "file-status " + (type || "");
+		item.status.textContent = text;
+
+		if (link) {
+			item.status.append (" ");
+			const a = document.createElement ("a");
+			a.href = link;
+			a.textContent = "In der Liste";
+			item.status.appendChild (a);
+		}
+	}
+
+	function setState (item, state) {
+		item.state = state;
+		item.element.classList.toggle ("done", "done" === state);
+		item.element.classList.toggle ("failed", "failed" === state || "invalid" === state);
+	}
+
+	function field (labelText, input) {
+		const box = document.createElement ("div");
+		const label = document.createElement ("label");
+		label.textContent = labelText;
+		label.htmlFor = input.id;
+		box.appendChild (label);
+		box.appendChild (input);
+		return box;
+	}
+
+	let counter = 0;
+
+	function addItem (selected) {
+		counter += 1;
+
+		const element = document.createElement ("li");
+		element.className = "file-item";
+
+		const head = document.createElement ("div");
+		head.className = "file-head";
+
+		const name = document.createElement ("span");
+		name.className = "name";
+		name.textContent = selected.name;
+
+		const size = document.createElement ("span");
+		size.className = "size";
+		size.textContent = sizeText (selected.size);
+
+		const remove = document.createElement ("button");
+		remove.type = "button";
+		remove.className = "button light remove";
+		remove.title = "Aus der Liste entfernen";
+		remove.setAttribute ("aria-label", selected.name + " aus der Liste entfernen");
+		remove.textContent = "✖︎";
+
+		head.append (name, size, remove);
+
+		const number = document.createElement ("input");
+		number.type = "text";
+		number.id = "number-" + counter;
+		number.inputMode = "numeric";
+		number.pattern = "[0-9]+";
+		number.title = "nur Ziffern (0-9), leer: nächste freie";
+		number.placeholder = "automatisch";
+		number.autocomplete = "off";
+
+		const description = document.createElement ("input");
+		description.type = "text";
+		description.id = "description-" + counter;
+		description.maxLength = descriptionMax;
+		description.autocomplete = "off";
+		description.value = defaultDescription (selected.name);
+
+		const fields = document.createElement ("div");
+		fields.className = "file-fields";
+		fields.append (field ("Nummer", number), field ("Beschreibung", description));
+
+		const progress = document.createElement ("progress");
+		progress.max = 1;
+		progress.value = 0;
+		progress.hidden = true;
+
+		const status = document.createElement ("p");
+		status.className = "file-status";
+		status.setAttribute ("aria-live", "polite");
+
+		element.append (head, fields, progress, status);
+		list.appendChild (element);
+
+		const item = {
+			file: selected, element: element, number: number,
+			description: description, remove: remove,
+			progress: progress, status: status, state: "ready"
+		};
+
+		[number, description].forEach (function (input) {
+			input.addEventListener ("input", function () {
+				input.removeAttribute ("aria-invalid");
+			});
+		});
+
+		remove.addEventListener ("click", function () {
+			items = items.filter (function (other) { return other !== item; });
+			element.remove ();
+			update ();
+			file.focus ();
+		});
+
+		const problem = fileProblem (selected);
+		if (problem) {
+			setState (item, "invalid");
+			setStatus (item, problem + " Wird nicht hochgeladen.", "error");
+			number.disabled = description.disabled = true;
+		}
+
+		items.push (item);
+	}
+
+	function update () {
+		const count = items.length;
+
+		fileName.textContent = 0 === count ? "Keine Datei ausgewählt"
+		                     : 1 === count ? items[0].file.name
+		                     : count + " Dateien ausgewählt";
+		fileName.classList.toggle ("empty", 0 === count);
+
+		list.hidden = listHint.hidden = 0 === count;
+		submit.disabled = sending;
+		file.disabled = sending;
+
+		items.forEach (function (item) {
+			const locked = sending || "done" === item.state || "invalid" === item.state;
+			item.number.disabled = item.description.disabled = locked;
+			item.remove.hidden = sending || "done" === item.state;
+		});
+	}
+
+	function addFiles () {
+		if (sending || !file.files.length)
 			return;
 
-		const name = selected.name.toLowerCase ();
-		if (!extensions.some (function (extension) { return name.endsWith (extension); })) {
-			event.preventDefault ();
-			showMessage ("Bitte nur Audiodateien hochladen ({{ upload_extensions_text }})!", "error");
+		// a new choice after an upload: the saved ones are finished
+		items = items.filter (function (item) {
+			if ("done" !== item.state)
+				return true;
+
+			item.element.remove ();
+			return false;
+		});
+
+		for (const selected of file.files)
+			addItem (selected);
+
+		// the files are in the list, choosing again adds more
+		// (also the same file again)
+		file.value = "";
+		summary.hidden = true;
+		update ();
+	}
+
+	file.addEventListener ("change", addFiles);
+
+	// e.g. the browser restored the files on "back"
+	addFiles ();
+	update ();
+
+	// a mistake in the fields is shown before anything is sent
+	function inputProblem (pending) {
+		const numbers = {};
+
+		for (const item of pending) {
+			const number = item.number.value.trim ();
+			item.number.value = number;
+
+			if (number && !/^[0-9]+$/.test (number))
+				return [item.number, "Ungültige Nummer, bitte nur Ziffern (0-9) eingeben."];
+
+			if (number && numbers[number])
+				return [item.number, "Nummer " + number + " ist mehrfach eingetragen."];
+
+			numbers[number] = true;
+
+			const description = item.description.value.trim ();
+			const size = bytes (description);
+			if (size > descriptionMax)
+				return [item.description, "Beschreibung zu lang: " + size + " Bytes, höchstens " + descriptionMax + " erlaubt (Umlaute zählen doppelt)."];
 		}
-		else if (selected.size > maxSize) {
-			event.preventDefault ();
-			showMessage ("Datei zu groß, höchstens {{ upload_max }} MiB erlaubt.", "error");
+
+		return null;
+	}
+
+	function answerOf (request) {
+		try {
+			const answer = JSON.parse (request.responseText);
+			if (answer && answer.message)
+				return answer;
 		}
+		catch (error) {
+		}
+
+		return { message: "Unerwartete Antwort vom Telefon (" + request.status + ").", type: "error" };
+	}
+
+	// one file per request: the phone converts them one after the
+	// other anyway, and an upload is held in its RAM (/tmp) until done
+	function send (item) {
+		return new Promise (function (resolve) {
+			const data = new FormData ();
+			data.append ("file", item.file, item.file.name);
+			data.append ("requestedNumber", item.number.value.trim ());
+			data.append ("description", item.description.value.trim ());
+
+			const request = new XMLHttpRequest ();
+			const converted = !item.file.name.toLowerCase ().endsWith (".mp3");
+
+			item.progress.value = 0;
+			item.progress.hidden = false;
+			setStatus (item, "Wird hochgeladen …", "info");
+
+			request.upload.addEventListener ("progress", function (event) {
+				if (event.lengthComputable)
+					item.progress.value = event.loaded / event.total;
+			});
+
+			request.upload.addEventListener ("load", function () {
+				item.progress.value = 1;
+				setStatus (item, converted ? "Wird umgewandelt und gespeichert …"
+				                           : "Wird geprüft und gespeichert …", "info");
+			});
+
+			request.addEventListener ("load", function () {
+				item.progress.hidden = true;
+
+				const answer = answerOf (request);
+				answer.status = request.status;
+				resolve (answer);
+			});
+
+			request.addEventListener ("error", function () {
+				item.progress.hidden = true;
+				resolve ({ message: "Keine Verbindung zum Telefon.", type: "error", status: 0 });
+			});
+
+			request.open ("POST", form.getAttribute ("action") || location.pathname);
+			request.setRequestHeader ("X-Requested-With", "XMLHttpRequest");
+			request.send (data);
+		});
+	}
+
+	async function upload (pending, skipped) {
+		sending = true;
+		form.setAttribute ("aria-busy", "true");
+		summary.hidden = true;
+		update ();
+
+		pending.forEach (function (item) {
+			setStatus (item, "Wartet …", "info");
+		});
+
+		// files with a chosen number first, so that an automatic
+		// number can not take it away; the rest in the list's order
+		const order = pending.filter (function (item) { return item.number.value; })
+		              .concat (pending.filter (function (item) { return !item.number.value; }));
+
+		let saved = 0;
+		let last = null;
+
+		for (const item of order) {
+			setState (item, "sending");
+
+			const answer = await send (item);
+			last = answer;
+
+			if (undefined !== answer.diskSpace)
+				diskSpace.textContent = answer.diskSpace;
+
+			if ("success" === answer.type) {
+				saved += 1;
+				setState (item, "done");
+				if (answer.number)
+					item.number.value = answer.number;
+				setStatus (item, answer.message, "success", answer.list_url);
+			}
+			else {
+				setState (item, "failed");
+				setStatus (item, answer.message, answer.type);
+
+				// the number is the problem (taken or invalid)
+				if (item.number.value && (409 === answer.status || /Nummer/.test (answer.message)))
+					item.number.setAttribute ("aria-invalid", "true");
+				else if (/Beschreibung/.test (answer.message))
+					item.description.setAttribute ("aria-invalid", "true");
+			}
+
+			update ();
+		}
+
+		sending = false;
+		form.removeAttribute ("aria-busy");
+		update ();
+
+		const total = order.length + skipped;
+		const failed = total - saved;
+
+		// a single file: the phone's message, like always
+		if (1 === total && last) {
+			showMessage (last.message, last.type);
+		}
+		else {
+			const type = 0 === failed ? "success" : saved ? "warning" : "error";
+			const text = saved + " von " + total + " Dateien gespeichert.";
+			showMessage (text, type);
+
+			summary.className = "alert " + type;
+			summary.textContent = text + " ";
+			if (failed)
+				summary.append ("Nicht gespeicherte Dateien bleiben in der Liste: Nummer oder Beschreibung ändern (oder warten, wenn das Telefon beschäftigt ist) und nochmal „Hochladen“. ");
+
+			if (saved) {
+				const a = document.createElement ("a");
+				a.href = listUrl;
+				a.textContent = "Zur Liste";
+				summary.appendChild (a);
+			}
+			summary.hidden = false;
+		}
+	}
+
+	form.addEventListener ("submit", function (event) {
+		event.preventDefault ();
+
+		if (sending)
+			return;
+
+		const pending = items.filter (function (item) {
+			return "ready" === item.state || "failed" === item.state;
+		});
+		const skipped = items.filter (function (item) { return "invalid" === item.state; }).length;
+
+		if (!pending.length) {
+			showMessage (skipped ? "Keine Datei zum Hochladen, die gewählten Dateien werden nicht angenommen."
+			                     : "Keine Datei ausgewählt!", "error");
+			file.focus ();
+			return;
+		}
+
+		const problem = inputProblem (pending);
+		if (problem) {
+			problem[0].setAttribute ("aria-invalid", "true");
+			problem[0].focus ();
+			showMessage (problem[1], "error");
+			return;
+		}
+
+		upload (pending, skipped);
 	});
 
-	form.addEventListener ("answer", function (event) {
-		if (undefined !== event.detail.diskSpace)
-			document.getElementById ("disk-space").textContent = event.detail.diskSpace;
+	// leaving the page would stop the upload
+	window.addEventListener ("beforeunload", function (event) {
+		if (sending) {
+			event.preventDefault ();
+			event.returnValue = "";
+		}
 	});
 }) ();
 </script>

@@ -203,6 +203,20 @@ class NoFreeNumber (Exception):
 	pass
 
 
+# what happened to one uploaded file: HTTP status, message (German),
+# message type (success, error, warning) and the number it got
+class UploadResult:
+	def __init__ (self, status:int, message:str, message_type:str,
+	              number:Number=None):
+		self.status = status
+		self.message = message
+		self.type = message_type
+		self.number = number
+		return
+
+
+BUSY_MESSAGE = "Telefon beschäftigt, bitte später nochmal versuchen."
+
 # the extensions for the templates, e.g. ".mp3, .wav, .m4a"
 UPLOAD_EXTENSIONS_TEXT = ", ".join (UPLOAD_EXTENSIONS)
 
@@ -342,7 +356,7 @@ class TelefonoWebApp (Flask):
 		if error.queued:
 			message = "Telefon beschäftigt, die Anfrage wird ausgeführt, sobald es wieder frei ist."
 		else:
-			message = "Telefon beschäftigt, bitte später nochmal versuchen."
+			message = BUSY_MESSAGE
 
 		# only offer to send a GET again, a queued request
 		# would be done twice
@@ -669,43 +683,73 @@ class TelefonoWebApp (Flask):
 
 		return
 
-	# the upload page again, with the number that was entered
-	# (not read from request.form here: too_large can not parse it)
+	# the upload page again, with the number and description that were
+	# entered (not read from request.form here: too_large can not parse
+	# it); results: one line per file of an upload with several files
 	def upload_reply (self, message:str, message_type:str,
-	                  status:int=200, number:str=""):
+	                  status:int=200, number:str="", description:str="",
+	                  results:list=None):
 		return self.reply ("upload.html", message, message_type,
 		                   status,
 		                   diskSpace=getFreeDiskSpace (),
-		                   number=number)
+		                   number=number,
+		                   description=description,
+		                   results=results)
 
 	def upload_page(self):
 		diskSpace = getFreeDiskSpace()
 		return render_template("upload.html", diskSpace = diskSpace)
 
+	# saves one uploaded file under the requested number, or under the
+	# next free one if none is given (like a recording on the phone);
+	# IPC_Timeout while asking whether the number is free or for the
+	# next free number: nothing was saved
+	def save_upload (self, uploaded_file, requested_number:str,
+	                 description:str) -> UploadResult:
+		def failed (message:str, status:int):
+			return UploadResult (status, message, "error")
 
-	def upload_file(self):
-		uploaded_file = request.files["file"]
-		requested_number = request.form["requestedNumber"]
+		if not uploaded_file or not uploaded_file.filename:
+			return failed ("Keine Datei ausgewählt!", 400)
 
-		if not uploaded_file.filename:
-			return self.upload_reply ("Keine Datei ausgewählt!",
-			                          "error", 400,
-			                          number=requested_number)
+		message = too_long_message ("Beschreibung", description,
+		                            IPC_DESCRIPTION_MAX_BYTES)
+		if message:
+			return failed (message, 400)
 
-		if not requested_number:
-			return self.upload_reply ("Keine Nummer angegeben!",
-			                          "error", 400,
-			                          number=requested_number)
+		saved = []
 
-		number = parse_number (requested_number)
-		if None is number:
-			return self.upload_reply (INVALID_NUMBER, "error", 400,
-			                          number=requested_number)
+		# same name as Subscriber.register_file, e.g. recording007.mp3
+		def path (number:Number) -> str:
+			return os.path.join (UPLOAD_DIR, RECORD_PREFIX + str (number)
+			                                 + RECORD_SUFFIX)
 
-		if not self.ipc.is_free (number):
-			return self.upload_reply ("Nummer %s existiert bereits!"
-			                          % number, "error", 409,
-			                          number=requested_number)
+		# the next free number is only asked for once the file is
+		# converted (that takes a while), and again if a file appeared
+		# there meanwhile (e.g. a recording on the phone, or a second
+		# upload at the same time)
+		def next_name ():
+			number = self.ipc.next_free ()
+			if number is None:
+				raise NoFreeNumber ()
+
+			saved.append (number)
+			return path (number)
+
+		if requested_number:
+			number = parse_number (requested_number)
+			if None is number:
+				return failed (INVALID_NUMBER, 400)
+
+			if not self.ipc.is_free (number):
+				return failed ("Nummer %s existiert bereits!" % number,
+				               409)
+
+			saved.append (number)
+			filename, attempts = path (number), 1
+
+		else:
+			filename, attempts = next_name, 3
 
 		stream = uploaded_file.stream
 		file_type = uploaded_file.filename.lower ()
@@ -717,8 +761,7 @@ class TelefonoWebApp (Flask):
 		elif file_type.endswith (".wav"):
 			message = self.check_wav (stream)
 			if message:
-				return self.upload_reply (message, "error", 400,
-				                          number=requested_number)
+				return failed (message, 400)
 
 			write = lambda f: self.encode_wav (stream, f)
 
@@ -727,44 +770,147 @@ class TelefonoWebApp (Flask):
 			write = lambda f: self.convert_upload (stream, f)
 
 		else:
-			return self.upload_reply (WRONG_EXTENSION, "error", 400,
-			                          number=requested_number)
+			return failed (WRONG_EXTENSION, 400)
 
-		# same name as Subscriber.register_file, e.g. recording007.mp3
-		file_path = UPLOAD_DIR + "/" + RECORD_PREFIX + str(number) + RECORD_SUFFIX
 		try:
-			save_file (file_path, write)
+			file_path = save_file (filename, write,
+			                       directory=UPLOAD_DIR,
+			                       attempts=attempts)
 
 		except InvalidUpload as error:
-			return self.upload_reply (str (error), "error", 400,
-			                          number=requested_number)
+			return failed (str (error), 400)
 
 		# a file the main process does not know yet (e.g. copied
 		# there by hand, or a second upload at the same time)
 		except FileExistsError:
-			return self.upload_reply ("Nummer %s existiert bereits!"
-			                          % number, "error", 409,
-			                          number=requested_number)
+			return failed ("Nummer %s existiert bereits!" % saved[-1], 409)
+
+		except NoFreeNumber:
+			self.logger.error ("main process sent no free number")
+			return failed ("Ein Fehler ist aufgetreten.", 500)
+
+		# asking for the free number, nothing was saved (busy
+		# message); a TimeoutError is an OSError, so before that
+		except IPC_Timeout:
+			raise
 
 		# e.g. the SD card is full, nothing was written
 		except OSError as error:
-			self.logger.error ("saving %s failed: %s", file_path, error)
+			self.logger.error ("saving %s failed: %s",
+			                   saved[-1] if saved else "an upload", error)
 
 			if errno.ENOSPC == error.errno:
 				message = "Speichern fehlgeschlagen, nicht genug freier Speicher."
 			else:
 				message = "Speichern fehlgeschlagen."
 
-			return self.upload_reply (message, "error", 500,
-			                          number=requested_number)
+			return failed (message, 500)
 
-		self.ipc.upload ()
-
+		number = saved[-1]
 		self.logger.info ("uploaded %s", file_path)
-		return self.finish (url_for ("upload_page"),
-		                    "Aufnahme unter Nummer %s gespeichert." % number,
+
+		message = "Aufnahme unter Nummer %s gespeichert." % number
+
+		# the file is saved, the main process registers it (and sets
+		# the description) as soon as it is free; sending it again
+		# would add another number, so this is no busy error
+		try:
+			self.ipc.upload (number, description)
+
+		except IPC_Timeout:
+			self.logger.warning ("telefono busy, %s is registered later",
+			                     number)
+			message += " Das Telefon ist gerade beschäftigt, sie " \
+			           "erscheint in der Liste, sobald es frei ist."
+
+		return UploadResult (200, message, "success", number)
+
+	# the upload page's script sends one file per request (the phone
+	# converts them one after the other, and /tmp is in RAM); without
+	# the script several files can come in one request
+	def upload_file(self):
+		uploaded_files = [uploaded
+		                  for uploaded in request.files.getlist ("file")
+		                  if uploaded.filename]
+		requested_number = request.form.get ("requestedNumber", "").strip ()
+		description = request.form.get ("description", "").strip ()
+
+		if 1 < len (uploaded_files):
+			return self.upload_files (uploaded_files, requested_number,
+			                          description)
+
+		result = self.save_upload (uploaded_files[0] if uploaded_files
+		                           else None,
+		                           requested_number, description)
+
+		if "success" != result.type:
+			return self.upload_reply (result.message, result.type,
+			                          result.status,
+			                          number=requested_number,
+			                          description=description)
+
+		list_url = url_for ("list") + "#n%s" % result.number
+		return self.finish (url_for ("upload_page"), result.message,
 		                    "success",
-		                    diskSpace=getFreeDiskSpace ())
+		                    diskSpace=getFreeDiskSpace (),
+		                    number=str (result.number),
+		                    list_url=list_url)
+
+	# several files in one request (form sent without the script): all
+	# get the next free numbers in the order they came, one failing file
+	# does not stop the others; the page shows a line for each
+	def upload_files (self, uploaded_files:list, requested_number:str,
+	                  description:str):
+		def error (message:str):
+			return self.upload_reply (message, "error", 400,
+			                          number=requested_number,
+			                          description=description)
+
+		if requested_number:
+			return error ("Mehrere Dateien bekommen die nächsten freien "
+			              "Nummern, bitte keine Nummer eingeben (oder "
+			              "nur eine Datei wählen).")
+
+		message = too_long_message ("Beschreibung", description,
+		                            IPC_DESCRIPTION_MAX_BYTES)
+		if message:
+			return error (message)
+
+		results = []
+		for uploaded in uploaded_files:
+			try:
+				result = self.save_upload (uploaded, "", description)
+
+			# nothing saved; the phone may be free again for the next
+			except IPC_Timeout:
+				self.logger.warning ("telefono busy: %s not saved",
+				                     uploaded.filename)
+				result = UploadResult (503, BUSY_MESSAGE, "warning")
+
+			results.append ({
+				"name": uploaded.filename,
+				"message": result.message,
+				"type": result.type,
+				"status": result.status,
+				"number": None if result.number is None
+				          else str (result.number),
+			})
+
+		saved = sum (1 for result in results
+		             if "success" == result["type"])
+
+		message = "%d von %d Dateien gespeichert." \
+		          % (saved, len (results))
+
+		if saved == len (results):
+			message_type, status = "success", 200
+		elif saved:
+			message_type, status = "warning", 200
+		else:
+			message_type, status = "error", results[0]["status"]
+
+		return self.upload_reply (message, message_type, status,
+		                          results=results)
 
 	# the page for recording in the browser: getUserMedia only works
 	# on https (or localhost), from http it links to the https server
