@@ -128,21 +128,22 @@
 			height: .75rem;
 		}
 
-		/* file picker (upload, record): the browser's own file button speaks the
-		   browser's language, so with the script it is replaced by a German one
-		   styled like the list numbers */
-		#file-picker {
+		/* file picker: the browser's own file button speaks the browser's
+		   language, so with the script it is replaced by a German one
+		   styled like the list numbers; classes, not ids, because the
+		   page for uploading has two of them (file and recording) */
+		.file-picker {
 			position: relative;
 			display: flex;
 			align-items: center;
 			gap: 1rem;
 		}
 
-		#file-button, #file-name {
+		.file-button, .file-name {
 			display: none;
 		}
 
-		.js #file {
+		.js .file-input {
 			position: absolute;
 			left: 0;
 			bottom: 0;
@@ -152,7 +153,7 @@
 			overflow: hidden;
 		}
 
-		.js #file-button {
+		.js .file-button {
 			display: inline-block;
 			flex: none;
 			min-width: 3.5rem;
@@ -162,18 +163,18 @@
 			white-space: nowrap;
 		}
 
-		#file:focus-visible + #file-button {
+		.file-input:focus-visible + .file-button {
 			outline: 0;
 			box-shadow: 0 0 0 .2rem rgba(130,138,145,.5);
 		}
 
-		.js #file-name {
+		.js .file-name {
 			display: block;
 			min-width: 0;
 			overflow-wrap: anywhere;
 		}
 
-		#file-name.empty {
+		.file-name.empty {
 			color: var(--secondary);
 		}
 
@@ -436,9 +437,8 @@
 			<div>
 {% set active_page = request.endpoint %}
 {% if active_page == 'edit_value' %}{% set active_page = 'list' %}{% endif %}
-{% if active_page == 'upload_file' %}{% set active_page = 'upload_page' %}{% endif %}
-{% if active_page == 'record_save' %}{% set active_page = 'record_page' %}{% endif %}
-{% for endpoint, title in [('home', 'Anrufen'), ('list', 'Liste'), ('upload_page', 'Upload'), ('record_page', 'Aufnehmen'), ('say', 'Text ansagen'), ('volume', 'Lautstärke'), ('status', 'Status'), ('diagnose', 'Hardware-Test'), ('help', 'Anleitung')] %}
+{% if active_page in ['upload_file', 'record_page', 'record_save'] %}{% set active_page = 'upload_page' %}{% endif %}
+{% for endpoint, title in [('home', 'Anrufen'), ('list', 'Liste'), ('upload_page', 'Hochladen'), ('say', 'Text ansagen'), ('volume', 'Lautstärke'), ('status', 'Status'), ('diagnose', 'Hardware-Test'), ('help', 'Anleitung')] %}
 				<a {% if active_page == endpoint %}class="active" aria-current="page" {% endif %}href="{{ url_for(endpoint) }}">{{ title }}</a>
 {% endfor %}
 			</div>

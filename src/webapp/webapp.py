@@ -323,7 +323,8 @@ class TelefonoWebApp (Flask):
 		self.ipc = ipc
 
 		# port of the https server, if there is one (set by main),
-		# the record page links to it from http
+		# the page for uploading links to it from http (recording in
+		# the browser only works on a secure connection)
 		self.https_port = None
 
 		# larger requests are refused before they are read
@@ -337,6 +338,8 @@ class TelefonoWebApp (Flask):
 		self.add_url_rule ("/list", "list", self.list, methods=["POST", "GET"])
 		self.add_url_rule ("/edit/<number>", "edit_value", self.edit_value, methods=["GET", "POST"])
 		self.add_url_rule ("/say", "say", self.say, methods=["GET", "POST"])
+		# uploading a file and recording in the browser are one page
+		# ("Hochladen"), but they are saved on different ways
 		self.add_url_rule ("/upload", "upload_page", self.upload_page)
 		self.add_url_rule ("/upload", "upload_file", self.upload_file, methods=["POST"])
 		self.add_url_rule ("/record", "record_page", self.record_page)
@@ -963,22 +966,29 @@ class TelefonoWebApp (Flask):
 
 		return
 
-	# the upload page again, with the number and description that were
-	# entered (not read from request.form here: too_large can not parse
-	# it); results: one line per file of an upload with several files
+	# the page again, with the number and description that were entered
+	# (not read from request.form here: too_large can not parse it);
+	# the two forms of the page keep their input apart, so a failed
+	# upload does not fill in the recorder's fields and the other way
+	# round; results: one line per file of an upload with several files
 	def upload_reply (self, message:str, message_type:str,
 	                  status:int=200, number:str="", description:str="",
-	                  results:list=None):
+	                  results:list=None, record_number:str="",
+	                  record_description:str=""):
 		return self.reply ("upload.html", message, message_type,
 		                   status,
 		                   diskSpace=getFreeDiskSpace (),
+		                   https_url=self.https_url (),
 		                   number=number,
 		                   description=description,
-		                   results=results)
+		                   results=results,
+		                   record_number=record_number,
+		                   record_description=record_description)
 
-	def upload_page(self):
-		diskSpace = getFreeDiskSpace()
-		return render_template("upload.html", diskSpace = diskSpace)
+	def upload_page (self):
+		return render_template ("upload.html",
+		                        diskSpace=getFreeDiskSpace (),
+		                        https_url=self.https_url ())
 
 	# saves one uploaded file under the requested number, or under the
 	# next free one if none is given (like a recording on the phone);
@@ -1192,8 +1202,9 @@ class TelefonoWebApp (Flask):
 		return self.upload_reply (message, message_type, status,
 		                          results=results)
 
-	# the page for recording in the browser: getUserMedia only works
-	# on https (or localhost), from http it links to the https server
+	# recording in the browser: getUserMedia only works on https (or
+	# localhost), from http the page links to the https server (at the
+	# recorder, which is the lower half of the page)
 	def https_url (self):
 		if request.is_secure or self.https_port is None:
 			return None
@@ -1205,21 +1216,22 @@ class TelefonoWebApp (Flask):
 		if ":" in host:
 			host = "[%s]" % host
 
-		return "https://%s:%d%s" % (host, self.https_port,
-		                            url_for ("record_page"))
+		return "https://%s:%d%s#aufnehmen" % (host, self.https_port,
+		                                      url_for ("upload_page"))
 
-	# the record page again with the input (number, description), the
+	# the page again with the input (number, description), the
 	# recording itself is still in the page (script) or has to be
 	# chosen again (without script)
 	def record_reply (self, message:str, message_type:str,
 	                  status:int=200, number:str="", description:str=""):
-		return self.reply ("record.html", message, message_type,
-		                   status, https_url=self.https_url (),
-		                   number=number, description=description)
+		return self.upload_reply (message, message_type, status,
+		                          record_number=number,
+		                          record_description=description)
 
+	# the recorder is part of the page for uploading now,
+	# the old address still works
 	def record_page (self):
-		return render_template ("record.html",
-		                        https_url=self.https_url ())
+		return redirect (url_for ("upload_page") + "#aufnehmen")
 
 	# the number a recording without a chosen number gets,
 	# shown on the page (busy: 503 like everywhere)
@@ -1242,7 +1254,7 @@ class TelefonoWebApp (Flask):
 
 		if duration > maximum:
 			raise InvalidUpload ("Aufnahme zu lang, höchstens %s erlaubt. "
-			                     "Längere Dateien bitte über „Upload“ "
+			                     "Längere Aufnahmen bitte als Datei "
 			                     "hochladen."
 			                     % minutes (BROWSER_RECORD_MAX))
 
