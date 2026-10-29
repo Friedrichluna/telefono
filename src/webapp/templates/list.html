@@ -50,52 +50,135 @@
 			animation: highlight 2s ease;
 		}
 
-		li > form {
-			display: contents;
-		}
-
 		li .button {
 			padding: .25rem .5rem;
 			font-size: .875rem;
 			border-radius: .2rem;
 		}
 
-		li .button.gray {
+		/* the number is only shown (calling is the phone button),
+		   same size as the buttons */
+		.number {
+			flex: none;
 			min-width: 3.5rem;
+			padding: .25rem .5rem;
+
+			color: #495057;
+			background-color: #e9ecef;
+			border: 1px solid var(--border);
+			border-radius: .2rem;
+
+			font-size: .875rem;
 			font-variant-numeric: tabular-nums;
+			text-align: center;
+			overflow-wrap: anywhere;
 		}
 
-		li > span {
+		.description {
 			flex: 1;
 			overflow-wrap: anywhere;
 		}
 
-		/* play, download, edit */
+		/* call and the menu */
 		.actions {
 			display: flex;
 			gap: .25rem;
+		}
+
+		.actions form {
+			display: contents;
 		}
 
 		.actions .button {
 			min-width: 2.125rem;
 		}
 
-		.actions svg {
+		li svg {
 			width: 1em;
 			height: 1em;
 			fill: currentColor;
 			vertical-align: -.125em;
 		}
 
-		.play .pause-icon, li.playing .play .play-icon {
+		.button.light:focus-visible {
+			outline: 0;
+			box-shadow: 0 0 0 .2rem rgba(130,138,145,.5);
+		}
+
+		/* the menu ("…"): a <details>, so it also opens without the
+		   script; with it, it closes on a click outside, Escape and
+		   when another one opens */
+		.row-menu {
+			position: relative;
+		}
+
+		.row-menu > summary {
+			display: block;
+			list-style: none;
+			user-select: none;
+		}
+
+		.row-menu > summary::-webkit-details-marker {
 			display: none;
 		}
 
-		li.playing .play .pause-icon {
+		.row-menu[open] > summary {
+			background-color: #e2e6ea;
+		}
+
+		.menu {
+			position: absolute;
+			z-index: 5;
+			top: calc(100% + .25rem);
+			right: 0;
+
+			min-width: 14rem;
+			max-width: calc(100vw - 32px);
+			margin: 0;
+			padding: .25rem 0;
+
+			background-color: white;
+			border: 1px solid rgba(0,0,0,.15);
+			border-radius: .25rem;
+			box-shadow: 0 .25rem .75rem rgba(0,0,0,.15);
+		}
+
+		/* not enough room below it in the window */
+		.row-menu.up .menu {
+			top: auto;
+			bottom: calc(100% + .25rem);
+		}
+
+		.menu a {
+			display: flex;
+			align-items: center;
+			gap: .75rem;
+			padding: .5rem 1rem;
+
+			color: #212529;
+			text-decoration: none;
+			white-space: nowrap;
+		}
+
+		.menu a:hover, .menu a:focus {
+			background-color: #e9ecef;
+			outline: 0;
+		}
+
+		.menu a:focus-visible {
+			box-shadow: inset 0 0 0 .2rem rgba(0,123,255,.4);
+		}
+
+		/* play / pause (menu entry and the button of the player) */
+		.pause-icon, li.playing .play-icon {
+			display: none;
+		}
+
+		li.playing .pause-icon {
 			display: inline;
 		}
 
-		li.loading .play {
+		li.loading .play, li.loading .player button {
 			opacity: .65;
 			cursor: progress;
 		}
@@ -110,6 +193,11 @@
 			flex-basis: 100%;
 			align-items: center;
 			gap: .75rem;
+		}
+
+		.player .button {
+			flex: none;
+			min-width: 2.125rem;
 		}
 
 		.player input {
@@ -134,20 +222,35 @@
 {% block title %}Liste{% endblock %}
 
 {% block content %}
+	<!-- icons, used in every row -->
+	<svg hidden>
+		<symbol id="i-call" viewBox="0 0 16 16"><path d="M3.6 1.1c.4-.3 1-.2 1.3.2l1.7 2.4c.3.4.3 1-.1 1.3l-1 1c.6 1.5 2.2 3.2 3.6 3.9l1-1c.4-.4.9-.4 1.3-.1l2.4 1.7c.4.3.5.9.2 1.3l-1 1.4c-.6.8-1.6 1.1-2.5.8C6.8 13.2 2.8 9.2 2 5.5c-.3-.9 0-1.9.8-2.5z"/></symbol>
+		<symbol id="i-play" viewBox="0 0 16 16"><path d="M4 2.5v11l9.5-5.5z"/></symbol>
+		<symbol id="i-pause" viewBox="0 0 16 16"><path d="M3.5 2.5h3v11h-3zm6 0h3v11h-3z"/></symbol>
+		<symbol id="i-download" viewBox="0 0 16 16"><path d="M7 1h2v7.6l2.8-2.8 1.4 1.4L8 12.4 2.8 7.2l1.4-1.4L7 8.6zM2 13.5h12V15H2z"/></symbol>
+		<symbol id="i-edit" viewBox="0 0 16 16"><path d="M11.6 1.1l3.3 3.3-1.6 1.6L10 2.7zM8.9 3.8l3.3 3.3-7.5 7.5H1.4v-3.3z"/></symbol>
+		<symbol id="i-menu" viewBox="0 0 16 16"><circle cx="8" cy="2.75" r="1.5"/><circle cx="8" cy="8" r="1.5"/><circle cx="8" cy="13.25" r="1.5"/></symbol>
+	</svg>
 	<input type="search" id="filter" placeholder="Nummer oder Beschreibung suchen …" aria-label="Liste durchsuchen" hidden>
 	<ul>
 {% for number, description in network_list %}
 		<li id="n{{ number }}">
-			<form method="post" data-async>
-				<button type="submit" name="selected_value" value="{{ number }}" class="button gray" title="Nummer {{ number }} anrufen lassen">{{ number }}</button>
-			</form>
-			<span>{{ description }}</span>
+			<span class="number">{{ number }}</span>
+			<span class="description">{{ description }}</span>
 			<div class="actions">
+				<form method="post" data-async>
+					<button type="submit" name="selected_value" value="{{ number }}" class="button light" title="Anrufen" aria-label="Nummer {{ number }} anrufen"><svg aria-hidden="true"><use href="#i-call"/></svg></button>
+				</form>
+				<details class="row-menu" name="row-menu">
+					<summary class="button light" title="Weitere Aktionen" aria-label="Weitere Aktionen für Nummer {{ number }}"><svg aria-hidden="true"><use href="#i-menu"/></svg></summary>
+					<div class="menu">
 {% if number|string in recorded %}
-				<a href="{{ url_for('recording', number=number) }}" class="button light play" title="Aufnahme {{ number }} anhören" aria-label="Aufnahme {{ number }} anhören"><svg class="play-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5v11l9.5-5.5z"/></svg><svg class="pause-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 2.5h3v11h-3zm6 0h3v11h-3z"/></svg></a>
-				<a href="{{ url_for('download', number=number) }}" class="button light" title="Aufnahme {{ number }} herunterladen" aria-label="Aufnahme {{ number }} herunterladen" download><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M7 1h2v7.6l2.8-2.8 1.4 1.4L8 12.4 2.8 7.2l1.4-1.4L7 8.6zM2 13.5h12V15H2z"/></svg></a>
+						<a href="{{ url_for('recording', number=number) }}" class="play"><svg class="play-icon" aria-hidden="true"><use href="#i-play"/></svg><svg class="pause-icon" aria-hidden="true"><use href="#i-pause"/></svg><span>Abspielen</span></a>
+						<a href="{{ url_for('download', number=number) }}" download><svg aria-hidden="true"><use href="#i-download"/></svg><span>Herunterladen</span></a>
 {% endif %}
-				<a href="{{ url_for('edit_value', number=number) }}" class="button blue" title="Beschreibung bearbeiten">&#9998;</a>
+						<a href="{{ url_for('edit_value', number=number) }}"><svg aria-hidden="true"><use href="#i-edit"/></svg><span>Beschreibung bearbeiten</span></a>
+					</div>
+				</details>
 			</div>
 		</li>
 {% endfor %}
@@ -166,8 +269,8 @@
 
 	// number and description only (not e.g. the player's time)
 	const texts = items.map (function (item) {
-		return (item.querySelector ("button").textContent + " "
-		      + item.querySelector (":scope > span").textContent).toLowerCase ();
+		return (item.querySelector (".number").textContent + " "
+		      + item.querySelector (".description").textContent).toLowerCase ();
 	});
 
 	// the filter needs the script, so it is only shown with it
@@ -196,9 +299,166 @@
 		apply ();
 }) ();
 
-/* the play button is a link to the mp3 (opened by the browser
-   without the script); with it the recording plays in the list,
-   the audio element is only made (and loaded) on the first click */
+/* the row menus are <details> (open and close without the script);
+   here they become menu buttons: one open at a time, closed by a
+   click outside, Escape or Tab, arrow keys move between the entries */
+(function () {
+	"use strict";
+
+	const menus = document.querySelectorAll ("details.row-menu");
+	let byKeyboard = false;
+
+	menus.forEach (function (details) {
+		const summary = details.firstElementChild;
+		summary.setAttribute ("role", "button");
+		summary.setAttribute ("aria-haspopup", "menu");
+		summary.setAttribute ("aria-expanded", "false");
+	});
+
+	function entries (details) {
+		return Array.from (details.querySelectorAll (".menu a"));
+	}
+
+	function close (details, focus) {
+		details.open = false;
+		if (focus)
+			details.firstElementChild.focus ();
+	}
+
+	function opened (details) {
+		const summary = details.firstElementChild;
+		const menu = details.querySelector (".menu");
+
+		menus.forEach (function (other) {
+			if (other !== details && other.open)
+				close (other, false);
+		});
+
+		// the roles only fit with the script (arrow keys)
+		if (!menu.hasAttribute ("role")) {
+			menu.setAttribute ("role", "menu");
+			menu.setAttribute ("aria-label", summary.getAttribute ("aria-label"));
+			entries (details).forEach (function (entry) {
+				entry.setAttribute ("role", "menuitem");
+			});
+		}
+
+		summary.setAttribute ("aria-expanded", "true");
+
+		// open upwards if it does not fit below, but does above
+		details.classList.remove ("up");
+		const box = menu.getBoundingClientRect ();
+		if (box.bottom > window.innerHeight - 8
+		&&  summary.getBoundingClientRect ().top - box.height - 8 > 0)
+			details.classList.add ("up");
+
+		if (byKeyboard)
+			entries (details)[0].focus ();
+		byKeyboard = false;
+	}
+
+	// "toggle" does not bubble
+	document.addEventListener ("toggle", function (event) {
+		const details = event.target;
+		if (!details.matches || !details.matches ("details.row-menu"))
+			return;
+
+		if (details.open)
+			opened (details);
+		else {
+			details.firstElementChild.setAttribute ("aria-expanded", "false");
+			details.classList.remove ("up");
+		}
+	}, true);
+
+	document.addEventListener ("click", function (event) {
+		menus.forEach (function (details) {
+			if (details.open && !details.contains (event.target))
+				close (details, false);
+		});
+
+		// an entry was chosen (play is handled below, it stays
+		// on the page; the others are left after their default)
+		const entry = event.target.closest && event.target.closest (".menu a");
+		if (entry) {
+			const details = entry.closest ("details");
+			setTimeout (function () {
+				close (details, entry.classList.contains ("play"));
+			}, 0);
+		}
+	});
+
+	document.addEventListener ("keydown", function (event) {
+		const details = event.target.closest && event.target.closest ("details.row-menu");
+		if (!details)
+			return;
+
+		const summary = details.firstElementChild;
+		const list = entries (details);
+		const index = list.indexOf (event.target);
+
+		if (event.target === summary) {
+			if ("Enter" === event.key || " " === event.key)
+				byKeyboard = !details.open;
+			else if ("ArrowDown" === event.key && !details.open) {
+				event.preventDefault ();
+				byKeyboard = true;
+				details.open = true;
+			}
+			else if ("Escape" === event.key && details.open) {
+				event.preventDefault ();
+				close (details, true);
+			}
+			return;
+		}
+
+		if (index < 0)
+			return;
+
+		let next = null;
+		switch (event.key) {
+		case "Escape":
+			event.preventDefault ();
+			close (details, true);
+			return;
+		case "ArrowDown":
+			next = list[(index + 1) % list.length];
+			break;
+		case "ArrowUp":
+			next = list[(index - 1 + list.length) % list.length];
+			break;
+		case "Home":
+			next = list[0];
+			break;
+		case "End":
+			next = list[list.length - 1];
+			break;
+		case " ":
+			// like a button, not scrolling the page
+			event.preventDefault ();
+			event.target.click ();
+			return;
+		case "Tab":
+			// leaves the menu
+			close (details, false);
+			if (!event.shiftKey)
+				return;
+			event.preventDefault ();
+			summary.focus ();
+			return;
+		default:
+			return;
+		}
+
+		event.preventDefault ();
+		next.focus ();
+	});
+}) ();
+
+/* "Abspielen" is a link to the mp3 (opened by the browser without
+   the script); with it the recording plays in the list, the audio
+   element is only made (and loaded) on the first click; the row
+   then gets a play/pause button and a seek bar */
 (function () {
 	"use strict";
 
@@ -212,9 +472,12 @@
 
 	function setup (link) {
 		const item = link.closest ("li");
-		const number = item.querySelector ("button").value;
+		const number = item.querySelector (".number").textContent;
+		const linkText = link.querySelector ("span");
+		const icons = link.querySelector (".play-icon").outerHTML
+		            + link.querySelector (".pause-icon").outerHTML;
 		let audio = null;
-		let player, range, time;
+		let player, toggle, range, time;
 		let dragging = false;
 
 		function showTime (position) {
@@ -224,9 +487,13 @@
 		function setPlaying (playing) {
 			item.classList.toggle ("playing", playing);
 
-			const label = "Aufnahme " + number + (playing ? " anhalten" : " anhören");
-			link.title = label;
-			link.setAttribute ("aria-label", label);
+			linkText.textContent = playing ? "Anhalten" : "Abspielen";
+
+			if (toggle) {
+				const label = "Aufnahme " + number + (playing ? " anhalten" : " abspielen");
+				toggle.title = playing ? "Anhalten" : "Abspielen";
+				toggle.setAttribute ("aria-label", label);
+			}
 		}
 
 		function create () {
@@ -236,6 +503,12 @@
 
 			player = document.createElement ("div");
 			player.className = "player";
+
+			toggle = document.createElement ("button");
+			toggle.type = "button";
+			toggle.className = "button light";
+			toggle.innerHTML = icons;
+			toggle.addEventListener ("click", playPause);
 
 			range = document.createElement ("input");
 			range.type = "range";
@@ -247,9 +520,10 @@
 
 			time = document.createElement ("span");
 
-			player.append (range, time, audio);
+			player.append (toggle, range, time, audio);
 			item.appendChild (player);
 			showTime (0);
+			setPlaying (false);
 
 			audio.addEventListener ("durationchange", function () {
 				if (isFinite (audio.duration))
@@ -297,9 +571,10 @@
 
 				// a new try loads it again
 				item.classList.remove ("loading", "playing", "current");
-				setPlaying (false);
 				player.remove ();
 				audio = null;
+				toggle = null;
+				setPlaying (false);
 			});
 
 			// seek when the slider is let go, not on every step
@@ -314,9 +589,7 @@
 			});
 		}
 
-		link.addEventListener ("click", function (event) {
-			event.preventDefault ();
-
+		function playPause () {
 			if (!audio)
 				create ();
 
@@ -332,10 +605,15 @@
 			audio.play ().catch (function () {
 				item.classList.remove ("loading");
 			});
+		}
+
+		link.addEventListener ("click", function (event) {
+			event.preventDefault ();
+			playPause ();
 		});
 	}
 
-	document.querySelectorAll ("a.play").forEach (setup);
+	document.querySelectorAll (".menu a.play").forEach (setup);
 }) ();
 </script>
 {% endblock %}

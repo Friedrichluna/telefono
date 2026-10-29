@@ -139,7 +139,7 @@
 			<li>In den Hörer sprechen (höchstens 2 Minuten).</li>
 			<li>Zum Speichern den <b>linken Knopf</b> nochmal drücken oder auflegen. Zum Verwerfen den <b>mittleren Knopf</b> drücken.</li>
 		</ol>
-		<p>Aufnahmen unter 2 Sekunden werden nicht gespeichert. Die neue Aufnahme hat noch keine Beschreibung, die kann man in der <a href="{{ url_for('list') }}">Liste</a> mit dem Stift eintragen.</p>
+		<p>Aufnahmen unter 2 Sekunden werden nicht gespeichert. Die neue Aufnahme hat noch keine Beschreibung, die kann man in der <a href="{{ url_for('list') }}">Liste</a> im Menü der Nummer (&#8942;) unter „Beschreibung bearbeiten“ eintragen.</p>
 
 		<h4>Menü</h4>
 		<p>Den <b>mittleren Knopf</b> drücken. Nach „Menü wird geöffnet“ eine Ziffer wählen:</p>
@@ -212,7 +212,7 @@
 		<p>Nummer eingeben und „Anrufen“ drücken. Das Telefon klingelt, und wer abnimmt, hört die Aufnahme dieser Nummer.</p>
 
 		<h4><a href="{{ url_for('list') }}">Liste</a></h4>
-		<p>Alle Nummern mit Beschreibung. Ein Klick auf die graue Nummer lässt das Telefon damit klingeln, der Stift ändert die Beschreibung. Mit &#9654;&#xFE0E; hört man die Aufnahme gleich im Browser an (auch wenn das Telefon gerade beschäftigt ist), mit dem Pfeil nach unten lädt man sie als .mp3 Datei herunter. Oben kann man nach Nummer oder Beschreibung suchen.</p>
+		<p>Alle Nummern mit Beschreibung. Der Knopf mit dem Hörer lässt das Telefon mit dieser Nummer klingeln. Die drei Punkte (&#8942;) daneben öffnen ein Menü: „Abspielen“ spielt die Aufnahme gleich im Browser ab (auch wenn das Telefon gerade beschäftigt ist); dabei erscheinen in der Zeile ein Knopf zum Anhalten und Weiterspielen und ein Regler zum Spulen. „Herunterladen“ speichert sie als .mp3 Datei, „Beschreibung bearbeiten“ ändert die Beschreibung. Oben kann man nach Nummer oder Beschreibung suchen.</p>
 
 		<h4><a href="{{ url_for('upload_page') }}">Upload</a></h4>
 		<p>Eine Audiodatei (höchstens {{ upload_max }} MiB) unter einer freien Nummer speichern. Danach kann man sie am Telefon wählen. Man kann auch mehrere Dateien auf einmal auswählen: Für jede kann man eine Nummer eintragen (leer lassen = die nächste freie, in der Reihenfolge der Liste) und eine Beschreibung (vorausgefüllt mit dem Dateinamen); sie werden nacheinander hochgeladen, und bei jeder steht, ob es geklappt hat. .mp3 wird so gespeichert, wie es ist, andere Formate ({{ upload_extensions[1:] | join(', ') }}) werden in .mp3 umgewandelt. Nullen am Anfang zählen mit: <span class="number">007</span> ist eine andere Nummer als <span style="white-space: nowrap"><span class="number">7</span>.</span></p>
