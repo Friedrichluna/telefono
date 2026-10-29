@@ -506,9 +506,10 @@
 			white-space: nowrap;
 		}
 
-		/* the menu fits into one line with the title from about 940 px on,
-		   below it would wrap into several lines, so it is collapsed */
-		@media screen and (max-width: 979px) {
+		/* the title and the four entries fit into one line down to about
+		   560 px, below it would wrap into several lines, so it is
+		   collapsed */
+		@media screen and (max-width: 559px) {
 			.js #menu-button {
 				display: block;
 			}
