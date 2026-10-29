@@ -12,6 +12,7 @@ from .CONSTANTS import DEBUG_TIME_FORMAT
 from .CONSTANTS import MIN_HOUR
 from .CONSTANTS import MAX_HOUR
 
+from .history import history
 from .network import Subscriber
 
 
@@ -108,6 +109,7 @@ class EventQueue:
 
 		self.log.info ("schedule random call %s for %s",
 		               call.number, self.__get_debug_time (time))
+		history.add ("random_planned", number=call.number, at=time)
 
 		return self.__add_event (time, event)
 
@@ -127,7 +129,7 @@ class EventQueue:
 				self.log.info ("process call %s at %s",
 				               event[1].number,
 				               self.__get_debug_time (_time))
-				self.__process_call (event[1], player)
+				self.__process_call (event[1], player, "webapp")
 
 			elif EVENT_TYPE.TEXT == event[0]:
 				self.log.info ("process text %r at %s",
@@ -139,7 +141,7 @@ class EventQueue:
 				self.log.info ("process random call %s at %s",
 				               event[1].number,
 				               self.__get_debug_time (_time))
-				self.__process_call (event[1], player)
+				self.__process_call (event[1], player, "random")
 
 				tomorrow = datetime.date.today ()
 				tomorrow += datetime.timedelta (1)
@@ -162,8 +164,8 @@ class EventQueue:
 
 		return
 
-	def __process_call (self, number, player):
-		if number.inbound_call (player):
+	def __process_call (self, number, player, cause:str):
+		if number.inbound_call (player, cause=cause):
 			# still off-hook
 			player.play_busy_tone ()
 		return
@@ -175,7 +177,7 @@ class EventQueue:
 		return
 
 	def __process_shout (self, number, player):
-		if number.inbound_call (player, ring=False):
+		if number.inbound_call (player, ring=False, cause="shout"):
 			# still off-hook
 			player.play_busy_tone ()
 		return

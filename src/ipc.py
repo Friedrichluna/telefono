@@ -8,7 +8,9 @@ import socket
 import threading
 
 from .CONSTANTS import IPC_TIMEOUT
+from .CONSTANTS import HISTORY_TEXT_MAX
 
+from .history import history
 from .number import Number
 
 
@@ -587,11 +589,16 @@ class IPC_Server (IPC):
 		elif IPC_MESSAGE.CALL == message_type:
 			call = network[payload]
 			if not call.is_callable ():
+				history.add ("webapp", action="call",
+				             number=payload, result="no number")
+
 				data = self._serialize_answer (
 				                IPC_ANSWER.NO_NUMBER)
 				self._send (data)
 				return
 
+			history.add ("webapp", action="call", number=payload,
+			             result="queued")
 			queue.add_call (call)
 
 			data = self._serialize_answer (IPC_ANSWER.OK)
@@ -599,6 +606,8 @@ class IPC_Server (IPC):
 			return
 
 		elif IPC_MESSAGE.TTS == message_type:
+			history.add ("webapp", action="text",
+			             text=payload[:HISTORY_TEXT_MAX])
 			queue.add_text (payload)
 
 			data = self._serialize_answer (IPC_ANSWER.OK)
@@ -620,6 +629,8 @@ class IPC_Server (IPC):
 		and payload[0] in network:
 			key, value = payload
 			network[key].description = value
+			history.add ("webapp", action="description", number=key,
+			             description=value)
 
 			data = self._serialize_answer (IPC_ANSWER.OK)
 			self._send (data)
@@ -647,6 +658,9 @@ class IPC_Server (IPC):
 			network.sync_fs ()
 
 			number, description = payload
+			history.add ("webapp", action="upload", number=number,
+			             description=description)
+
 			if number is not None and description:
 				if number in network:
 					network[number].description = description
@@ -673,6 +687,8 @@ class IPC_Server (IPC):
 			self._send (data)
 
 			self.log.info ("testing output %s", payload.name)
+			history.add ("webapp", action="test",
+			             output=payload.name.lower ())
 			outputs[payload] ()
 			return
 

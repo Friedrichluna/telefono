@@ -88,6 +88,10 @@ class Player ():
 	def __off_hook (self):
 		return self.__hook.is_pressed
 
+	# e.g. whether a ringing call was answered (for the history)
+	def is_off_hook (self) -> bool:
+		return self.__hook.is_pressed
+
 	def __never (self):
 		return False
 

@@ -33,6 +33,7 @@ from .audio import convert_legacy_recordings
 from .config import LED_PIN
 from .config import PINS
 from .config import read_inverted
+from .history import history
 from .ipc import IPC_OUTPUT
 from .ipc import IPC_Server
 from .player import Player
@@ -66,6 +67,7 @@ def do_dial_call (off_hook, ButtonLeft, dial, network, player, led, log):
 	number = dial.get_number (abort, led, player)
 	if not number:
 		# started dialling, but didn't dial anything
+		history.add ("dial_empty")
 		return player.play_busy_tone ()
 
 	if network[number].outbound_call (player):
@@ -87,7 +89,13 @@ def do_recording (off_hook, ButtonLeft, ButtonMiddle, network, player, led):
 		# hang up
 		return
 
-	result = Recorder (subscriber, led).record (end, abort)
+	recorder = Recorder (subscriber, led)
+	started = time.monotonic ()
+	result = recorder.record (end, abort)
+
+	history.add ("recording", number=subscriber.number,
+	             result=result.name.lower (),
+	             seconds=round (time.monotonic () - started, 1))
 
 	if not player.notify_recording_end (subscriber.number, result):
 		# hang up
@@ -118,28 +126,29 @@ def do_menu (off_hook, dial, network, player, led, log):
 
 	player.stop_tone ()
 	option = dial.get_digit (abort, led, player)
+	history.add ("menu", option=option)
 	# aborted
 	if option is None:
 		log.info ("aborted menu selection")
 		pass
 	elif option == 0:
 		log.info ("menu: selected 0")
-		if not network["0"].outbound_call (player):
+		if not network["0"].outbound_call (player, "menu"):
 			# hang up
 			return
 	elif option == 1:
 		log.info ("menu: selected 1")
-		if not network["100"].outbound_call (player):
+		if not network["100"].outbound_call (player, "menu"):
 			# hang up
 			return
 	elif option == 2:
 		log.info ("menu: selected 2")
-		if not network["200"].outbound_call (player):
+		if not network["200"].outbound_call (player, "menu"):
 			# hang up
 			return
 	elif option == 3:
 		log.info ("menu: selected 3")
-		if not network["300"].outbound_call (player):
+		if not network["300"].outbound_call (player, "menu"):
 			# hang up
 			return
 	else:
@@ -287,13 +296,21 @@ def main ():
 	}
 
 	log.info ("startup finished")
+	history.add ("start", version=VCS_VERSION)
+
 	while running and not turn_off (ButtonMiddle, log):
 
 		if off_hook ():
+			history.add ("off_hook")
+			lifted = time.monotonic ()
+
 			off_hook_loop (network, player, off_hook, dial,
 			               ButtonLeft, ButtonMiddle, led,
 			               log)
 			log.debug ("leaving off-hook loop")
+
+			history.add ("on_hook", seconds=round (time.monotonic ()
+			                                       - lifted, 1))
 
 		ipc.handle_message (queue, network, test_outputs)
 
@@ -302,6 +319,9 @@ def main ():
 		ipc.wait (MAINLOOP_DELAY)
 
 	log.info ("shutting down")
+	# SIGTERM (systemctl stop/restart) or the middle button
+	history.add ("stop", reason="signal" if not running else "button")
+
 	player.play_system_sound (SHUTDOWN_FILE)
 
 	webAppProcess.terminate ()

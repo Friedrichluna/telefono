@@ -6,6 +6,7 @@ import fcntl
 import logging
 import os
 import random
+import time
 
 import linkat
 
@@ -16,6 +17,7 @@ from .CONSTANTS import RECORD_SUFFIX
 from .CONSTANTS import RECORD_LIST_FILE
 from .CONSTANTS import BACKUP_EXT
 
+from .history import history
 from .number import Number
 
 
@@ -350,26 +352,75 @@ class Subscriber ():
 
 		return False
 
-	def outbound_call (self, player) -> bool:
+	# one event per call in the history: the number, its type, the
+	# number that played (a list's member) and how the call ended:
+	# complete, aborted (on the hook), no recording (SIT tone) or not
+	# picked up; cause: dial, menu (outbound), random, webapp, shout
+	def __add_history (self, direction:str, cause:str, routed,
+	                   result:str, started:float=None):
+		data = dict ()
+
+		if routed is not self:
+			data["routed"] = routed.number
+
+		if started is not None:
+			data["seconds"] = round (time.monotonic () - started, 1)
+
+		history.add ("call", direction=direction, cause=cause,
+		             number=self.number, kind=self.type.name.lower (),
+		             result=result, **data)
+		return
+
+	@staticmethod
+	def __result (available:bool, connected:bool) -> str:
+		if not available:
+			return "no recording"
+
+		return "complete" if connected else "aborted"
+
+	def outbound_call (self, player, cause:str="dial") -> bool:
 		self.log.info ("outgoing call to %s", self.number)
 
 		number = self.__route ()
 		self.log.debug ("route call to %s", number.number)
 
-		return number.__call (player, aloud=False, wind=True)
+		available = number.is_callable ()
+		started = time.monotonic ()
 
-	def inbound_call (self, player, ring=True) -> bool:
+		connected = number.__call (player, aloud=False, wind=True)
+
+		self.__add_history ("out", cause, number,
+		                    self.__result (available, connected), started)
+		return connected
+
+	def inbound_call (self, player, ring=True, cause:str="webapp") -> bool:
 		self.log.info ("incoming call from %s %s", self.number,
 		               "" if ring else "(silent)")
 
 		if ring and player.play_ring ():
 			# never picked up
+			self.__add_history ("in", cause, self, "not picked up")
 			return False
 
 		number = self.__route ()
 		self.log.debug ("route call to %s", number.number)
 
-		return number.__call (player, aloud=(not ring), wind=False)
+		# play_ring returns nothing, so the call is routed anyway;
+		# whether someone answered is only seen at the hook
+		picked_up = not ring or player.is_off_hook ()
+		available = number.is_callable ()
+		started = time.monotonic ()
+
+		connected = number.__call (player, aloud=(not ring), wind=False)
+
+		if picked_up:
+			self.__add_history ("in", cause, number,
+			                    self.__result (available, connected),
+			                    started)
+		else:
+			self.__add_history ("in", cause, number, "not picked up")
+
+		return connected
 
 	def dial (self, number):
 		return self.__network[self.__number + number]

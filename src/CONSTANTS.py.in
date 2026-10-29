@@ -23,6 +23,18 @@ BACKUP_EXT = ".bak"
 
 UPLOAD_DIR = RECORD_DIR
 
+# what happened on the phone (status page of the webapp), one JSON
+# object per line, appended by the main process (src/history.py);
+# above HISTORY_MAX_SIZE bytes the oldest events are dropped, so that
+# HISTORY_KEEP_SIZE are left (an event takes 40 to 200 bytes, so the
+# file holds about 5000 to 13000 events)
+HISTORY_FILE = "@pkglocalstatedir@/history.jsonl"
+HISTORY_MAX_SIZE = 1024 * 1024
+HISTORY_KEEP_SIZE = 512 * 1024
+# longer texts (text to speech) are shortened in the history
+HISTORY_TEXT_MAX = 200
+
+
 # hardware configuration of this phone (which inputs are inverted),
 # see telefono.conf.example
 CONFIG_FILE = "@sysconfdir@/telefono.conf"
