@@ -46,6 +46,15 @@ sudo systemctl restart telefono
 
 Das `rm` gehört dazu: der Hook `post-checkout` schreibt `build/vcs_version` nur beim Checkout, ein `git pull` löst `post-merge` aus. Sonst wird die alte Version in `CONSTANTS.py` gebacken und der Dienst meldet beim Start einen Commit, der längst nicht mehr läuft (`journalctl -u telefono | grep started`).
 
+`configure` vergisst die Optionen der letzten Installation: wurde mit anderen Pfaden installiert, müssen beim Update dieselben Optionen wieder angegeben werden. Sonst landet ein zweites Paket unter `site-packages`, das der Dienst nie lädt (er läuft mit dem alten weiter), und die Aufnahmen werden unter `/usr/local/var/telefono` gesucht. Welche Pfade installiert sind, zeigt `grep -E "RECORD_DIR|VCS" /usr/local/lib/python3.*/*-packages/telefono/CONSTANTS.py`. Auf dem Pi (`ssh pi`) liegen die Aufnahmen unter `/var/telefono` und das Paket unter `dist-packages`, dort heißt die Zeile:
+
+```
+cd build && ../configure --sysconfdir=/etc --localstatedir=/var \
+    am_cv_python_pythondir=/usr/local/lib/python3.13/dist-packages \
+    am_cv_python_pyexecdir=/usr/local/lib/python3.13/dist-packages \
+    && make && sudo make install
+```
+
 `make install` löscht nichts. Wurden Dateien im Quellbaum umbenannt oder in ein Paket verschoben, bleiben die alten im installierten Paket liegen – ein altes `webapp.py` neben dem neuen Paket `webapp/` etwa. Beim Update von einer deutlich älteren Version das Paketverzeichnis vorher wegsichern und leeren, mindestens `__pycache__` löschen.
 
 
