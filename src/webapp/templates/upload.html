@@ -310,7 +310,7 @@
 		<p class="hint no-script" id="upload-number-hint">Leer lassen für die nächste freie Nummer. Bei mehreren Dateien leer lassen: sie bekommen die nächsten freien Nummern, alle zusammen höchstens {{ upload_max }} MiB.</p>
 		<label for="upload-description" class="no-script">Beschreibung (freiwillig, bei mehreren Dateien für alle):</label>
 		<input type="text" id="upload-description" name="description" value="{{ description }}" maxlength="{{ description_max }}" autocomplete="off" class="no-script">
-		<input type="submit" class="button blue" id="upload-submit" value="Hochladen">
+		<input type="submit" class="button primary" id="upload-submit" value="Hochladen">
 		<p id="summary" class="alert" hidden aria-live="polite"></p>
 		<p class="hint">Freier Speicher: <span id="disk-space">{{ diskSpace }}</span> GiB</p>
 	</form>
@@ -333,7 +333,7 @@
 			<div id="insecure" class="alert info" hidden>
 				<p>Direkt im Browser aufnehmen geht nur über eine sichere Verbindung (https).</p>
 {% if https_url %}
-				<p><a href="{{ https_url }}" class="button blue">Sichere Seite öffnen</a></p>
+				<p><a href="{{ https_url }}" class="button primary">Sichere Seite öffnen</a></p>
 				<p>Beim ersten Mal warnt der Browser, weil das Telefon sein Zertifikat selbst ausgestellt hat: „Erweitert“ (oder „Details“) und dann „Weiter zu …“ (oder „Diese Website besuchen“) wählen.</p>
 {% endif %}
 			</div>
@@ -351,7 +351,7 @@
 		<label for="record-description">Beschreibung (freiwillig):</label>
 		<input type="text" id="record-description" name="description" value="{{ record_description }}" maxlength="{{ description_max }}" autocomplete="off">
 		<progress max="1" value="0" hidden></progress>
-		<input type="submit" class="button blue" id="record-save" value="Speichern">
+		<input type="submit" class="button primary" id="record-save" value="Speichern">
 		<p id="result" class="alert success" hidden aria-live="polite">Gespeichert unter Nummer <a id="result-link" href="{{ url_for('list') }}"></a>, in der Liste ansehen.</p>
 	</form>
 {% endblock %}

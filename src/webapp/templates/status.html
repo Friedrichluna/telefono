@@ -246,7 +246,7 @@
 	<h3 id="verlauf">Verlauf</h3>
 	<div id="filter" role="group" aria-label="Verlauf filtern">
 {% for key, title, _ in filters %}
-		<a class="button {{ 'blue' if key == selected else 'light' }}"{% if key == selected %} aria-current="true"{% endif %} href="{{ url_for('status', filter=key or None) }}#verlauf">{{ title }}</a>
+		<a class="button {{ 'primary' if key == selected else 'light' }}"{% if key == selected %} aria-current="true"{% endif %} href="{{ url_for('status', filter=key or None) }}#verlauf">{{ title }}</a>
 {% endfor %}
 	</div>
 
