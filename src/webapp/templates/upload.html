@@ -35,6 +35,12 @@
 			background-color: var(--info-bg);
 		}
 
+		.alert.neutral {
+			color: var(--text);
+			background-color: var(--light);
+			border: 1px solid var(--border);
+		}
+
 		.alert.success {
 			color: var(--success-text);
 			background-color: var(--success-bg);
@@ -330,14 +336,14 @@
 			<p class="hint">Mit dem Mikrofon dieses Geräts, {{ record_min }} s bis {{ record_max // 60 }} min. Vor dem Speichern anhören oder verwerfen.</p>
 		</div>
 		<div id="fallback">
-			<div id="insecure" class="alert info" hidden>
+			<div id="insecure" class="alert neutral" hidden>
 				<p>Direkt im Browser aufnehmen geht nur über eine sichere Verbindung (https).</p>
 {% if https_url %}
 				<p><a href="{{ https_url }}" class="button primary">Sichere Seite öffnen</a></p>
 				<p>Beim ersten Mal warnt der Browser, weil das Telefon sein Zertifikat selbst ausgestellt hat: „Erweitert“ (oder „Details“) und dann „Weiter zu …“ (oder „Diese Website besuchen“) wählen.</p>
 {% endif %}
 			</div>
-			<p id="unsupported" class="alert info" hidden>Dieser Browser kann nicht direkt aufnehmen.</p>
+			<p id="unsupported" class="alert neutral" hidden>Dieser Browser kann nicht direkt aufnehmen.</p>
 			<label for="record-file">Mit der Aufnahme-App des Handys aufnehmen oder eine Audiodatei wählen ({{ record_min }} s bis {{ record_max // 60 }} min):</label>
 			<div class="file-picker">
 				<input type="file" id="record-file" name="file" class="file-input" accept="audio/*" capture required>

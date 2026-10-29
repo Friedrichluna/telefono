@@ -43,16 +43,16 @@
 			--nav-link: rgba(0,0,0,.55);
 			--nav-link-hover: rgba(0,0,0,.75);
 
-			/* bordeaux accent; --primary is the filled one (white text
+			/* red accent; --primary is the filled one (white text
 			   on it), --accent the same colour used as text, border,
 			   slider or stroke; on a dark ground that one has to be
 			   much lighter to stay readable */
-			--primary: #7b1e3c;
-			--primary-hover: #5a162c;
-			--primary-border: #c07c92;
-			--accent: #7b1e3c;
-			--focus-ring: rgba(123,30,60,.4);
-			--focus-ring-soft: rgba(123,30,60,.25);
+			--primary: #bb0010;
+			--primary-hover: #9b000d;
+			--primary-border: #f3737e;
+			--accent: #c20212;
+			--focus-ring: rgba(196, 2, 18, 0.4);
+			--focus-ring-soft: rgba(194, 1, 17, 0.25);
 			--focus-ring-gray: rgba(130,138,145,.5);
 			--secondary: #6c757d;
 			--secondary-hover: #5a6268;
@@ -86,8 +86,8 @@
 		/* dark theme, following the browser or system setting; there is
 		   no switch in the page on purpose, the browser decides. Only
 		   colours change, and the whole dark palette stands here: a dark
-		   gray ground instead of black (black and bordeaux glare at each
-		   other), slightly lighter surfaces above it, and the bordeaux
+		   gray ground instead of black (black and red glare at each
+		   other), slightly lighter surfaces above it, and the red
 		   lightened wherever it is writing or a thin line */
 		@media (prefers-color-scheme: dark) {
 			:root {
@@ -108,12 +108,12 @@
 				--nav-link: rgba(255,255,255,.7);
 				--nav-link-hover: rgba(255,255,255,.9);
 
-				--primary: #8f2a48;
-				--primary-hover: #a63455;
-				--primary-border: #e08ca3;
-				--accent: #e08ca3;
-				--focus-ring: rgba(224,140,163,.45);
-				--focus-ring-soft: rgba(224,140,163,.3);
+				--primary: #ac0112;
+				--primary-hover: #c90014;
+				--primary-border: #ec6974;
+				--accent: #ee6c77;
+				--focus-ring: rgba(240,138,147,.45);
+				--focus-ring-soft: rgba(240,138,147,.3);
 				--focus-ring-gray: rgba(161,161,170,.5);
 				--secondary: #5c5c64;
 				--secondary-hover: #6b6b74;
@@ -175,7 +175,7 @@
 		}
 
 		h1 a {
-			color: var(--accent);
+			color: var(--text);
 			text-decoration: none;
 		}
 
