@@ -47,6 +47,15 @@ STATUS_REFRESH = 10
 # see telefono.conf.example
 CONFIG_FILE = "@sysconfdir@/telefono.conf"
 
+# finding the webapp (tools/telefono-net.in): the state of the mDNS name
+# and of the WLAN hotspot, written by their services for the status page;
+# a state older than NET_STATE_MAX_AGE s means the service hangs
+NET_MDNS_STATE_FILE = "/run/telefono-mdns/state.json"
+NET_HOTSPOT_STATE_FILE = "/run/telefono-hotspot/state.json"
+NET_STATE_MAX_AGE = 180
+NET_DEFAULT_NAME = "telefono"
+NET_HOTSPOT_ADDRESS = "10.42.0.1"
+
 # hardware test page (/diagnose): the GPIO registers are read from
 # DIAGNOSE_GPIO_MEM (read-only, nothing is claimed or changed); while
 # the page is open, a thread samples the inputs every

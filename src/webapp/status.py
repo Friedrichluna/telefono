@@ -2,9 +2,12 @@
 # -*- coding: utf-8 -*-
 
 import collections
+import configparser
 import datetime
+import json
 import logging
 import os
+import socket
 import threading
 import time
 
@@ -15,6 +18,13 @@ from ..CONSTANTS import RECORD_DIR
 from ..CONSTANTS import RECORD_PREFIX
 from ..CONSTANTS import RECORD_SUFFIX
 from ..CONSTANTS import HISTORY_MAX_SIZE
+from ..CONSTANTS import CONFIG_FILE
+from ..CONSTANTS import FLASK_PORT
+from ..CONSTANTS import NET_MDNS_STATE_FILE
+from ..CONSTANTS import NET_HOTSPOT_STATE_FILE
+from ..CONSTANTS import NET_STATE_MAX_AGE
+from ..CONSTANTS import NET_DEFAULT_NAME
+from ..CONSTANTS import NET_HOTSPOT_ADDRESS
 
 from ..audio import mp3_duration
 
@@ -181,6 +191,156 @@ def wlan_text (signal) -> str:
 	                                             quality)
 
 
+# the state written by telefono-net (tools/telefono-net.in): a dict,
+# None if the service does not run, "stale" set if it stopped writing
+def net_state (path:str):
+	try:
+		with open (path, encoding="utf-8") as f:
+			state = json.load (f)
+	except (OSError, ValueError):
+		return None
+
+	if not isinstance (state, dict):
+		return None
+
+	updated = state.get ("updated")
+	if not isinstance (updated, (int, float)) \
+	or abs (time.time () - updated) > NET_STATE_MAX_AGE:
+		state["stale"] = True
+	return state
+
+
+def text_of (state:dict, key:str) -> str:
+	value = state.get (key)
+	return value if isinstance (value, str) else ""
+
+
+def clock_text (timestamp) -> str:
+	if not isinstance (timestamp, (int, float)):
+		return "?"
+	return time.strftime ("%H:%M", time.localtime (timestamp))
+
+
+# the names to find the webapp, for the help page: mDNS name (without
+# .local), hostname, SSID of the hotspot; from the services' state or
+# from telefono.conf
+def network_names (config_file:str=CONFIG_FILE) -> dict:
+	hostname = socket.gethostname ().split (".")[0]
+	names = {"name": NET_DEFAULT_NAME, "hostname": hostname,
+	         "ssid": "telefono-" + hostname, "address": NET_HOTSPOT_ADDRESS,
+	         "port": FLASK_PORT}
+
+	config = configparser.ConfigParser ()
+	try:
+		config.read (config_file, encoding="utf-8")
+		section = config["network"] if config.has_section ("network") else {}
+		names["name"] = section.get ("name", "").strip ().lower () \
+		                .removesuffix (".local") or names["name"]
+		names["ssid"] = section.get ("hotspot_ssid", "").strip () \
+		                or names["ssid"]
+	except (configparser.Error, UnicodeDecodeError):
+		pass
+
+	mdns = net_state (NET_MDNS_STATE_FILE) or {}
+	if "established" == mdns.get ("state") and text_of (mdns, "name"):
+		names["name"] = mdns["name"]
+
+	hotspot = net_state (NET_HOTSPOT_STATE_FILE) or {}
+	if text_of (hotspot, "ssid"):
+		names["ssid"] = hotspot["ssid"]
+	return names
+
+
+MDNS_STATES = {
+	"registering": "%s.local wird angemeldet",
+	"collision": "%s.local wird angemeldet",
+	"no address": "%s.local: keine Netzwerkverbindung",
+	"no avahi": "%s.local nicht möglich: avahi-daemon läuft nicht",
+	"avahi not ready": "%s.local nicht möglich: avahi-daemon startet",
+	"no dbus": "%s.local nicht möglich: python3-dbus fehlt",
+}
+
+
+# the mDNS name (telefono-mdns.service)
+def mdns_text (state, hostname:str) -> str:
+	own = "%s.local" % hostname
+	if state is None:
+		return "%s (%s.local aus: Dienst telefono-mdns läuft nicht)" \
+		       % (own, NET_DEFAULT_NAME)
+
+	name = text_of (state, "name") or text_of (state, "wanted") \
+	       or NET_DEFAULT_NAME
+	if state.get ("stale"):
+		return "%s (Dienst telefono-mdns antwortet nicht)" % own
+
+	kind = state.get ("state")
+	if "established" == kind:
+		text = "%s.local und %s (http://%s.local:%d)" % (name, own, name,
+		                                                 FLASK_PORT)
+		wanted = text_of (state, "wanted")
+		if wanted and wanted != name:
+			text += ", %s.local hat schon ein anderes Gerät" % wanted
+		return text
+
+	if "hostname" == kind:
+		return own
+
+	return "%s (%s)" % (own, MDNS_STATES.get (kind, "%s.local: " + str (kind))
+	                          % name)
+
+
+def devices_text (count) -> str:
+	if not isinstance (count, int):
+		return "Geräte unbekannt"
+	if 1 == count:
+		return "1 Gerät verbunden"
+	return "%s Geräte verbunden" % (count or "keine")
+
+
+# the fallback WLAN hotspot (telefono-hotspot.service)
+def hotspot_text (state) -> str:
+	if state is None:
+		return "aus (Dienst telefono-hotspot läuft nicht)"
+
+	if state.get ("stale"):
+		return "unbekannt (Dienst telefono-hotspot antwortet nicht)"
+
+	mode = state.get ("mode")
+	ssid = quoted (text_of (state, "ssid") or "?")
+
+	if "hotspot" == mode:
+		return "an: WLAN %s, http://%s:%d, %s (sucht alle paar Minuten das" \
+		       " bekannte WLAN, wenn kein Gerät verbunden ist)" \
+		       % (ssid, text_of (state, "address") or NET_HOTSPOT_ADDRESS,
+		          FLASK_PORT, devices_text (state.get ("clients")))
+
+	if "client" == mode:
+		return "aus, im bekannten WLAN; ohne bekanntes WLAN geht nach" \
+		       " 1,5 min das WLAN %s an" % ssid
+
+	if "waiting" == mode or "connecting" == mode:
+		return "kein bekanntes WLAN, WLAN %s geht um %s an" \
+		       % (ssid, clock_text (state.get ("hotspot_at")))
+
+	if "hotspot starting" == mode:
+		return "WLAN %s startet" % ssid
+
+	if "error" == mode:
+		return "Start von WLAN %s fehlgeschlagen, neuer Versuch um %s" \
+		       % (ssid, clock_text (state.get ("retry")))
+
+	if "off" == mode:
+		return "abgeschaltet (hotspot = no in telefono.conf)"
+
+	if "no networkmanager" == mode:
+		return "nicht möglich: NetworkManager läuft nicht"
+
+	if "no wlan" == mode:
+		return "nicht möglich: kein WLAN-Gerät"
+
+	return str (mode)
+
+
 def rss (pid:int):
 	try:
 		return psutil.Process (pid).memory_info ().rss
@@ -237,7 +397,20 @@ def system_status (started, recordings:Recordings, history_size:int,
 	if temperature is not None:
 		items.append (("CPU-Temperatur", "%s °C" % decimal (temperature)))
 
-	items.append (("WLAN", wlan_text (wlan_signal ())))
+	hotspot = net_state (NET_HOTSPOT_STATE_FILE)
+	network = text_of (hotspot or {}, "network")
+	if hotspot and "hotspot" == hotspot.get ("mode") \
+	and not hotspot.get ("stale"):
+		text = "eigenes WLAN %s (Hotspot)" % quoted (text_of (hotspot, "ssid"))
+	else:
+		text = wlan_text (wlan_signal ())
+		if network and hotspot and "client" == hotspot.get ("mode"):
+			text += ", %s" % quoted (network)
+	items.append (("WLAN", text))
+	items.append (("Name im Netzwerk",
+	               mdns_text (net_state (NET_MDNS_STATE_FILE),
+	                          socket.gethostname ().split (".")[0])))
+	items.append (("WLAN-Hotspot", hotspot_text (hotspot)))
 
 	items.append (("Verlauf", "%d Ereignisse, %s (höchstens %s, dann "
 	               "werden die ältesten gelöscht)"

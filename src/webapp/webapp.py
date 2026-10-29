@@ -562,7 +562,7 @@ class TelefonoWebApp (Flask):
 	# static, does not ask the main process, so it
 	# also works while the phone is busy
 	def help (self):
-		return render_template ("help.html")
+		return render_template ("help.html", net=status.network_names ())
 
 	# state of the phone and its history, read from files (not through
 	# the main process, so it also works while the phone is busy);
