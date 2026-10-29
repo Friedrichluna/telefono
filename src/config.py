@@ -34,6 +34,9 @@ OUTPUTS = ("speaker_relay", )
 # every key of the [inverted] section
 KEYS = (*INPUTS, *OUTPUTS)
 
+# [network] (mDNS name and WLAN hotspot) is read by tools/telefono-net.in
+SECTIONS = ("inverted", "network")
+
 
 # what was read from CONFIG_FILE:
 # inverted: {key: bool} for all KEYS (inputs and the relay)
@@ -68,7 +71,7 @@ def load_inverted (path:str=CONFIG_FILE) -> ConfigResult:
 		                     unknown_sections, unknown_inputs, invalid)
 
 	for section in config.sections ():
-		if "inverted" != section:
+		if section not in SECTIONS:
 			unknown_sections.append (section)
 
 	if config.has_section ("inverted"):

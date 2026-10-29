@@ -37,6 +37,7 @@ edit = sed -e 's|@pkgdatadir[@]|$(pkgdatadir)|g' \
            -e 's|@templatedir[@]|$(templatedir)|g' \
            -e 's|@staticdir[@]|$(staticdir)|g' \
            -e 's|@sysconfdir[@]|$(sysconfdir)|g' \
+           -e 's|@pkglibexecdir[@]|$(pkglibexecdir)|g' \
            -e 's|@vcs_version[@]|'`cat vcs_version`'|g'
 
 all: CONSTANTS.py
@@ -54,6 +55,36 @@ vcs_version:
 	git describe --long --tags --dirty --always > vcs_version
 
 CLEANFILES = CONSTANTS.py vcs_version
+
+
+# finding the webapp: telefono.local (mDNS) and a WLAN hotspot when no
+# known WLAN is in range, see tools/telefono-net.in; run by
+# telefono-mdns.service and telefono-hotspot.service (below)
+nodist_pkglibexec_SCRIPTS = telefono-net
+
+telefono-net: $(srcdir)/tools/telefono-net.in Makefile vcs_version
+	rm -f $@ $@.tmp
+	$(edit) $(srcdir)/tools/telefono-net.in >$@.tmp
+	chmod +x $@.tmp
+	chmod a-w $@.tmp
+	mv $@.tmp $@
+
+telefono-mdns.service: $(srcdir)/telefono-mdns.service.in Makefile vcs_version
+	rm -f $@ $@.tmp
+	$(edit) $(srcdir)/telefono-mdns.service.in >$@.tmp
+	mv $@.tmp $@
+
+telefono-hotspot.service: $(srcdir)/telefono-hotspot.service.in Makefile vcs_version
+	rm -f $@ $@.tmp
+	$(edit) $(srcdir)/telefono-hotspot.service.in >$@.tmp
+	mv $@.tmp $@
+
+CLEANFILES += telefono-net telefono-mdns.service telefono-hotspot.service
+EXTRA_DIST = tools/telefono-net.in telefono-mdns.service.in telefono-hotspot.service.in
+
+# the webapp in service browsers (avahi reads it at once)
+avahiservicedir = $(sysconfdir)/avahi/services
+dist_avahiservice_DATA = data/avahi/telefono.service
 
 
 dist_pkgdata_DATA =
@@ -124,26 +155,34 @@ install-data-local:
 	    echo "WARNING: making the https certificate failed, the webapp has no https"; }; \
 	fi
 
+# the hotspot's password ($(sysconfdir)/telefono-hotspot.conf) is kept
 uninstall-local:
 	rm -f "$(DESTDIR)$(https_cert)" "$(DESTDIR)$(https_key)"
+	rm -f "$(DESTDIR)/etc/NetworkManager/dnsmasq-shared.d/telefono.conf"
 
 dist_doc_DATA =
 dist_doc_DATA += README.md
 dist_doc_DATA += todo.txt
 dist_doc_DATA += docs/circuit_diagram.png
 
-EXTRA_DIST =
 
 
 if HAVE_SYSTEMD
 systemd_DATA = telefono.service
+nodist_systemd_DATA = telefono-mdns.service telefono-hotspot.service
 
+# the network services are restarted if they run (new version), telefono
+# itself is not
 if INSTALL_SYSTEMD_SERVICE
 install-data-hook:
 	systemctl daemon-reload
-	systemctl enable telefono
+	systemctl enable telefono telefono-mdns telefono-hotspot
+	systemctl try-restart telefono-mdns telefono-hotspot
 
+# a running hotspot is ended (NetworkManager then connects a known WLAN)
 uninstall-hook:
+	systemctl disable --now telefono-mdns telefono-hotspot
+	-nmcli connection delete id telefono-hotspot 2>/dev/null
 	systemctl daemon-reload
 	systemctl disable telefono
 endif

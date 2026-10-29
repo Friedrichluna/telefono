@@ -1,0 +1,16 @@
+<?xml version="1.0" standalone='no'?>
+<!DOCTYPE service-group SYSTEM "avahi-service.dtd">
+<!-- the webapp of telefono for service browsers (installed by make install) -->
+<service-group>
+  <name replace-wildcards="yes">Telefono %h</name>
+  <service>
+    <type>_http._tcp</type>
+    <port>5000</port>
+    <txt-record>path=/</txt-record>
+  </service>
+  <service>
+    <type>_https._tcp</type>
+    <port>5443</port>
+    <txt-record>path=/</txt-record>
+  </service>
+</service-group>

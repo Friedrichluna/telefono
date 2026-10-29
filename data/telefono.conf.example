@@ -28,3 +28,17 @@ speaker_switch = no
 # loudspeaker relay (GPIO 4, output, powers the loudspeaker's amplifier):
 # no = low is on, yes = high is on
 speaker_relay = no
+
+# Finding the webapp (telefono-mdns and telefono-hotspot services), read
+# again within seconds, no restart needed. The defaults are shown.
+[network]
+# name in the network: http://<name>.local:5000, in addition to
+# http://<hostname>.local:5000. With several phones in one network give
+# each its own name, otherwise the second one gets telefono-2.local.
+#name = telefono
+# own WLAN (access point) when no known WLAN is in range for 90 s,
+# back to the known WLAN when it is in range and nobody uses the hotspot
+#hotspot = yes
+# name of that WLAN (default telefono-<hostname>); its password is in
+# /etc/telefono-hotspot.conf (made at the first start, root only)
+#hotspot_ssid = telefono-pi

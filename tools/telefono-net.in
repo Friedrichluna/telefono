@@ -1,0 +1,977 @@
+#!/usr/bin/python3
+# -*- coding: utf-8 -*-
+
+# telefono-net: makes the webapp of a phone easy to find
+#
+#   telefono-net mdns      publishes <name>.local (default telefono.local)
+#                          with the IPv4 address of every interface, in
+#                          addition to <hostname>.local (avahi over D-Bus,
+#                          telefono-mdns.service)
+#   telefono-net hotspot   turns the WLAN into an access point when no
+#                          known WLAN is in range and goes back to a known
+#                          WLAN as soon as it is in range again and nobody
+#                          uses the hotspot (NetworkManager,
+#                          telefono-hotspot.service, runs as root)
+#
+# Settings: section [network] of telefono.conf (see telefono.conf.example),
+# read again on every check. For the status page of the webapp each one
+# writes its state to /run/telefono-<command>/state.json.
+#
+# Standalone on purpose: importing the telefono package would load the
+# GPIO and audio modules.
+
+import argparse
+import configparser
+import json
+import logging
+import os
+import re
+import secrets
+import signal
+import socket
+import subprocess
+import sys
+import time
+
+
+CONFIG_FILE = "@sysconfdir@/telefono.conf"
+# the password of the hotspot, generated at the first start (root only)
+PASSWORD_FILE = "@sysconfdir@/telefono-hotspot.conf"
+
+MDNS_STATE_FILE = "/run/telefono-mdns/state.json"
+HOTSPOT_STATE_FILE = "/run/telefono-hotspot/state.json"
+
+# names of the phone for the devices in the hotspot that ask DNS instead
+# of mDNS (read by the dnsmasq NetworkManager starts for the hotspot)
+DNSMASQ_FILE = "/etc/NetworkManager/dnsmasq-shared.d/telefono.conf"
+
+DEFAULT_NAME = "telefono"
+
+# mDNS: interfaces and addresses are checked every MDNS_TICK s
+MDNS_TICK = 5
+
+# hotspot: the WLAN is checked every HOTSPOT_TICK s; without a known
+# WLAN for HOTSPOT_DELAY s (after the start or after losing it) the
+# hotspot is started; in the hotspot, every HOTSPOT_CHECK s a known WLAN
+# is looked for if no device is connected to the hotspot
+HOTSPOT_TICK = 15
+HOTSPOT_DELAY = 90
+HOTSPOT_CHECK = 180
+# without NetworkManager or WLAN only every IDLE_TICK s
+IDLE_TICK = 60
+# a failed hotspot start is retried after HOTSPOT_DELAY, doubled up to
+HOTSPOT_RETRY_MAX = 1800
+
+HOTSPOT_CONNECTION = "telefono-hotspot"
+HOTSPOT_ADDRESS = "10.42.0.1"
+HOTSPOT_PREFIX = 24
+PASSWORD_ALPHABET = "abcdefghijkmnpqrstuvwxyz23456789"
+
+# after the hotspot is stopped: NetworkManager gets up to SWITCH_WAIT s
+# to connect a known WLAN by itself (checked every SWITCH_POLL s), less if
+# it does not start connecting within SWITCH_IDLE s
+SWITCH_WAIT = 30
+SWITCH_IDLE = 6
+SWITCH_POLL = 2
+
+# timeouts (s) of nmcli commands that activate something
+ACTIVATE_TIMEOUT = 45
+DEACTIVATE_TIMEOUT = 20
+
+STATE_REWRITE = 60
+
+log = logging.getLogger ("telefono-net")
+
+
+warned = set ()
+
+
+# a configuration problem is logged once, not on every check
+def warn_once (message:str, *args):
+	text = message % args
+	if text not in warned:
+		warned.add (text)
+		log.warning ("%s", text)
+	return
+
+
+def short_hostname () -> str:
+	return socket.gethostname ().split (".")[0]
+
+
+NAME_PATTERN = re.compile (r"^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$")
+
+
+# the [network] section: {"name": mDNS name without .local,
+# "hotspot": bool, "ssid": SSID of the hotspot}; missing or invalid
+# entries are the defaults, a broken file never stops anything
+def read_config (path:str=CONFIG_FILE) -> dict:
+	result = {"name": DEFAULT_NAME, "hotspot": True,
+	          "ssid": "telefono-" + short_hostname ()}
+
+	config = configparser.ConfigParser ()
+	try:
+		config.read (path, encoding="utf-8")
+	except (configparser.Error, UnicodeDecodeError) as error:
+		warn_once ("%s is invalid, using the defaults: %s", path, error)
+		return result
+
+	if not config.has_section ("network"):
+		return result
+
+	section = config["network"]
+
+	name = section.get ("name", "").strip ().lower ()
+	if name.endswith (".local"):
+		name = name[:-len (".local")]
+	if name:
+		if NAME_PATTERN.match (name):
+			result["name"] = name
+		else:
+			warn_once ("%s: name = %s is not a valid name (letters, digits"
+			           " and -), using %s", path, name, DEFAULT_NAME)
+
+	try:
+		result["hotspot"] = section.getboolean ("hotspot", True)
+	except ValueError:
+		warn_once ("%s: hotspot = %s is neither yes nor no, using yes",
+		           path, section.get ("hotspot"))
+
+	ssid = section.get ("hotspot_ssid", "").strip ()
+	if ssid:
+		if len (ssid.encode ()) <= 32:
+			result["ssid"] = ssid
+		else:
+			warn_once ("%s: hotspot_ssid is longer than 32 bytes, using %s",
+			           path, result["ssid"])
+
+	return result
+
+
+class StateFile ():
+	def __init__ (self, path:str):
+		self.path = path
+		self.written = None
+		self.time = 0
+		return
+
+	# written when it changed and every STATE_REWRITE s (so the status
+	# page sees that the service is alive)
+	def write (self, state:dict):
+		now = time.time ()
+		if state == self.written and now - self.time < STATE_REWRITE:
+			return
+
+		data = dict (state, updated=now)
+		temp = self.path + ".tmp"
+		try:
+			with open (temp, "w", encoding="utf-8") as f:
+				json.dump (data, f, ensure_ascii=False)
+			os.chmod (temp, 0o644)
+			os.replace (temp, self.path)
+		except OSError as error:
+			warn_once ("writing %s failed: %s", self.path, error)
+			return
+
+		self.written = state
+		self.time = now
+		return
+
+
+#
+# mDNS
+#
+
+AVAHI = "org.freedesktop.Avahi"
+AVAHI_IF_UNSPEC = -1
+# protocol = the mDNS transport (IPv4 and IPv6 multicast), not the
+# address family: Windows asks over IPv6 too
+AVAHI_PROTO_UNSPEC = -1
+# no PTR record: the reverse name of the address stays <hostname>.local
+AVAHI_PUBLISH_NO_REVERSE = 16
+AVAHI_SERVER_RUNNING = 2
+GROUP_STATES = {0: "uncommitted", 1: "registering", 2: "established",
+                3: "collision", 4: "failure"}
+GROUP_COLLISION = 3
+GROUP_FAILURE = 4
+
+
+# {interface: first IPv4 address} of the interfaces that are up, without
+# loopback
+def interface_addresses () -> dict:
+	import psutil
+
+	stats = psutil.net_if_stats ()
+	result = dict ()
+	for name, addresses in psutil.net_if_addrs ().items ():
+		if "lo" == name or name not in stats or not stats[name].isup:
+			continue
+
+		for address in addresses:
+			if socket.AF_INET == address.family \
+			and not address.address.startswith ("127."):
+				result[name] = address.address
+				break
+
+	return result
+
+
+class Mdns ():
+	def __init__ (self):
+		import dbus
+		self.dbus = dbus
+		self.bus = None
+		self.owner = None
+		self.server = None
+		self.group = None
+		self.wanted = None
+		self.name = None
+		self.published = None
+		self.state = StateFile (MDNS_STATE_FILE)
+		return
+
+	def reset (self):
+		self.server = None
+		self.group = None
+		self.published = None
+		return
+
+	def connect (self):
+		dbus = self.dbus
+		if self.bus is None:
+			self.bus = dbus.SystemBus ()
+
+		owner = self.bus.get_name_owner (AVAHI)
+		if owner != self.owner or self.server is None:
+			# avahi-daemon was (re)started: our old entry group is gone
+			self.reset ()
+			self.owner = owner
+			self.server = dbus.Interface (self.bus.get_object (AVAHI, "/"),
+			                              AVAHI + ".Server")
+		return
+
+	def new_group (self):
+		path = self.server.EntryGroupNew ()
+		self.group = self.dbus.Interface (self.bus.get_object (AVAHI, path),
+		                                  AVAHI + ".EntryGroup")
+		return
+
+	# publishes self.name.local with the address of each interface on
+	# that interface (eth0 and wlan0 can be in the same network, each
+	# answers with its own address, like avahi does for the hostname)
+	def publish (self, addresses:dict):
+		dbus = self.dbus
+
+		for attempt in range (10):
+			if self.group is None:
+				self.new_group ()
+			else:
+				self.group.Reset ()
+
+			fqdn = self.name + ".local"
+			try:
+				for interface, address in sorted (addresses.items ()):
+					try:
+						index = socket.if_nametoindex (interface)
+					except OSError:
+						continue
+
+					self.group.AddAddress (dbus.Int32 (index),
+					                       dbus.Int32 (AVAHI_PROTO_UNSPEC),
+					                       dbus.UInt32 (AVAHI_PUBLISH_NO_REVERSE),
+					                       fqdn, address)
+			except dbus.exceptions.DBusException as error:
+				# another name of this host (or one of its services)
+				if "CollisionError" not in (error.get_dbus_name () or ""):
+					raise
+				self.rename ("local collision")
+				continue
+
+			if not self.group.IsEmpty ():
+				self.group.Commit ()
+				log.info ("publishing %s: %s", fqdn,
+				          ", ".join ("%s %s" % item
+				                     for item in sorted (addresses.items ())))
+			else:
+				log.info ("%s: no address to publish", fqdn)
+			return
+
+		raise RuntimeError ("no free name found for %s" % self.wanted)
+
+	def rename (self, reason:str):
+		old = self.name
+		self.name = str (self.server.GetAlternativeHostName (self.name))
+		log.warning ("%s.local is used by another device (%s), now %s.local",
+		             old, reason, self.name)
+		return
+
+	def tick (self):
+		config = read_config ()
+		hostname = short_hostname ()
+		state = {"wanted": config["name"], "hostname": hostname}
+
+		if config["name"] != self.wanted:
+			self.wanted = config["name"]
+			self.name = self.wanted
+			self.published = None
+
+		addresses = interface_addresses ()
+		try:
+			if self.name == hostname:
+				# <hostname>.local is published by avahi itself
+				if self.group is not None and self.published is not None:
+					self.group.Reset ()
+				self.published = None
+				state.update (state="hostname", name=self.name)
+				self.state.write (state)
+				return
+
+			self.connect ()
+
+			if self.server.GetState () != AVAHI_SERVER_RUNNING:
+				# a host name conflict of avahi itself resets everything
+				self.reset ()
+				state.update (state="avahi not ready")
+				self.state.write (state)
+				return
+
+			if self.group is not None and self.published is not None:
+				group_state = self.group.GetState ()
+				if GROUP_COLLISION == group_state:
+					self.rename ("collision")
+					self.published = None
+				elif GROUP_FAILURE == group_state:
+					log.warning ("publishing %s.local failed, trying again",
+					             self.name)
+					self.published = None
+
+			key = (self.name, tuple (sorted (addresses.items ())))
+			if key != self.published:
+				self.publish (addresses)
+				self.published = key
+
+			group_state = GROUP_STATES.get (self.group.GetState (), "?")
+		except self.dbus.exceptions.DBusException as error:
+			warn_once ("avahi is not reachable: %s", error.get_dbus_message ()
+			           or error)
+			self.reset ()
+			state.update (state="no avahi")
+			self.state.write (state)
+			return
+
+		if not addresses:
+			group_state = "no address"
+
+		state.update (state=group_state, name=self.name,
+		              addresses=addresses)
+		self.state.write (state)
+		return
+
+
+def run_mdns (args) -> int:
+	try:
+		publisher = Mdns ()
+	except ImportError:
+		log.error ("python3-dbus is missing (sudo apt install python3-dbus),"
+		           " %s.local is not published", DEFAULT_NAME)
+		StateFile (MDNS_STATE_FILE).write ({"state": "no dbus"})
+		return 0
+
+	log.info ("started")
+	while True:
+		try:
+			publisher.tick ()
+		except Exception:
+			log.exception ("mDNS check failed")
+			publisher.reset ()
+		time.sleep (MDNS_TICK)
+
+
+#
+# hotspot
+#
+
+def run_command (command:list, timeout:float=60):
+	env = dict (os.environ, LC_ALL="C")
+	try:
+		result = subprocess.run (command, capture_output=True, text=True,
+		                         timeout=timeout, env=env)
+	except FileNotFoundError:
+		return 127, "", "%s not found" % command[0]
+	except subprocess.TimeoutExpired:
+		return 124, "", "%s timed out" % " ".join (command[:4])
+
+	return result.returncode, result.stdout, result.stderr
+
+
+# fields of a line of nmcli -t (":" separated, "\:" and "\\" escaped)
+def terse_fields (line:str) -> list:
+	fields = list ()
+	field = ""
+	escaped = False
+	for c in line:
+		if escaped:
+			field += c
+			escaped = False
+		elif "\\" == c:
+			escaped = True
+		elif ":" == c:
+			fields.append (field)
+			field = ""
+		else:
+			field += c
+
+	fields.append (field)
+	return fields
+
+
+class NetworkManager ():
+	def __init__ (self, run=run_command, nmcli:str="nmcli", iw:str="iw"):
+		self.run = run
+		self.nmcli = nmcli
+		self.iw = iw
+		return
+
+	def nm (self, *args, timeout:float=30):
+		return self.run ([self.nmcli, *args], timeout=timeout)
+
+	# [{device, type, state, connection}], None if NetworkManager
+	# does not run (or nmcli is missing)
+	def devices (self):
+		code, out, _ = self.nm ("-t", "-f", "DEVICE,TYPE,STATE,CONNECTION",
+		                        "device")
+		if code:
+			return None
+
+		devices = list ()
+		for line in out.splitlines ():
+			fields = terse_fields (line)
+			if len (fields) < 4:
+				continue
+			devices.append ({"device": fields[0], "type": fields[1],
+			                 "state": fields[2], "connection": fields[3]})
+		return devices
+
+	# values of the settings of a connection (tuple in the order of
+	# names), None if it does not exist; "uuid" is a UUID or "id NAME"
+	def settings (self, uuid:str, names:tuple, show_secrets:bool=False):
+		key = ["id", uuid[3:]] if uuid.startswith ("id ") else ["uuid", uuid]
+		code, out, _ = self.nm (*(["-s"] if show_secrets else []), "-t", "-f",
+		                        ",".join (names), "connection", "show", *key)
+		if code:
+			return None
+
+		# one "name:value" line per setting, the value is not escaped
+		values = dict ()
+		for line in out.splitlines ():
+			name, separator, value = line.partition (":")
+			if separator:
+				values[name] = value
+		return tuple (values.get (name, "") for name in names)
+
+	# known WLANs NetworkManager connects to by itself: [(uuid, ssid)],
+	# the wifi connections in infrastructure mode with autoconnect for
+	# this device (or any device), without the hotspot
+	def known_networks (self, device:str) -> list:
+		code, out, _ = self.nm ("-t", "-f", "NAME,UUID,TYPE", "connection",
+		                        "show")
+		if code:
+			return []
+
+		known = list ()
+		for line in out.splitlines ():
+			fields = terse_fields (line)
+			if len (fields) < 3 or fields[2] != "802-11-wireless" \
+			or HOTSPOT_CONNECTION == fields[0]:
+				continue
+
+			values = self.settings (fields[1], ("802-11-wireless.ssid",
+			                                    "802-11-wireless.mode",
+			                                    "connection.autoconnect",
+			                                    "connection.interface-name"))
+			if values is None:
+				continue
+
+			ssid, mode, autoconnect, interface = values
+			if mode not in ("", "infrastructure") or "yes" != autoconnect \
+			or interface not in ("", device) or not ssid:
+				continue
+
+			known.append ((fields[1], ssid))
+		return known
+
+	# {ssid: signal} of the WLANs in range (NetworkManager's scan)
+	def visible (self, device:str, rescan:bool=True) -> dict:
+		code, out, _ = self.nm ("-t", "-f", "SSID,SIGNAL", "device", "wifi",
+		                        "list", "ifname", device, "--rescan",
+		                        "yes" if rescan else "no", timeout=60)
+		if code and rescan:
+			# e.g. no scan allowed right now: the last results
+			code, out, _ = self.nm ("-t", "-f", "SSID,SIGNAL", "device",
+			                        "wifi", "list", "ifname", device,
+			                        "--rescan", "auto", timeout=60)
+		result = dict ()
+		if code:
+			return result
+
+		for line in out.splitlines ():
+			fields = terse_fields (line)
+			if len (fields) < 2 or not fields[0]:
+				continue
+			try:
+				signal = int (fields[1])
+			except ValueError:
+				signal = 0
+			result[fields[0]] = max (signal, result.get (fields[0], 0))
+		return result
+
+	# SSIDs in range while the device is an access point, None if the
+	# driver can not scan then
+	def ap_scan (self, device:str):
+		code, out, _ = self.run ([self.iw, "dev", device, "scan", "ap-force"],
+		                         timeout=30)
+		if code:
+			return None
+
+		return {line.strip ()[len ("SSID: "):] for line in out.splitlines ()
+		        if line.strip ().startswith ("SSID: ")}
+
+	# number of devices connected to the hotspot, None if unknown
+	def stations (self, device:str):
+		code, out, _ = self.run ([self.iw, "dev", device, "station", "dump"],
+		                         timeout=10)
+		if code:
+			return None
+
+		return sum (1 for line in out.splitlines ()
+		            if line.startswith ("Station "))
+
+	def up (self, uuid:str, device:str) -> bool:
+		code, _, err = self.nm ("--wait", str (ACTIVATE_TIMEOUT), "connection",
+		                        "up", "uuid", uuid, "ifname", device,
+		                        timeout=ACTIVATE_TIMEOUT + 15)
+		if code:
+			log.info ("connecting %s failed: %s", uuid, err.strip ())
+		return not code
+
+	# the hotspot connection: (ssid, password, interface) or None
+	def hotspot_settings (self):
+		return self.settings ("id " + HOTSPOT_CONNECTION,
+		                      ("802-11-wireless.ssid",
+		                       "802-11-wireless-security.psk",
+		                       "connection.interface-name"), show_secrets=True)
+
+	def delete_hotspot (self):
+		code, _, _ = self.nm ("connection", "delete", "id", HOTSPOT_CONNECTION)
+		return not code
+
+	# the hotspot is an in-memory connection (nothing written to
+	# /etc/NetworkManager or /etc/netplan), made again after every start
+	# of NetworkManager; without autoconnect, so NetworkManager itself
+	# never starts it, only this script
+	def make_hotspot (self, device:str, ssid:str, password:str) -> bool:
+		if self.hotspot_settings () == (ssid, password, device):
+			return True
+
+		self.delete_hotspot ()
+		code, _, err = self.nm (
+		        "connection", "add", "save", "no",
+		        "type", "wifi", "ifname", device,
+		        "con-name", HOTSPOT_CONNECTION, "autoconnect", "no",
+		        "ssid", ssid,
+		        "802-11-wireless.mode", "ap",
+		        "802-11-wireless.band", "bg",
+		        "ipv4.method", "shared",
+		        "ipv4.addresses", "%s/%d" % (HOTSPOT_ADDRESS, HOTSPOT_PREFIX),
+		        "ipv6.method", "disabled",
+		        "wifi-sec.key-mgmt", "wpa-psk",
+		        "wifi-sec.proto", "rsn",
+		        "wifi-sec.pairwise", "ccmp",
+		        "wifi-sec.group", "ccmp",
+		        "wifi-sec.psk", password)
+		if code:
+			log.error ("making the hotspot connection failed: %s", err.strip ())
+		return not code
+
+	def hotspot_up (self, device:str) -> bool:
+		code, _, err = self.nm ("--wait", str (ACTIVATE_TIMEOUT), "connection",
+		                        "up", "id", HOTSPOT_CONNECTION, "ifname", device,
+		                        timeout=ACTIVATE_TIMEOUT + 15)
+		if code:
+			log.error ("starting the hotspot failed: %s", err.strip ())
+		return not code
+
+	# down, and NetworkManager may connect the device to known WLANs
+	# again by itself (a "nmcli device disconnect" would forbid that)
+	def hotspot_down (self, device:str):
+		self.nm ("--wait", str (DEACTIVATE_TIMEOUT), "connection", "down",
+		         "id", HOTSPOT_CONNECTION, timeout=DEACTIVATE_TIMEOUT + 10)
+		self.nm ("device", "set", device, "autoconnect", "yes")
+		return
+
+
+def valid_password (password:str) -> bool:
+	return 8 <= len (password) <= 63 \
+	       and all (32 <= ord (c) < 127 for c in password)
+
+
+# the password of the hotspot from PASSWORD_FILE, made and saved
+# (root only) if there is none
+def hotspot_password (path:str=PASSWORD_FILE) -> str:
+	try:
+		with open (path, encoding="utf-8") as f:
+			for line in f:
+				key, separator, value = line.partition ("=")
+				if separator and "password" == key.strip ():
+					value = value.strip ()
+					if valid_password (value):
+						return value
+					warn_once ("%s: the password must have 8 to 63 characters"
+					           " (ASCII), making a new one", path)
+	except FileNotFoundError:
+		pass
+	except (OSError, UnicodeDecodeError) as error:
+		warn_once ("reading %s failed (%s), making a new password",
+		           path, error)
+
+	password = "-".join ("".join (secrets.choice (PASSWORD_ALPHABET)
+	                              for _ in range (4))
+	                     for _ in range (3))
+
+	temp = path + ".tmp"
+	try:
+		if os.path.exists (temp):
+			os.unlink (temp)
+		fd = os.open (temp, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+		with os.fdopen (fd, "w", encoding="utf-8") as f:
+			f.write ("# Password of the WLAN hotspot of telefono (WPA2, 8 to 63"
+			         " characters),\n# made at the first start, only readable"
+			         " by root. After a change:\n# sudo systemctl restart"
+			         " telefono-hotspot\npassword = %s\n" % password)
+			f.flush ()
+			os.fsync (f.fileno ())
+		os.replace (temp, path)
+		log.info ("made a new hotspot password, see %s", path)
+	except OSError as error:
+		# the hotspot works with it until the next start
+		log.error ("saving the hotspot password in %s failed: %s",
+		           path, error)
+
+	return password
+
+
+# the names of the phone for DNS in the hotspot (some phones do not ask
+# mDNS for .local names)
+def write_dnsmasq (name:str, path:str=DNSMASQ_FILE):
+	text = ("# written by telefono-hotspot: names of this phone for the"
+	        " devices in its hotspot\naddress=/%s.local/%s\naddress=/%s/%s\n"
+	        % (name, HOTSPOT_ADDRESS, name, HOTSPOT_ADDRESS))
+	try:
+		with open (path, encoding="utf-8") as f:
+			if f.read () == text:
+				return
+	except OSError:
+		pass
+
+	try:
+		if not os.path.isdir (os.path.dirname (os.path.dirname (path))):
+			return
+		os.makedirs (os.path.dirname (path), exist_ok=True)
+		with open (path + ".tmp", "w", encoding="utf-8") as f:
+			f.write (text)
+		os.replace (path + ".tmp", path)
+	except OSError as error:
+		warn_once ("writing %s failed: %s", path, error)
+	return
+
+
+class Hotspot ():
+	def __init__ (self, nm:NetworkManager=None, delay:float=HOTSPOT_DELAY,
+	              check:float=HOTSPOT_CHECK, hide=(), clock=time.monotonic,
+	              config=read_config, password=hotspot_password,
+	              dnsmasq=write_dnsmasq, state_file:str=HOTSPOT_STATE_FILE,
+	              sleep=time.sleep):
+		self.nm = nm or NetworkManager ()
+		self.delay = delay
+		self.check = check
+		# SSIDs treated as unknown (tests: "not in range")
+		self.hide = set (hide)
+		self.clock = clock
+		self.sleep = sleep
+		self.config = config
+		self.password = password
+		self.dnsmasq = dnsmasq
+		self.state = StateFile (state_file)
+		self.started = time.time () - clock ()
+		self.last_good = clock ()
+		self.next_check = 0
+		self.failures = 0
+		self.retry_at = 0
+		self.mode = None
+		self.cleaned = False
+		# SSIDs of connections (for the status page)
+		self.ssids = dict ()
+		return
+
+	def wall (self, moment:float) -> float:
+		return self.started + moment
+
+	def set_mode (self, mode:str, **details):
+		if mode != self.mode:
+			log.info ("%s%s", mode, "".join (" %s=%s" % item for item
+			                                  in sorted (details.items ())
+			                                  if item[0] in ("network", "ssid",
+			                                                 "device", "reason")))
+			self.mode = mode
+		self.state.write (dict (details, mode=mode))
+		return
+
+	def network_ssid (self, connection:str) -> str:
+		if connection not in self.ssids:
+			values = self.nm.settings ("id " + connection,
+			                           ("802-11-wireless.ssid", ))
+			self.ssids[connection] = values[0] if values and values[0] 			                         else connection
+		return self.ssids[connection]
+
+	def set_client (self, device:str, connection:str, config:dict):
+		self.last_good = self.clock ()
+		self.failures = 0
+		self.set_mode ("client", device=device, ssid=config["ssid"],
+		               network=self.network_ssid (connection))
+		return
+
+	def known (self, device:str) -> list:
+		return [(uuid, ssid) for uuid, ssid in self.nm.known_networks (device)
+		        if ssid not in self.hide]
+
+	def device (self, devices:list, config:dict):
+		for device in devices:
+			if "wifi" == device["type"]:
+				return device
+		return None
+
+	# tries the known WLANs in range, best signal first; True if one is
+	# connected
+	def connect_known (self, device:str, known:list) -> bool:
+		if not known:
+			return False
+
+		visible = self.nm.visible (device, rescan=True)
+		candidates = sorted ((visible[ssid], uuid, ssid) for uuid, ssid in known
+		                     if ssid in visible)
+		for _, uuid, ssid in reversed (candidates):
+			log.info ("known WLAN %s in range, connecting", ssid)
+			if self.nm.up (uuid, device):
+				return True
+		return False
+
+	def start_hotspot (self, device:str, config:dict, now:float):
+		password = self.password ()
+		self.dnsmasq (config["name"])
+		if self.nm.make_hotspot (device, config["ssid"], password) \
+		and self.nm.hotspot_up (device):
+			self.failures = 0
+			self.next_check = now + self.check
+			self.set_mode ("hotspot", ssid=config["ssid"], device=device,
+			               address=HOTSPOT_ADDRESS, clients=0,
+			               since=self.wall (now))
+			return True
+
+		self.failures += 1
+		retry = min (self.delay * 2 ** (self.failures - 1), HOTSPOT_RETRY_MAX)
+		self.retry_at = now + retry
+		self.last_good = now
+		self.set_mode ("error", ssid=config["ssid"], device=device,
+		               retry=self.wall (self.retry_at))
+		return False
+
+	# in the hotspot without devices: back to a known WLAN if one is
+	# in range
+	def check_back (self, device:str, config:dict, now:float):
+		known = self.known (device)
+		if not known:
+			return
+
+		seen = self.nm.ap_scan (device)
+		if seen is not None and not any (ssid in seen for _, ssid in known):
+			log.debug ("no known WLAN in range")
+			return
+
+		log.info ("looking for known WLANs (%s)",
+		          ", ".join (ssid for _, ssid in known))
+		self.nm.hotspot_down (device)
+
+		# NetworkManager connects a known WLAN in range by itself; if it
+		# does not start that soon, it is tried here
+		start = self.clock ()
+		connected = False
+		while True:
+			current = self.find (device)
+			state = current["state"] if current else ""
+			if state.startswith ("connected") \
+			and HOTSPOT_CONNECTION != current["connection"]:
+				connected = True
+				break
+
+			waited = self.clock () - start
+			if waited >= SWITCH_WAIT or (waited >= SWITCH_IDLE
+			                             and not state.startswith ("connecting")
+			                             and not state.startswith ("deactivating")):
+				break
+			self.sleep (SWITCH_POLL)
+
+		if not connected:
+			connected = self.connect_known (device, known)
+
+		if connected:
+			self.set_client (device, self.current_network (device), config)
+			return
+
+		log.info ("no known WLAN in range, hotspot again")
+		self.start_hotspot (device, config, self.clock ())
+		return
+
+	def find (self, device:str):
+		for item in self.nm.devices () or []:
+			if item["device"] == device:
+				return item
+		return None
+
+	def current_network (self, device:str) -> str:
+		item = self.find (device)
+		return item["connection"] if item else ""
+
+	def tick (self):
+		now = self.clock ()
+		config = self.config ()
+		devices = self.nm.devices ()
+
+		if devices is None:
+			self.last_good = now
+			self.set_mode ("no networkmanager")
+			return IDLE_TICK
+
+		item = self.device (devices, config)
+		if item is None:
+			self.last_good = now
+			self.set_mode ("no wlan")
+			return IDLE_TICK
+
+		device = item["device"]
+		state = item["state"]
+		in_hotspot = HOTSPOT_CONNECTION == item["connection"]
+
+		if not config["hotspot"]:
+			if in_hotspot:
+				log.info ("hotspot switched off in the configuration")
+				self.nm.hotspot_down (device)
+			if not self.cleaned:
+				self.nm.delete_hotspot ()
+				self.cleaned = True
+			self.last_good = now
+			self.set_mode ("off", device=device, ssid=config["ssid"])
+			return HOTSPOT_TICK
+		self.cleaned = False
+
+		if in_hotspot:
+			self.last_good = now
+			if not state.startswith ("connected"):
+				self.set_mode ("hotspot starting", device=device,
+				               ssid=config["ssid"])
+				return HOTSPOT_TICK
+
+			clients = self.nm.stations (device)
+			since = self.state.written.get ("since") \
+			        if self.state.written else None
+			self.set_mode ("hotspot", device=device, ssid=config["ssid"],
+			               address=HOTSPOT_ADDRESS, clients=clients,
+			               since=since or self.wall (now),
+			               next_check=self.wall (self.next_check))
+
+			if now >= self.next_check:
+				self.next_check = now + self.check
+				if clients:
+					log.debug ("%d devices in the hotspot, staying", clients)
+				else:
+					self.check_back (device, config, now)
+			return HOTSPOT_TICK
+
+		if state.startswith ("connected"):
+			self.set_client (device, item["connection"], config)
+			return HOTSPOT_TICK
+
+		if state.startswith ("unavailable") or state.startswith ("unmanaged"):
+			self.last_good = now
+			self.set_mode ("no wlan", device=device, reason=state)
+			return HOTSPOT_TICK
+
+		# connecting, getting an address, ...: NetworkManager is busy
+		if not state.startswith ("disconnected"):
+			self.set_mode ("connecting", device=device, ssid=config["ssid"],
+			               hotspot_at=self.wall (self.last_good + self.delay))
+			return HOTSPOT_TICK
+
+		at = max (self.last_good + self.delay, self.retry_at)
+		if now < at:
+			self.set_mode ("waiting", device=device, ssid=config["ssid"],
+			               hotspot_at=self.wall (at))
+			return HOTSPOT_TICK
+
+		# NetworkManager gave up or nothing known is in range
+		if self.connect_known (device, self.known (device)):
+			self.set_client (device, self.current_network (device), config)
+			return HOTSPOT_TICK
+
+		log.info ("no known WLAN in range for %d s, starting the hotspot %s",
+		          now - self.last_good, config["ssid"])
+		self.start_hotspot (device, config, self.clock ())
+		return HOTSPOT_TICK
+
+
+def run_hotspot (args) -> int:
+	hotspot = Hotspot (delay=args.delay, check=args.check, hide=args.hide)
+	log.info ("started (hotspot after %d s without a known WLAN, checks every"
+	          " %d s%s)", args.delay, args.check,
+	          ", ignoring " + ", ".join (args.hide) if args.hide else "")
+	while True:
+		try:
+			wait = hotspot.tick ()
+		except Exception:
+			log.exception ("hotspot check failed")
+			wait = HOTSPOT_TICK
+		time.sleep (wait)
+
+
+def stop (signum, frame):
+	log.info ("stopped")
+	sys.exit (0)
+
+
+def main () -> int:
+	parser = argparse.ArgumentParser (description="mDNS name and WLAN hotspot"
+	                                  " of telefono")
+	parser.add_argument ("--debug", action="store_true")
+	commands = parser.add_subparsers (dest="command", required=True)
+	commands.add_parser ("mdns", help="publish <name>.local")
+	hotspot = commands.add_parser ("hotspot", help="WLAN hotspot when no"
+	                               " known WLAN is in range")
+	hotspot.add_argument ("--delay", type=float, default=HOTSPOT_DELAY,
+	                      help="s without a known WLAN before the hotspot")
+	hotspot.add_argument ("--check", type=float, default=HOTSPOT_CHECK,
+	                      help="s between looking for known WLANs")
+	hotspot.add_argument ("--hide", action="append", default=[],
+	                      metavar="SSID", help="treat this WLAN as not in"
+	                      " range (for tests)")
+	args = parser.parse_args ()
+
+	logging.basicConfig (level=logging.DEBUG if args.debug else logging.INFO,
+	                     format="%(levelname)s: %(message)s")
+	signal.signal (signal.SIGTERM, stop)
+
+	if "mdns" == args.command:
+		return run_mdns (args)
+	return run_hotspot (args)
+
+
+if "__main__" == __name__:
+	sys.exit (main ())

@@ -1,0 +1,20 @@
+[Unit]
+Description=Telefono: name telefono.local for the webapp (mDNS)
+After=avahi-daemon.service network.target
+
+[Service]
+ExecStart=python3 @pkglibexecdir@/telefono-net mdns
+# avahi lets every user publish over D-Bus, root is not needed
+# (no DynamicUser: dbus-daemon can not resolve it without nss-systemd)
+User=pi
+RuntimeDirectory=telefono-mdns
+RuntimeDirectoryMode=0755
+Restart=on-failure
+RestartSec=10
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+
+[Install]
+WantedBy=multi-user.target
