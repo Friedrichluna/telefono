@@ -279,6 +279,21 @@
 			margin: .5rem 0 0;
 		}
 
+		/* "oder" between the two ways to record, a line on both sides */
+		.or {
+			display: flex;
+			align-items: center;
+			gap: 1rem;
+			margin: 0 0 1rem;
+			color: var(--muted);
+		}
+
+		.or::before, .or::after {
+			content: "";
+			flex: 1;
+			border-top: 1px solid var(--border-subtle);
+		}
+
 		/* like the labels of the form */
 		#fallback > label {
 			display: block;
@@ -308,7 +323,7 @@
 			<label for="upload-file" class="file-button button gray">Dateien auswählen</label>
 			<span id="upload-file-name" class="file-name empty">Keine Datei ausgewählt</span>
 		</div>
-		<p class="hint" id="formats">.mp3 wird so gespeichert, wie es ist; {{ upload_extensions[1:] | join(', ') }} werden in .mp3 umgewandelt. Selbst aufnehmen: <a href="#aufnehmen">im Browser aufnehmen</a>.</p>
+		<p class="hint" id="formats">.mp3 wird so gespeichert, wie es ist; {{ upload_extensions[1:] | join(', ') }} werden in .mp3 umgewandelt. Stattdessen selbst aufnehmen: <a href="#aufnehmen">zur Aufnahme</a>.</p>
 		<ol id="files" aria-label="Gewählte Dateien" hidden></ol>
 		<p class="hint" id="files-hint" hidden>Ohne Nummer bekommt eine Datei die nächste freie Nummer (in der Reihenfolge der Liste). Die Beschreibung ist mit dem Dateinamen vorausgefüllt und kann geändert oder gelöscht werden. Die Dateien werden nacheinander hochgeladen und umgewandelt, das dauert pro Datei einige Sekunden.</p>
 		<label for="upload-number" class="no-script">Gewünschte Nummer:</label>
@@ -321,7 +336,7 @@
 		<p class="hint">Freier Speicher: <span id="disk-space">{{ diskSpace }}</span> GiB</p>
 	</form>
 
-	<h3 id="aufnehmen">Im Browser aufnehmen</h3>
+	<h3 id="aufnehmen">Selbst aufnehmen</h3>
 	<form method="post" action="{{ url_for('record_save') }}" enctype="multipart/form-data" class="stacked" id="record-form" data-async data-reset>
 		<div id="recorder" hidden>
 			<div id="controls">
@@ -336,11 +351,16 @@
 			<p class="hint">Mit dem Mikrofon dieses Geräts, {{ record_min }} s bis {{ record_max // 60 }} min. Vor dem Speichern anhören oder verwerfen.</p>
 		</div>
 		<div id="fallback">
-			<div id="insecure" class="alert neutral" hidden>
-				<p>Direkt im Browser aufnehmen geht nur über eine sichere Verbindung (https).</p>
+			<div id="insecure" hidden>
+				<div class="alert neutral">
+					<p>Aufnehmen mit dem Mikrofon direkt auf dieser Seite geht nur über eine sichere Verbindung (https).</p>
 {% if https_url %}
-				<p><a href="{{ https_url }}" class="button primary">Sichere Seite öffnen</a></p>
-				<p>Beim ersten Mal warnt der Browser, weil das Telefon sein Zertifikat selbst ausgestellt hat: „Erweitert“ (oder „Details“) und dann „Weiter zu …“ (oder „Diese Website besuchen“) wählen.</p>
+					<p><a href="{{ https_url }}" class="button gray">Sichere Seite öffnen</a></p>
+					<p>Beim ersten Mal warnt der Browser, weil das Telefon sein Zertifikat selbst ausgestellt hat: „Erweitert“ (oder „Details“) und dann „Weiter zu …“ (oder „Diese Website besuchen“) wählen.</p>
+{% endif %}
+				</div>
+{% if https_url %}
+				<p class="or" aria-hidden="true">oder</p>
 {% endif %}
 			</div>
 			<p id="unsupported" class="alert neutral" hidden>Dieser Browser kann nicht direkt aufnehmen.</p>
