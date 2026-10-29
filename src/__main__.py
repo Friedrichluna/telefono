@@ -29,6 +29,9 @@ from .CONSTANTS import SHUTDOWN_BUTTON_DELAY
 from .CONSTANTS import DIAGNOSE_LED_BLINKS
 from .CONSTANTS import DIAGNOSE_LED_BLINK_TIME
 
+from .CONSTANTS import VOLUME_TEST_HANDSET_TEXT
+from .CONSTANTS import VOLUME_TEST_SPEAKER_TEXT
+
 from .audio import convert_legacy_recordings
 from .config import LED_PIN
 from .config import PINS
@@ -37,6 +40,7 @@ from .history import history
 from .ipc import IPC_OUTPUT
 from .ipc import IPC_Server
 from .player import Player
+from .volume import VolumeSettings
 
 
 def turn_off (button, log):
@@ -252,6 +256,19 @@ def main ():
 
 	player = Player (Hook, ButtonLeft, ButtonMiddle, speakerThread)
 
+	# the volume of handset, loudspeaker and ring (webapp page /volume):
+	# set in the card now (before the startup sound), and again when
+	# the webapp changed the file (it sets the card itself as well, so
+	# that works while the phone is busy), logged in the history
+	volume = VolumeSettings ()
+	volume.update (apply=True)
+	player.ring_volume = volume.ring
+
+	def update_volume ():
+		if volume.update ():
+			player.ring_volume = volume.ring
+		return
+
 	# initialize call queue
 	queue = EventQueue (network)
 
@@ -293,6 +310,11 @@ def main ():
 		                                   n=DIAGNOSE_LED_BLINKS,
 		                                   background=True),
 		IPC_OUTPUT.SPEAKER: test_speaker,
+		IPC_OUTPUT.HANDSET_SOUND: lambda: player.play_test_text (
+		                                VOLUME_TEST_HANDSET_TEXT, aloud=False),
+		IPC_OUTPUT.SPEAKER_SOUND: lambda: player.play_test_text (
+		                                VOLUME_TEST_SPEAKER_TEXT, aloud=True),
+		IPC_OUTPUT.RING_SOUND: player.play_ring_test,
 	}
 
 	log.info ("startup finished")
@@ -311,6 +333,9 @@ def main ():
 
 			history.add ("on_hook", seconds=round (time.monotonic ()
 			                                       - lifted, 1))
+
+		# before a request (e.g. the ring test) or a call rings
+		update_volume ()
 
 		ipc.handle_message (queue, network, test_outputs)
 

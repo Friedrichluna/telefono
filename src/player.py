@@ -36,6 +36,7 @@ from .CONSTANTS import SOX_NUMBER_D
 from .CONSTANTS import FFPLAY_CMD
 from .CONSTANTS import FFPLAY_START
 from .CONSTANTS import FFPLAY_VOLUME
+from .CONSTANTS import FFPLAY_DURATION
 from .CONSTANTS import FFPLAY_POLL_DELAY
 from .CONSTANTS import FFPLAY_STALL_TIMEOUT
 from .CONSTANTS import FFPLAY_STALL_RETRIES
@@ -52,6 +53,9 @@ from .CONSTANTS import ESPEAK_TEXT
 from .CONSTANTS import TTS_SPEED
 from .CONSTANTS import TTS_AMPLITUDE
 from .CONSTANTS import TTS_VOICE
+
+from .CONSTANTS import RING_VOLUME
+from .CONSTANTS import VOLUME_TEST_RING_TIME
 
 from .CONSTANTS import WIND_TIME
 
@@ -80,6 +84,10 @@ class Player ():
 		self.__speaker = speaker
 		self.__process = None
 
+		# ffplay volume (percent) of the ring, set by the main process
+		# from the volume settings (src/volume.py)
+		self.ring_volume = RING_VOLUME
+
 		return
 
 	def __on_hook (self):
@@ -101,10 +109,14 @@ class Player ():
 	def __forward (self):
 		return self.__wind_forward.is_released
 
-	def __ffplay (self, filename, start=0, volume=100):
+	# duration: only the first seconds (from start), None: all
+	def __ffplay (self, filename, start=0, volume=100, duration=None):
 		command = (*FFPLAY_CMD, filename,
 		           *FFPLAY_START, str (start),
 		           *FFPLAY_VOLUME, str (volume))
+
+		if duration is not None:
+			command += (*FFPLAY_DURATION, str (duration))
 
 		self.log.debug ("invoking ffplay: %s", repr (command))
 
@@ -156,13 +168,14 @@ class Player ():
 
 		return number
 
+	# duration: only the first seconds of the file (not with wind)
 	def __play (self, filename, abort, volume=100,
-	            aloud=False, wind=False) -> bool:
+	            aloud=False, wind=False, duration=None) -> bool:
 
 		self.log.debug ("play file %s, abort=%s, "
-		                "volume=%d, aloud=%s, wind=%s",
+		                "volume=%d, aloud=%s, wind=%s, duration=%r",
 		                filename, repr (abort),
-		                volume, repr (aloud), repr (wind))
+		                volume, repr (aloud), repr (wind), duration)
 
 		if not os.path.exists (filename):
 			self.log.error ("file doesn't exist")
@@ -177,7 +190,8 @@ class Player ():
 			self.__speaker.activate ()
 
 
-		process = self.__ffplay (filename, volume=volume)
+		process = self.__ffplay (filename, volume=volume,
+		                         duration=duration)
 
 		buffer = bytearray ()
 		start = 0
@@ -228,7 +242,10 @@ class Player ():
 				buffer.clear ()
 				process = self.__ffplay (filename,
 				                         start,
-				                         volume)
+				                         volume,
+				                         None if duration is None
+				                         else max (duration - start,
+				                                   0.1))
 				progress = time.monotonic ()
 				continue
 
@@ -267,7 +284,26 @@ class Player ():
 
 	def play_ring (self):
 		self.__play (RING_FILE, abort=self.__off_hook,
-		             volume=70, aloud=True)
+		             volume=self.ring_volume, aloud=True)
+
+	# test sounds of the webapp's volume page: the beginning of the
+	# ring (one strike), a text in the handset or aloud
+	def play_ring_test (self):
+		self.__play (RING_FILE, abort=self.__off_hook,
+		             volume=self.ring_volume, aloud=True,
+		             duration=VOLUME_TEST_RING_TIME)
+		return
+
+	def play_test_text (self, text:str, aloud:bool):
+		if aloud:
+			self.__speaker.activate ()
+
+		self.play_say (text, abort=self.__never)
+
+		if aloud:
+			self.__speaker.deactivate ()
+
+		return
 
 	def play_file (self, filename:str, aloud, wind) -> bool:
 		return self.__play (filename, abort=self.__on_hook,

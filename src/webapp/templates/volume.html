@@ -1,0 +1,218 @@
+{% extends "base.html" %}
+
+{% block style %}
+		p {
+			margin: 0 0 .75rem;
+		}
+
+		.alert {
+			margin: 0 0 .75rem;
+			padding: .5rem .75rem;
+			color: #D8000C;
+			background-color: #FFBABA;
+			border-radius: .25rem;
+		}
+
+		ul.volumes {
+			margin: 0 0 1rem;
+			padding: 0;
+			list-style: none;
+
+			border: 1px solid rgba(0,0,0,.125);
+			border-radius: .25rem;
+		}
+
+		ul.volumes > li {
+			padding: .75rem;
+			border-top: 1px solid rgba(0,0,0,.125);
+		}
+
+		ul.volumes > li:first-child {
+			border-top: 0;
+		}
+
+		.head, .foot {
+			display: flex;
+			flex-wrap: wrap;
+			align-items: center;
+			justify-content: space-between;
+			gap: .25rem .75rem;
+		}
+
+		.name {
+			font-weight: 500;
+		}
+
+		.level {
+			font-variant-numeric: tabular-nums;
+		}
+
+		input[type="range"] {
+			display: block;
+			width: 100%;
+			margin: .5rem 0;
+			accent-color: var(--primary);
+		}
+
+		.foot .hint {
+			flex: 1 1 14rem;
+		}
+
+		.foot .button {
+			padding: .25rem .5rem;
+			font-size: .875rem;
+			border-radius: .2rem;
+		}
+
+		/* with the script every change is saved at once */
+		.js #save {
+			display: none;
+		}
+{% endblock %}
+
+{% block title %}Lautstärke{% endblock %}
+
+{% block content %}
+	{% set hints = {
+		"handset": "Alles, was man im Hörer hört (rechter Kanal der Soundkarte).",
+		"speaker": "Wenn der Lautsprecher an ist: Schalter am Telefon, Klingeln, Durchsagen (linker Kanal der Soundkarte, zum Verstärker).",
+		"ring": "Das Klingeln, als Anteil der Lautsprecher-Lautstärke (100 % = so laut wie der Lautsprecher).",
+	} %}
+
+	<h2>Lautstärke</h2>
+
+{% if error %}
+	<p class="alert">{{ error }}</p>
+{% endif %}
+
+	<form method="post" id="volume-form" data-async>
+		<ul class="volumes">
+{% for item in items %}
+			<li>
+				<div class="head">
+					<label class="name" for="{{ item.key }}">{{ item.name }}</label>
+					<output class="level" id="{{ item.key }}-level" for="{{ item.key }}">{{ item.text if item.value is not none else "–" }}</output>
+				</div>
+{% if item.value is not none %}
+				<input type="range" id="{{ item.key }}" name="{{ item.key }}" min="{{ item.minimum }}" max="{{ item.maximum }}" step="1" value="{{ item.value }}" aria-describedby="{{ item.key }}-hint"{% if item.linear %} data-linear{% else %} data-mute="{{ 1 if item.mute else 0 }}"{% if item.db_min is not none %} data-db-min="{{ item.db_min }}" data-db-max="{{ item.db_max }}"{% endif %}{% endif %}>
+{% else %}
+				<p class="hint">Nicht einstellbar.</p>
+{% endif %}
+				<div class="foot">
+					<span class="hint" id="{{ item.key }}-hint">{{ hints[item.key] }}</span>
+					<button type="submit" name="test" value="{{ item.key }}" class="button light">Testton abspielen</button>
+				</div>
+			</li>
+{% endfor %}
+		</ul>
+		<p><button type="submit" id="save" class="button blue">Speichern</button></p>
+	</form>
+
+	<p class="hint">Änderungen gelten sofort, auch während telefoniert wird, und bleiben nach einem Neustart erhalten. Testtöne spielt das Telefon nur, wenn es gerade frei ist (Hörer aufgelegt); ist der Lautsprecher-Schalter am Telefon eingeschaltet, hört man den Testton für den Hörer auch im Lautsprecher.</p>
+{% endblock %}
+
+{% block script %}
+<script>
+(function () {
+	"use strict";
+
+	const form = document.getElementById ("volume-form");
+	const sliders = form.querySelectorAll ("input[type='range']");
+
+	/* the same text as level_text () in webapp.py */
+	function levelText (slider) {
+		const value = Number (slider.value);
+		const min = Number (slider.min);
+		const max = Number (slider.max);
+
+		let percent, db = null, muted;
+
+		if (slider.hasAttribute ("data-linear")) {
+			percent = value;
+			muted = 0 === value;
+			if (value)
+				db = 20 * Math.log10 (value / 100);
+		}
+		else {
+			percent = max > min ? Math.round ((value - min) * 100 / (max - min)) : 100;
+			muted = "1" === slider.dataset.mute && value === min;
+
+			if (undefined !== slider.dataset.dbMin && max > min) {
+				const dbMin = Number (slider.dataset.dbMin);
+				const dbMax = Number (slider.dataset.dbMax);
+				db = dbMin + (value - min) * (dbMax - dbMin) / (max - min);
+			}
+		}
+
+		if (muted)
+			return "stumm";
+
+		if (null === db)
+			return percent + " %";
+
+		db = Math.round (db);
+		return percent + " % (" + (0 === db ? "0" : (db > 0 ? "+" + db : "−" + (-db))) + " dB)";
+	}
+
+	function showLevels (levels) {
+		for (const key in levels || {}) {
+			const output = document.getElementById (key + "-level");
+			if (output)
+				output.textContent = levels[key];
+		}
+	}
+
+	/* every change is saved at once, one request at a time,
+	   the newest values after the running request */
+	let saving = false;
+	let again = false;
+
+	function save () {
+		if (saving) {
+			again = true;
+			return;
+		}
+
+		saving = true;
+
+		fetch (form.getAttribute ("action") || location.pathname, {
+			method: "POST",
+			body: new FormData (form),
+			headers: { "X-Requested-With": "XMLHttpRequest" },
+		})
+			.then (function (response) {
+				return response.json ().catch (function () {
+					return {
+						message: "Unerwartete Antwort vom Telefon (" + response.status + ").",
+						type: "error",
+					};
+				});
+			})
+			.then (function (answer) {
+				showMessage (answer.message, answer.type);
+				showLevels (answer.levels);
+			})
+			.catch (function () {
+				showMessage ("Keine Verbindung zum Telefon.", "error");
+			})
+			.finally (function () {
+				saving = false;
+				if (again) {
+					again = false;
+					save ();
+				}
+			});
+	}
+
+	sliders.forEach (function (slider) {
+		const output = document.getElementById (slider.id + "-level");
+
+		slider.addEventListener ("input", function () {
+			output.textContent = levelText (slider);
+		});
+
+		slider.addEventListener ("change", save);
+	});
+}) ();
+</script>
+{% endblock %}

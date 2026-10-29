@@ -6,6 +6,7 @@ import logging
 import select
 import socket
 import threading
+import time
 
 from .CONSTANTS import IPC_TIMEOUT
 from .CONSTANTS import HISTORY_TEXT_MAX
@@ -29,12 +30,18 @@ class IPC_MESSAGE (enum.IntEnum):
 	TEST_OUTPUT = 8
 	NEXT_FREE = 9
 
-# the outputs the hardware test page can switch (TEST_OUTPUT payload)
+# the outputs the hardware test page can switch and the test sounds of
+# the volume page (TEST_OUTPUT payload)
 class IPC_OUTPUT (enum.IntEnum):
 	LED = 0
 	SPEAKER = 1
+	HANDSET_SOUND = 2
+	SPEAKER_SOUND = 3
+	RING_SOUND = 4
 
 IPC_INT_SIZE = 4
+# time.monotonic_ns () (the same clock in all processes)
+IPC_TIME_SIZE = 8
 IPC_NUMBER_SIZE = 32
 
 # a string field holds the UTF-8 encoded string and a terminating NUL,
@@ -287,18 +294,31 @@ class IPC:
 		data.append (IPC_MESSAGE.NEXT_FREE)
 		return data
 
-	def _serialize_test_output (self, output:IPC_OUTPUT) -> bytearray:
+	# sent: time.monotonic_ns () when it was sent, if it must only be
+	# done while the webapp still waits for the answer (not later)
+	def _serialize_test_output (self, output:IPC_OUTPUT,
+	                            sent:int=None) -> bytearray:
 		data = bytearray ()
 		data.append (IPC_MESSAGE.TEST_OUTPUT)
 		data.append (output)
+
+		if sent is not None:
+			data.extend (sent.to_bytes (IPC_TIME_SIZE, IPC_BYTEORDER,
+			                            signed=False))
 		return data
 
-	# raises ValueError for an unknown output (answered with ERROR)
-	def __deserialize_test_output (self, message:bytes) -> IPC_OUTPUT:
-		if 1 != len (message):
+	# (output, sent or None); raises ValueError for an unknown output
+	# (answered with ERROR)
+	def __deserialize_test_output (self, message:bytes) -> (IPC_OUTPUT, int):
+		if len (message) not in (1, 1 + IPC_TIME_SIZE):
 			raise IPC_Malformed ("output: %d bytes" % len (message))
 
-		return IPC_OUTPUT (message[0])
+		sent = None
+		if 1 < len (message):
+			sent = int.from_bytes (message[1:], IPC_BYTEORDER,
+			                       signed=False)
+
+		return IPC_OUTPUT (message[0]), sent
 
 
 	def _serialize_answer (self, answer:IPC_ANSWER,
@@ -525,10 +545,13 @@ class IPC_Client (IPC):
 
 		return "Ein Fehler ist aufgetreten.", "error"
 
-	# the main process answers before it switches the output
-	def test_output (self, output:IPC_OUTPUT):
-		data = self._serialize_test_output (output)
-		data = self.__request (data, queued=True)
+	# the main process answers before it switches the output;
+	# only_now: not done later if the phone is busy now (IPC_Timeout
+	# is not queued then), e.g. a test sound
+	def test_output (self, output:IPC_OUTPUT, only_now:bool=False):
+		sent = time.monotonic_ns () if only_now else None
+		data = self._serialize_test_output (output, sent)
+		data = self.__request (data, queued=not only_now)
 		answer, _ = self._deserialize_answer (data)
 
 		return IPC_ANSWER.OK == answer
@@ -682,14 +705,27 @@ class IPC_Server (IPC):
 			return
 
 		elif IPC_MESSAGE.TEST_OUTPUT == message_type \
-		and payload in (outputs or {}):
+		and payload[0] in (outputs or {}):
+			output, sent = payload
+
+			# the webapp said "busy" already, too late for a test
+			if sent is not None \
+			and time.monotonic_ns () - sent > IPC_TIMEOUT * 10**9:
+				self.log.info ("test of %s came %.1f s late, skipped",
+				               output.name,
+				               (time.monotonic_ns () - sent) / 10**9)
+
+				data = self._serialize_answer (IPC_ANSWER.ERROR)
+				self._send (data)
+				return
+
 			data = self._serialize_answer (IPC_ANSWER.OK)
 			self._send (data)
 
-			self.log.info ("testing output %s", payload.name)
+			self.log.info ("testing output %s", output.name)
 			history.add ("webapp", action="test",
-			             output=payload.name.lower ())
-			outputs[payload] ()
+			             output=output.name.lower ())
+			outputs[output] ()
 			return
 
 		data = self._serialize_answer (IPC_ANSWER.ERROR)

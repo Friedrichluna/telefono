@@ -171,7 +171,7 @@
 		</div>
 
 		<h4>Lautsprecher</h4>
-		<p>Mit dem <b>Kippschalter rechts</b> schaltet man den Lautsprecher ein, dann hören alle im Raum mit. Die Klingel ist immer laut.</p>
+		<p>Mit dem <b>Kippschalter rechts</b> schaltet man den Lautsprecher ein, dann hören alle im Raum mit. Die Klingel ist immer laut. Wie laut Hörer, Lautsprecher und Klingel sind, stellt man auf der Seite <a href="{{ url_for('volume') }}">Lautstärke</a> ein.</p>
 	</section>
 
 	<section id="anrufe">
@@ -217,13 +217,16 @@
 		<h4><a href="{{ url_for('say') }}">Text ansagen</a></h4>
 		<p>Eine Computerstimme liest den Text sofort vor, ohne vorher zu klingeln. Man hört ihn also nur, wenn der Hörer abgenommen ist oder der Lautsprecher eingeschaltet ist.</p>
 
+		<h4><a href="{{ url_for('volume') }}">Lautstärke</a></h4>
+		<p>Schieberegler für Hörer, Lautsprecher und Klingeln. Hörer und Lautsprecher hängen an getrennten Kanälen der Soundkarte, jeder hat seine eigene Lautstärke; das Klingeln ist ein Anteil der Lautsprecher-Lautstärke. Änderungen gelten sofort, auch während telefoniert wird, und bleiben nach einem Neustart erhalten. „Testton abspielen“ sagt einen kurzen Satz im Hörer oder im Lautsprecher an bzw. klingelt einmal, aber nur, wenn das Telefon gerade frei ist.</p>
+
 		<h4><a href="{{ url_for('status') }}">Status</a></h4>
 		<p>Version, Laufzeit, freier Speicher, Anzahl und Länge der Aufnahmen, Temperatur, Arbeitsspeicher und WLAN-Empfang. Darunter eine Statistik (am häufigsten gewählte Nummern, Anrufe der letzten 7 Tage) und der Verlauf: was am Telefon passiert ist (Hörer abgenommen, gewählte Nummern und wie der Anruf endete, Menü, Aufnahmen, Zufallsanrufe und Durchsagen, ob abgenommen wurde) und was über die Webseite angefordert wurde, filterbar. Die Seite aktualisiert sich alle 10 Sekunden und funktioniert auch, während telefoniert wird. Der Verlauf überlebt einen Neustart; ist er voll, werden die ältesten Einträge gelöscht. Bei Stromausfall können die letzten Einträge fehlen.</p>
 
 		<h4><a href="{{ url_for('diagnose') }}">Hardware-Test</a></h4>
 		<p>Zeigt live, was das Telefon an Hörer, Knöpfen, Wählscheibe und Lautsprecherschalter liest, auch bei abgehobenem Hörer. In Ruhe (Hörer aufgelegt, nichts gedrückt) muss alles grün „in Ruhe“ zeigen, sonst steht dort, was in <code>/etc/telefono.conf</code> umzustellen ist. Die gewählte Ziffer zeigt, ob die Wählscheibe richtig gezählt wird. LED und Lautsprecher-Relais lassen sich testen, wenn das Telefon frei ist.</p>
 
-		<p class="note">„Telefon beschäftigt“: Solange jemand telefoniert oder eine Aufnahme läuft, kann das Telefon nicht antworten. Anrufe, Texte und Änderungen werden dann ausgeführt, sobald es wieder frei ist. Bitte nicht mehrmals abschicken.</p>
+		<p class="note">„Telefon beschäftigt“: Solange jemand telefoniert oder eine Aufnahme läuft, kann das Telefon nicht antworten. Anrufe, Texte und Änderungen werden dann ausgeführt, sobald es wieder frei ist. Bitte nicht mehrmals abschicken. Testtöne der Seite Lautstärke werden dann nicht gespielt (später nochmal versuchen); die Lautstärke selbst lässt sich immer ändern.</p>
 	</section>
 
 	<section id="toene">

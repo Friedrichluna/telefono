@@ -337,7 +337,30 @@ RECORDING_RESULTS = {
 WEBAPP_TESTS = {
 	"led": "LED-Test",
 	"speaker": "Test des Lautsprecher-Relais",
+	"handset_sound": "Testton im Hörer",
+	"speaker_sound": "Testton im Lautsprecher",
+	"ring_sound": "Klingel-Test",
 }
+
+VOLUME_NAMES = (("handset", "Hörer"),
+                ("speaker", "Lautsprecher"),
+                ("ring", "Klingeln"))
+
+
+def volume_text (event:dict) -> str:
+	parts = []
+	for key, name in VOLUME_NAMES:
+		if key not in event:
+			continue
+
+		value = event[key]
+		if value is None:
+			parts.append ("%s nicht mehr eingestellt" % name)
+		else:
+			parts.append ("%s %s %%" % (name, value))
+
+	text = "Webapp: Lautstärke geändert"
+	return text + (": " + ", ".join (parts) if parts else "")
 
 
 def webapp_text (event:dict) -> str:
@@ -368,6 +391,9 @@ def webapp_text (event:dict) -> str:
 	if "test" == action:
 		return "Webapp: %s" % WEBAPP_TESTS.get (event.get ("output"),
 		                                        event.get ("output"))
+
+	if "volume" == action:
+		return volume_text (event)
 
 	return "Webapp: %s" % action
 

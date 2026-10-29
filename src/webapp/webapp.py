@@ -4,9 +4,11 @@
 import contextlib
 import errno
 import logging
+import math
 import os
 import shutil
 import tempfile
+import threading
 import time
 import urllib.parse
 import wave
@@ -45,6 +47,9 @@ from ..CONSTANTS import STATUS_DAYS
 from ..CONSTANTS import STATUS_TOP_NUMBERS
 from ..CONSTANTS import STATUS_REFRESH
 
+from ..CONSTANTS import VOLUME_FILE
+from ..CONSTANTS import RING_VOLUME
+
 from ..audio import EncodeError
 from ..audio import EncodeTimeout
 from ..audio import NoAudioError
@@ -69,6 +74,14 @@ from ..ipc import IPC_StringTooLong
 from ..ipc import IPC_Timeout
 from ..ipc import IPC_TTS_MESSAGE_MAX_BYTES
 from ..number import Number
+from ..volume import CHANNELS as VOLUME_CHANNELS
+from ..volume import Mixer
+from ..volume import MixerError
+from ..volume import read_settings
+from ..volume import to_db
+from ..volume import to_percent
+from ..volume import to_step
+from ..volume import write_settings
 
 from . import status
 
@@ -203,6 +216,35 @@ TEST_OUTPUTS = {
 }
 
 
+# the volume page: the settings (key, name), the test sounds (through
+# the main process, only if it is idle right now) and their messages
+VOLUME_ITEMS = (("handset", "Hörer"),
+                ("speaker", "Lautsprecher"),
+                ("ring", "Klingeln"))
+
+TEST_SOUNDS = {
+	"handset": (IPC_OUTPUT.HANDSET_SOUND, "Testton im Hörer wird abgespielt."),
+	"speaker": (IPC_OUTPUT.SPEAKER_SOUND,
+	            "Testton im Lautsprecher wird abgespielt (der Lautsprecher "
+	            "braucht %d s zum Einschalten)." % SPEAKER_POWERON_DELAY),
+	"ring": (IPC_OUTPUT.RING_SOUND, "Das Telefon klingelt einmal."),
+}
+
+
+# e.g. "85 % (-6 dB)", "stumm"; db None: unknown
+def level_text (percent:int, db, muted:bool) -> str:
+	if muted:
+		return "stumm"
+
+	if db is None:
+		return "%d %%" % percent
+
+	db = round (db)
+	return "%d %% (%s dB)" % (percent, "0" if 0 == db
+	                                   else ("+%d" % db if db > 0
+	                                         else "\u2212%d" % -db))
+
+
 # the upload can not be used, the message is shown to the user
 class InvalidUpload (Exception):
 	pass
@@ -306,6 +348,7 @@ class TelefonoWebApp (Flask):
 		self.add_url_rule ("/download/<number>", "download", self.download)
 		self.add_url_rule ("/diagnose", "diagnose", self.diagnose, methods=["GET", "POST"])
 		self.add_url_rule ("/diagnose/data", "diagnose_data", self.diagnose_data)
+		self.add_url_rule ("/volume", "volume", self.volume, methods=["GET", "POST"])
 
 		# hardware test: GPIO registers read directly, not through
 		# the main process (it does not answer while the phone is used)
@@ -317,6 +360,12 @@ class TelefonoWebApp (Flask):
 		# lengths of the recordings, both read directly
 		self.history = HistoryReader (HISTORY_FILE)
 		self.recordings = status.Recordings (RECORD_DIR)
+
+		# volume page: the settings file is written and the card set
+		# here, not through the main process (so it also works while
+		# the phone is busy); one change at a time
+		self.mixer = Mixer ()
+		self.volume_lock = threading.Lock ()
 
 		# the test page updates several times a second,
 		# that does not belong into the journal
@@ -622,6 +671,171 @@ class TelefonoWebApp (Flask):
 		                        pins=PINS,
 		                        output_specs=DIAGNOSE_OUTPUTS,
 		                        poll_interval=int (DIAGNOSE_POLL_INTERVAL * 1000))
+
+	# what the volume page shows: [{key, name, value, minimum, maximum,
+	# text, ...}] (value None: the card can not be read), the error
+	# (German), the settings file and the mixer state (None on errors);
+	# the value is what is saved, if it is, else what the card has
+	def volume_state (self):
+		settings, problems = read_settings (VOLUME_FILE)
+		for problem in problems:
+			self.logger.warning ("%s", problem)
+
+		error = None
+		try:
+			mixer = self.mixer.read ()
+
+			if len (mixer.values) <= max (VOLUME_CHANNELS.values ()):
+				raise MixerError ("%s has %d channel(s)"
+				                  % (mixer.name, len (mixer.values)))
+
+		except MixerError as failure:
+			self.logger.error ("reading the volume failed: %s", failure)
+			error = "Die Lautstärke der Soundkarte kann nicht gelesen " \
+			        "werden: %s" % failure
+			mixer = None
+
+		items = []
+		for key, name in VOLUME_ITEMS:
+			item = {"key": key, "name": name, "value": None}
+
+			if "ring" == key:
+				value = settings.get (key, RING_VOLUME)
+				item.update (value=value, minimum=0, maximum=100,
+				             percent=value, db=20 * math.log10 (value / 100)
+				                            if value else None,
+				             muted=0 == value, linear=True)
+
+			elif mixer is not None:
+				if key in settings:
+					value = to_step (mixer, settings[key])
+				else:
+					value = mixer.values[VOLUME_CHANNELS[key]]
+
+				item.update (value=value, minimum=mixer.minimum,
+				             maximum=mixer.maximum,
+				             percent=to_percent (mixer, value),
+				             db=to_db (mixer, value),
+				             muted=mixer.mute and value == mixer.minimum,
+				             db_min=mixer.db_min, db_max=mixer.db_max,
+				             mute=mixer.mute, linear=False)
+
+			if item["value"] is not None:
+				item["text"] = level_text (item["percent"], item["db"],
+				                           item["muted"])
+			items.append (item)
+
+		return items, error, settings, mixer
+
+	# without the script: back to the page with the message; with it:
+	# JSON with the message and the levels
+	def volume_reply (self, message:str, message_type:str, status:int=200,
+	                  **context):
+		if is_async ():
+			return jsonify (message=message, type=message_type,
+			                **context), status
+
+		flash (message, message_type)
+		return redirect (url_for ("volume"))
+
+	# GET: the page; POST: saves the values that differ from what the
+	# page showed (only those get into the file, the rest stays as it
+	# is), sets the card, then plays the test sound (name "test")
+	def volume (self):
+		if "POST" != request.method:
+			items, error, _, _ = self.volume_state ()
+			response = self.make_response (render_template (
+			        "volume.html", items=items, error=error))
+			response.cache_control.no_store = True
+			return response
+
+		test = request.form.get ("test")
+		if test is not None and test not in TEST_SOUNDS:
+			return self.volume_reply ("Unbekannter Testton.", "error", 400)
+
+		with self.volume_lock:
+			items, error, settings, mixer = self.volume_state ()
+			new = dict (settings)
+
+			for item in items:
+				key = item["key"]
+				text = request.form.get (key)
+				if text is None or item["value"] is None:
+					continue
+
+				try:
+					value = int (text.strip ())
+				except ValueError:
+					value = None
+
+				if value is None \
+				or not item["minimum"] <= value <= item["maximum"]:
+					return self.volume_reply ("Ungültiger Wert für %s."
+					                          % item["name"], "error", 400)
+
+				if value != item["value"]:
+					new[key] = value if "ring" == key \
+					           else to_percent (mixer, value)
+
+			changed = new != settings
+			if changed:
+				try:
+					write_settings (new, VOLUME_FILE)
+
+				except OSError as failure:
+					self.logger.error ("saving %s failed: %s",
+					                   VOLUME_FILE, failure)
+					return self.volume_reply ("Speichern fehlgeschlagen.",
+					                          "error", 500)
+
+				self.logger.info ("volume settings: %r", new)
+
+			# the card gets what is saved (also after it was changed
+			# some other way); the main process sees the new file
+			# when it is free and logs it
+			mixer_settings = {key: value for key, value in new.items ()
+			                  if key in VOLUME_CHANNELS}
+			if mixer is not None and mixer_settings:
+				try:
+					self.mixer.apply (mixer_settings)
+
+				except MixerError as failure:
+					self.logger.error ("setting the volume failed: %s",
+					                   failure)
+					return self.volume_reply (
+					        ("Gespeichert, aber die " if changed else "Die ")
+					        + "Soundkarte konnte nicht eingestellt werden.",
+					        "error", 500)
+
+			items = self.volume_state ()[0] if changed else items
+
+		levels = {item["key"]: item["text"] for item in items
+		          if item["value"] is not None}
+		message = "Lautstärke gespeichert." if changed \
+		          else "Lautstärke unverändert."
+
+		if test is None:
+			return self.volume_reply (message, "success", levels=levels)
+
+		output, test_message = TEST_SOUNDS[test]
+		saved = "Lautstärke gespeichert. " if changed else ""
+
+		# a test that can not be done now is not done later (that
+		# would surprise everyone), the main process skips it
+		try:
+			done = self.ipc.test_output (output, only_now=True)
+
+		except IPC_Timeout:
+			self.logger.warning ("telefono busy: test sound %s", test)
+			return self.volume_reply (saved + BUSY_MESSAGE, "warning",
+			                          503, levels=levels)
+
+		if not done:
+			return self.volume_reply (saved + "Ein Fehler ist aufgetreten.",
+			                          "error", 500, levels=levels)
+
+		return self.volume_reply (saved + test_message, "success",
+		                          levels=levels)
 
 	# the recording file itself, read from RECORD_DIR without asking
 	# the main process, so it can also be heard while the phone is

@@ -16,6 +16,7 @@ pkgpython_PYTHON += src/number.py
 pkgpython_PYTHON += src/player.py
 pkgpython_PYTHON += src/recorder.py
 pkgpython_PYTHON += src/speaker.py
+pkgpython_PYTHON += src/volume.py
 
 webappdir = $(pkgpythondir)/webapp
 webapp_PYTHON =
@@ -73,6 +74,7 @@ dist_template_DATA += src/webapp/templates/record.html
 dist_template_DATA += src/webapp/templates/say.html
 dist_template_DATA += src/webapp/templates/status.html
 dist_template_DATA += src/webapp/templates/upload.html
+dist_template_DATA += src/webapp/templates/volume.html
 
 staticdir = $(pkgdatadir)/static
 dist_static_DATA =

@@ -142,6 +142,29 @@ MAX_HOUR = 21
 SPEAKER_DELAY = 0.2
 SPEAKER_POWERON_DELAY = 2
 
+# volume (webapp page /volume, src/volume.py): the playback volume
+# control of the USB card has a channel for the loudspeaker (left, to
+# the amplifier the relay switches on) and one for the handset (right),
+# see docs/circuit_diagram.png; amixer without -c uses the "default"
+# card like the playback (sox, ffplay, espeak), the first control of
+# MIXER_CONTROLS the card has is used
+MIXER_CMD = ("amixer", )
+MIXER_CONTROLS = ("Speaker Playback Volume", "PCM Playback Volume",
+                  "Master Playback Volume", "Headphone Playback Volume")
+MIXER_SPEAKER_CHANNEL = 0
+MIXER_HANDSET_CHANNEL = 1
+MIXER_TIMEOUT = 5
+# the settings of the page in percent, written by the webapp; without
+# the file (or an entry) nothing is changed (the card keeps what
+# alsactl restored at boot)
+VOLUME_FILE = "@pkglocalstatedir@/volume.json"
+# ffplay volume (percent) of the ring without a setting
+RING_VOLUME = 70
+# test sounds of the page (through the main process, only when idle)
+VOLUME_TEST_RING_TIME = 3
+VOLUME_TEST_HANDSET_TEXT = "Das ist die Lautstärke im Hörer."
+VOLUME_TEST_SPEAKER_TEXT = "Das ist die Lautstärke des Lautsprechers."
+
 
 SOX_BASE = ("play", "-n")
 SOX_VOL = ("vol", "-20dB")
@@ -232,6 +255,7 @@ SOX_NUMBER_D = SOX_NUMBER (941, 1633)
 FFPLAY_CMD = ("ffplay", "-nodisp", "-autoexit", "-i")
 FFPLAY_START = ("-ss", )
 FFPLAY_VOLUME = ("-volume", )
+FFPLAY_DURATION = ("-t", )
 FFPLAY_POLL_DELAY = 0.01
 # restart ffplay, if its position doesn't change for this many seconds
 # (startup takes 1 s, with a cold cache after boot 4.5 s)
