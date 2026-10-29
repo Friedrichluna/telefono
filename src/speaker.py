@@ -36,7 +36,13 @@ class SpeakerThread (threading.Thread):
 		# output, off from the start
 		GPIO.setup (self.__gpio, GPIO.OUT, initial=self.__off_level)
 
-		self.__event = threading.Event ()
+		# activate () holds the relay on until the matching
+		# deactivate (), the switch is ignored meanwhile (counted, so
+		# a shout keeps it on when something inside it lets go); the
+		# lock keeps the thread from switching it off right after an
+		# activate ()
+		self.__lock = threading.Lock ()
+		self.__holds = 0
 		self.__stop = threading.Event ()
 
 		# force to set pin off
@@ -65,33 +71,48 @@ class SpeakerThread (threading.Thread):
 		self.__is_on = False
 		return True
 
+	# the relay follows the loudspeaker switch (lock held)
+	def __follow_switch (self):
+		if self.__switch.is_pressed:
+			self.__set_on ()
+		else:
+			self.__set_off ()
+		return
+
 	def run (self):
 		while not self.__stop.is_set ():
-			# block while event
-			while self.__event.is_set ():
-				time.sleep (SPEAKER_DELAY)
+			with self.__lock:
+				if 0 == self.__holds:
+					self.__follow_switch ()
 
-			if self.__switch.is_pressed:
-				self.__set_on ()
-			else:
-				self.__set_off ()
-
-			time.sleep (SPEAKER_DELAY)
+			self.__stop.wait (SPEAKER_DELAY)
 
 		return
 
 	def activate (self):
 		self.log.debug ("activate request")
-		self.__event.set ()
 
-		if self.__set_on ():
+		with self.__lock:
+			self.__holds += 1
+			changed = self.__set_on ()
+
+		if changed:
 			# only wait, if the state has actually changed
 			time.sleep (SPEAKER_POWERON_DELAY)
 		return
 
+	# back to what the switch says, once every activate () is undone
 	def deactivate (self):
 		self.log.debug ("deactivate request")
-		self.__event.clear ()
+
+		with self.__lock:
+			if 0 < self.__holds:
+				self.__holds -= 1
+			else:
+				self.log.warning ("deactivate without activate")
+
+			if 0 == self.__holds:
+				self.__follow_switch ()
 		return
 
 	def join (self, timeout=None):
@@ -104,6 +125,7 @@ class SpeakerThread (threading.Thread):
 		# telefono stops: the loudspeaker is off (the pin keeps its
 		# level after the process ended)
 		if not self.is_alive ():
-			self.__set_off ()
+			with self.__lock:
+				self.__set_off ()
 
 		return result

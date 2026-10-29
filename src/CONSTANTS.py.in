@@ -139,6 +139,12 @@ DEBUG_TIME_FORMAT = "%F %T %Z(%z) (%s)"
 MIN_HOUR = 15
 MAX_HOUR = 21
 
+# a shout (src/event_queue.py) more than SHOUT_MAX_DELAY s after its
+# time is skipped, not played late over the loudspeaker: the phone was
+# in use at its time, or the clock jumped after the start (the Pi has
+# no clock of its own, it gets the time from the network)
+SHOUT_MAX_DELAY = 10 * 60
+
 SPEAKER_DELAY = 0.2
 SPEAKER_POWERON_DELAY = 2
 

@@ -292,6 +292,9 @@ def main ():
 	global running
 	running = True
 
+	# a shout plays to the end, unless telefono is stopped
+	player.stopping = lambda: not running
+
 	signal.signal (signal.SIGINT, signal_handler)
 	signal.signal (signal.SIGTERM, signal_handler)
 

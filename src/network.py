@@ -17,6 +17,8 @@ from .CONSTANTS import RECORD_SUFFIX
 from .CONSTANTS import RECORD_LIST_FILE
 from .CONSTANTS import BACKUP_EXT
 
+from .CONSTANTS import SHOUT_MAX_DELAY
+
 from .history import history
 from .number import Number
 
@@ -421,6 +423,82 @@ class Subscriber ():
 			self.__add_history ("in", cause, number, "not picked up")
 
 		return connected
+
+	# the recordings a shout plays: the recording, or every member of
+	# a list (in list order); nothing for other numbers
+	def __shout_members (self) -> list:
+		if SubscriberType.RECORDING == self.__type:
+			return [self]
+
+		if SubscriberType.LIST == self.__type:
+			return list (self.__list)
+
+		return []
+
+	# a daily shout (src/event_queue.py, late: seconds after its time):
+	# no ring, over the loudspeaker and to the end, also with the
+	# handset on the hook (Player.play_shout). Without a recording it
+	# is skipped silently (only logged): a SIT tone over the
+	# loudspeaker at 22:00 would only disturb, nobody dialed. History
+	# result: played, skipped (reason: no recording | late), error
+	# (a file could not be played) or stopped (telefono was stopped)
+	def shout (self, player, late:float=0) -> str:
+		self.log.info ("shout %s", self.number)
+
+		data = dict ()
+		members = self.__shout_members ()
+
+		if SubscriberType.LIST == self.__type:
+			data["routed"] = [member.number for member in members]
+
+		if SHOUT_MAX_DELAY < late:
+			self.log.warning ("shout %s skipped: %d s late",
+			                  self.number, late)
+			result = "skipped"
+			data["reason"] = "late"
+			data["late"] = round (late)
+
+		else:
+			playable = [member for member in members if member.exists]
+
+			for member in members:
+				if member not in playable:
+					self.log.warning ("shout %s: %s has no recording,"
+					                  " skipped", self.number,
+					                  member.number)
+
+			if not playable:
+				self.log.info ("shout %s skipped: no recording",
+				               self.number)
+				result = "skipped"
+				data["reason"] = "no recording"
+
+			else:
+				if SubscriberType.LIST == self.__type:
+					data["routed"] = [member.number
+					                  for member in playable]
+
+				# the length played (without switching the relay on)
+				played = player.play_shout ([member.filename
+				                             for member in playable])
+				results = [result for result, _ in played]
+				data["seconds"] = round (sum (seconds for _, seconds
+				                              in played), 1)
+
+				if "aborted" in results:
+					result = "stopped"
+				elif any ("complete" != r for r in results):
+					result = "error"
+				else:
+					result = "played"
+
+				self.log.info ("shout %s: %s (%s)", self.number,
+				               result, ", ".join (results))
+
+		history.add ("call", direction="in", cause="shout",
+		             number=self.number, kind=self.type.name.lower (),
+		             result=result, **data)
+		return result
 
 	def dial (self, number):
 		return self.__network[self.__number + number]

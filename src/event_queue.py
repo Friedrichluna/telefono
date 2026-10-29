@@ -153,7 +153,8 @@ class EventQueue:
 				               self.__get_debug_time (_time))
 				date = datetime.datetime.fromtimestamp (_time)
 				if event[2] (date):
-					self.__process_shout (event[1], player)
+					self.__process_shout (event[1], player,
+					                      time.time () - _time)
 				else:
 					self.log.info ("suppress shout due to filter")
 
@@ -176,8 +177,8 @@ class EventQueue:
 			player.play_busy_tone ()
 		return
 
-	def __process_shout (self, number, player):
-		if number.inbound_call (player, ring=False, cause="shout"):
-			# still off-hook
-			player.play_busy_tone ()
+	# over the loudspeaker, also on the hook (Subscriber.shout); a
+	# handset lifted meanwhile gets the dial tone afterwards (main loop)
+	def __process_shout (self, number, player, late:float):
+		number.shout (player, late)
 		return

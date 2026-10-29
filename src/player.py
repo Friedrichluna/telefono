@@ -88,6 +88,10 @@ class Player ():
 		# from the volume settings (src/volume.py)
 		self.ring_volume = RING_VOLUME
 
+		# whether telefono is stopping (SIGTERM), set by the main
+		# process: the only thing that ends a shout early
+		self.stopping = self.__never
+
 		return
 
 	def __on_hook (self):
@@ -169,8 +173,18 @@ class Player ():
 		return number
 
 	# duration: only the first seconds of the file (not with wind)
+	# returns whether it was not aborted
 	def __play (self, filename, abort, volume=100,
 	            aloud=False, wind=False, duration=None) -> bool:
+		return "aborted" != self.__play_result (filename, abort, volume,
+		                                        aloud, wind, duration)
+
+	# how the playback ended: "complete", "aborted", "missing" (no
+	# file) or "failed" (ffplay gave up after stalling, exited with
+	# an error or never showed a position: a broken file, ffplay
+	# exits with 0 then)
+	def __play_result (self, filename, abort, volume=100,
+	                   aloud=False, wind=False, duration=None) -> str:
 
 		self.log.debug ("play file %s, abort=%s, "
 		                "volume=%d, aloud=%s, wind=%s, duration=%r",
@@ -179,12 +193,15 @@ class Player ():
 
 		if not os.path.exists (filename):
 			self.log.error ("file doesn't exist")
-			return True
+			return "missing"
 
 		if abort ():
-			return False
+			return "aborted"
 
 		aborted = False
+		failed = False
+		# whether ffplay ever showed a position
+		played = False
 
 		if aloud:
 			self.__speaker.activate ()
@@ -217,6 +234,7 @@ class Player ():
 
 				_pos = self.__parse_ffplay_output (buffer)
 				if _pos is not None:
+					played = True
 					if _pos != start:
 						progress = time.monotonic ()
 					start = _pos
@@ -232,6 +250,7 @@ class Player ():
 					self.log.error ("ffplay stalled %d times, "
 					                "giving up on %s",
 					                stalls + 1, filename)
+					failed = True
 					break
 
 				stalls += 1
@@ -276,7 +295,33 @@ class Player ():
 		if abort ():
 			aborted = True
 
-		return not aborted
+		if aborted:
+			return "aborted"
+
+		if failed:
+			return "failed"
+
+		if 0 != process.returncode:
+			self.log.error ("ffplay failed on %s (exit status %r)",
+			                filename, process.returncode)
+			return "failed"
+
+		if not played:
+			# what ffplay wrote after the last poll
+			try:
+				data = process.stderr.read ()
+			except (OSError, ValueError):
+				data = None
+
+			if data:
+				played = self.__parse_ffplay_output (
+				        bytes (buffer + data)) is not None
+
+		if not played:
+			self.log.error ("ffplay played nothing of %s", filename)
+			return "failed"
+
+		return "complete"
 
 	def play_system_sound (self, filename:str) -> True:
 		return self.__play (filename,
@@ -308,6 +353,34 @@ class Player ():
 	def play_file (self, filename:str, aloud, wind) -> bool:
 		return self.__play (filename, abort=self.__on_hook,
 		                    aloud=aloud, wind=wind)
+
+	# the daily shouts (src/event_queue.py): the files one after the
+	# other over the loudspeaker (relay on, whatever the speaker
+	# switch says, back to the switch afterwards) and to the end,
+	# with the handset on the hook or lifted; only stopping telefono
+	# ends them early; per file (result, seconds played), result:
+	# "complete", "aborted" (stopping), "missing" or "failed"
+	def play_shout (self, filenames) -> list:
+		results = list ()
+		if not filenames:
+			return results
+
+		self.__speaker.activate ()
+		try:
+			for filename in filenames:
+				if self.stopping ():
+					results.append (("aborted", 0))
+					continue
+
+				self.log.info ("shout: playing %s", filename)
+				started = time.monotonic ()
+				result = self.__play_result (filename,
+				                             abort=self.stopping)
+				results.append ((result, time.monotonic () - started))
+		finally:
+			self.__speaker.deactivate ()
+
+		return results
 
 
 	def start_tone (self, command, aloud=False):
@@ -394,7 +467,7 @@ class Player ():
 		timer = 0
 		while timer < NO_NUMBER_TIMEOUT:
 			if not self.__off_hook ():
-				self.stop_tone ()
+				self.stop_tone (aloud)
 				return False
 
 			time.sleep (NO_NUMBER_DELAY)

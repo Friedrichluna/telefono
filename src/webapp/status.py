@@ -297,9 +297,18 @@ def call_text (event:dict) -> str:
 		text = "Anruf %s aus der Webapp" % number
 
 	if "list" == kind and "routed" in event:
-		text += " (Liste, gespielt: %s)" % event["routed"]
+		routed = event["routed"]
+		# a shout plays every member of a list
+		if isinstance (routed, list):
+			routed = ", ".join (str (number) for number in routed)
+		text += " (Liste, gespielt: %s)" % routed
 	elif "callback" == kind:
 		text += " (Zeitansage)"
+
+	if "shout" == cause:
+		shout = shout_text (event, result, seconds)
+		if shout is not None:
+			return text + shout
 
 	incoming = "in" == event.get ("direction") and "shout" != cause
 
@@ -324,6 +333,34 @@ def call_text (event:dict) -> str:
 		return text + (" nach %s" % seconds if seconds else "")
 
 	return text
+
+
+# the results of a shout (Subscriber.shout), None for older entries
+# (before shouts played on the hook: "aborted", ...)
+def shout_text (event:dict, result, seconds:str):
+	if "played" == result:
+		return ": über den Lautsprecher abgespielt" \
+		       + (" (%s)" % seconds if seconds else "")
+
+	if "skipped" == result:
+		if "late" == event.get ("reason"):
+			late = event.get ("late")
+			if isinstance (late, (int, float)):
+				return ": ausgelassen, %s zu spät (Telefon war besetzt" \
+				       " oder die Uhr wurde gestellt)" % duration_text (late)
+			return ": ausgelassen, zu spät"
+
+		return ": ausgelassen, keine Aufnahme"
+
+	if "error" == result:
+		return ": Fehler beim Abspielen" \
+		       + (" (nach %s)" % seconds if seconds else "")
+
+	if "stopped" == result:
+		return ": abgebrochen, telefono wurde beendet" \
+		       + (" (nach %s)" % seconds if seconds else "")
+
+	return None
 
 
 RECORDING_RESULTS = {
