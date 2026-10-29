@@ -178,6 +178,11 @@ def do_menu (off_hook, dial, network, player, led, log):
 		if not network["300"].outbound_call (player, "menu"):
 			# hang up
 			return
+	elif option == 4:
+		log.info ("menu: selected 4")
+		if not network["400"].outbound_call (player, "menu"):
+			# hang up
+			return
 	else:
 		log.info ("error in menu selection")
 		if not player.notify_menu_error ():
@@ -260,6 +265,8 @@ def main ():
 	network["200"].list = ["201", "202", "203", "204", "205", "206"]
 	# pater quotes
 	network["300"].list = ["2", "10", "11", "19", "22", "26", "30", "88"]
+	# say the address of the webapp
+	network["400"].callback = Player.say_address
 
 	# the wiring differs between the phones, see telefono.conf
 	inverted = read_inverted ()

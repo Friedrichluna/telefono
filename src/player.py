@@ -5,8 +5,11 @@ import datetime
 import fcntl
 import logging
 import os
+import socket
 import subprocess
 import time
+
+import psutil
 
 from .CONSTANTS import RING_FILE
 
@@ -71,7 +74,30 @@ from .CONSTANTS import SAY_DELAY
 
 from .CONSTANTS import TIME_FORMAT
 
+from .CONSTANTS import FLASK_PORT
+
 from .recorder import RECORDER_RESULT
+
+
+# the addresses of the webapp for the menu, spoken (espeak reads
+# 192.168.0.144 as thousands): "192 Punkt 168 Punkt 0 Punkt 144
+# Doppelpunkt 5000", one per interface that is up (not loopback)
+def webapp_addresses () -> list:
+	stats = psutil.net_if_stats ()
+	result = list ()
+	for name, addresses in psutil.net_if_addrs ().items ():
+		if "lo" == name or name not in stats or not stats[name].isup:
+			continue
+
+		for address in addresses:
+			if socket.AF_INET == address.family \
+			and not address.address.startswith ("127."):
+				result.append ("%s Doppelpunkt %d" % (
+				    address.address.replace (".", " Punkt "),
+				    FLASK_PORT))
+				break
+
+	return result
 
 
 class Player ():
@@ -568,6 +594,25 @@ class Player ():
 		time_string = now.strftime (TIME_FORMAT)
 
 		ret = self.say (time_string)
+
+		if aloud:
+			self.__speaker.deactivate ()
+
+		return ret
+
+	def say_address (self, aloud, *args) -> bool:
+		self.log.info ("saying webapp address aloud=%r", aloud)
+
+		addresses = webapp_addresses ()
+		if addresses:
+			message = "Webseite: %s." % " oder ".join (addresses)
+		else:
+			message = "Keine Netzwerkverbindung."
+
+		if aloud:
+			self.__speaker.activate ()
+
+		ret = self.say (message)
 
 		if aloud:
 			self.__speaker.deactivate ()
