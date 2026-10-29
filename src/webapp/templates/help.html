@@ -179,7 +179,7 @@
 		<h3>Wenn es klingelt</h3>
 		<p>Das Telefon klingelt etwa 20 Sekunden lang. Wer abnimmt, hört eine Aufnahme. Es klingelt, wenn</p>
 		<ul>
-			<li>jemand auf dieser Webseite <a href="{{ url_for('home') }}">anrufen lässt</a>,</li>
+			<li>jemand auf dieser Webseite in der <a href="{{ url_for('list') }}">Liste</a> auf den Knopf mit dem Hörer drückt,</li>
 			<li>einmal am Tag zu einer zufälligen Zeit zwischen 15 und 21 Uhr, mit einer zufälligen Aufnahme.</li>
 		</ul>
 
@@ -208,11 +208,8 @@
 		<p>Im selben WLAN wie das Telefon: <a href="http://{{ net.name }}.local:{{ net.port }}/">http://{{ net.name }}.local:{{ net.port }}</a> (oder <code>http://{{ net.hostname }}.local:{{ net.port }}</code>, sicher über <code>https://…:5443</code>). Sind mehrere Telefone im selben Netz, heißt das zweite <code>{{ net.name }}-2.local</code> usw.; welcher Name es geworden ist, zeigt der <a href="{{ url_for('status') }}">Status</a>. Feste Namen gibt man jedem Telefon in <code>/etc/telefono.conf</code> (Abschnitt <code>[network]</code>, <code>name = …</code>).</p>
 		<p>Ist kein bekanntes WLAN da (zum Beispiel an einem anderen Ort), macht das Telefon nach etwa 1,5 Minuten ein eigenes WLAN auf: <b>„{{ net.ssid }}“</b>. Das Passwort hat, wer das Telefon eingerichtet hat (auf dem Telefon steht es in <code>/etc/telefono-hotspot.conf</code>). Mit diesem WLAN verbinden und <a href="http://{{ net.address }}:{{ net.port }}/">http://{{ net.address }}:{{ net.port }}</a> öffnen (oder <code>http://{{ net.name }}.local:{{ net.port }}</code>). Meldet das Handy „kein Internet“, trotzdem verbunden bleiben. Ist das bekannte WLAN wieder in Reichweite, wechselt das Telefon innerhalb von etwa 3 Minuten zurück, aber nur, wenn gerade kein Gerät mit seinem WLAN verbunden ist.</p>
 
-		<h4><a href="{{ url_for('home') }}">Anrufen</a></h4>
-		<p>Nummer eingeben und „Anrufen“ drücken. Das Telefon klingelt, und wer abnimmt, hört die Aufnahme dieser Nummer.</p>
-
 		<h4><a href="{{ url_for('list') }}">Liste</a></h4>
-		<p>Alle Nummern mit Beschreibung. Der Knopf mit dem Hörer lässt das Telefon mit dieser Nummer klingeln. Die drei Punkte (&#8942;) daneben öffnen ein Menü: „Abspielen“ spielt die Aufnahme gleich im Browser ab (auch wenn das Telefon gerade beschäftigt ist); dabei erscheinen in der Zeile ein Knopf zum Anhalten und Weiterspielen und ein Regler zum Spulen. „Herunterladen“ speichert sie als .mp3 Datei, „Beschreibung bearbeiten“ ändert die Beschreibung. Oben kann man nach Nummer oder Beschreibung suchen.</p>
+		<p>Die Startseite: alle Nummern mit Beschreibung. Der Knopf mit dem Hörer lässt das Telefon mit dieser Nummer klingeln – es klingelt etwa 20 Sekunden, und wer abnimmt, hört die Aufnahme dieser Nummer. Die drei Punkte (&#8942;) daneben öffnen ein Menü: „Abspielen“ spielt die Aufnahme gleich im Browser ab (auch wenn das Telefon gerade beschäftigt ist); dabei erscheinen in der Zeile ein Knopf zum Anhalten und Weiterspielen und ein Regler zum Spulen. „Herunterladen“ speichert sie als .mp3 Datei, „Beschreibung bearbeiten“ ändert die Beschreibung. Oben kann man nach Nummer oder Beschreibung suchen.</p>
 
 		<h4><a href="{{ url_for('upload_page') }}">Hochladen</a></h4>
 		<p>Aufnahmen kommen auf zwei Wegen auf das Telefon. Oben auf der Seite: eine Audiodatei (höchstens {{ upload_max }} MiB) unter einer freien Nummer speichern. Danach kann man sie am Telefon wählen. Man kann auch mehrere Dateien auf einmal auswählen: Für jede kann man eine Nummer eintragen (leer lassen = die nächste freie, in der Reihenfolge der Liste) und eine Beschreibung (vorausgefüllt mit dem Dateinamen); sie werden nacheinander hochgeladen, und bei jeder steht, ob es geklappt hat. .mp3 wird so gespeichert, wie es ist, andere Formate ({{ upload_extensions[1:] | join(', ') }}) werden in .mp3 umgewandelt. Nullen am Anfang zählen mit: <span class="number">007</span> ist eine andere Nummer als <span style="white-space: nowrap"><span class="number">7</span>.</span></p>

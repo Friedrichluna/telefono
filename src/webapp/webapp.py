@@ -334,8 +334,11 @@ class TelefonoWebApp (Flask):
 		# so a new key on every start does not matter
 		self.secret_key = os.urandom (16)
 
-		self.add_url_rule ("/", "home", self.home, methods=["POST", "GET"])
-		self.add_url_rule ("/list", "list", self.list, methods=["POST", "GET"])
+		# the list is the start page; "list" is the only endpoint
+		# that is built (url_for, the "#n<number>" anchors), the old
+		# address answers the same way, so nothing bookmarked breaks
+		self.add_url_rule ("/", "list", self.list, methods=["POST", "GET"])
+		self.add_url_rule ("/list", "old_list", self.list, methods=["POST", "GET"])
 		self.add_url_rule ("/edit/<number>", "edit_value", self.edit_value, methods=["GET", "POST"])
 		self.add_url_rule ("/say", "say", self.say, methods=["GET", "POST"])
 		# uploading a file and recording in the browser are one page
@@ -464,26 +467,6 @@ class TelefonoWebApp (Flask):
 		return self.reply ("message.html", "Eingabe zu groß.",
 		                   "error", 413, back=request.path,
 		                   back_title="Zurück")
-
-	def home(self):
-		if request.method == "POST":
-			requested_number = request.form["nm"]
-
-			number = parse_number (requested_number)
-			if None is number:
-				return self.reply ("index.html", INVALID_NUMBER,
-				                   "error", 400,
-				                   number=requested_number)
-
-			message, message_type = self.ipc.queue_call (number)
-			if "success" != message_type:
-				return self.reply ("index.html", message,
-				                   message_type,
-				                   number=requested_number)
-
-			return self.finish (url_for ("home"), message, message_type)
-		else:
-			return render_template("index.html")
 
 	def list(self):
 		if request.method == "POST":

@@ -427,7 +427,7 @@
 {% endif %}
 	</div>
 	<nav>
-		<h1><a href="{{ url_for('home') }}">Telefono</a></h1>
+		<h1><a href="{{ url_for('list') }}">Telefono</a></h1>
 		<button type="button" id="menu-button" aria-controls="menu" aria-expanded="false" title="Menü">
 			<svg viewBox="0 0 30 30" xmlns="http://www.w3.org/2000/svg">
 				<path stroke="rgba(0, 0, 0, 0.5)" stroke-width="2" stroke-linecap="round" stroke-miterlimit="10" d="M4 7h22M4 15h22M4 23h22"/>
@@ -436,9 +436,9 @@
 		<div id="menu">
 			<div>
 {% set active_page = request.endpoint %}
-{% if active_page == 'edit_value' %}{% set active_page = 'list' %}{% endif %}
+{% if active_page in ['edit_value', 'old_list'] %}{% set active_page = 'list' %}{% endif %}
 {% if active_page in ['upload_file', 'record_page', 'record_save'] %}{% set active_page = 'upload_page' %}{% endif %}
-{% for endpoint, title in [('home', 'Anrufen'), ('list', 'Liste'), ('upload_page', 'Hochladen'), ('say', 'Text ansagen'), ('volume', 'Lautstärke'), ('status', 'Status'), ('diagnose', 'Hardware-Test'), ('help', 'Anleitung')] %}
+{% for endpoint, title in [('list', 'Liste'), ('upload_page', 'Hochladen'), ('say', 'Text ansagen'), ('volume', 'Lautstärke'), ('status', 'Status'), ('diagnose', 'Hardware-Test'), ('help', 'Anleitung')] %}
 				<a {% if active_page == endpoint %}class="active" aria-current="page" {% endif %}href="{{ url_for(endpoint) }}">{{ title }}</a>
 {% endfor %}
 			</div>

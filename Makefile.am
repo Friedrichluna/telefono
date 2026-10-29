@@ -98,7 +98,6 @@ dist_template_DATA += src/webapp/templates/base.html
 dist_template_DATA += src/webapp/templates/diagnose.html
 dist_template_DATA += src/webapp/templates/edit.html
 dist_template_DATA += src/webapp/templates/help.html
-dist_template_DATA += src/webapp/templates/index.html
 dist_template_DATA += src/webapp/templates/list.html
 dist_template_DATA += src/webapp/templates/message.html
 dist_template_DATA += src/webapp/templates/say.html
