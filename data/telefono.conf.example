@@ -2,11 +2,12 @@
 #
 # Copy this file to telefono.conf in the same directory (usually
 # /etc/telefono.conf) and adjust it there, it is not overwritten by
-# updates. Without the file no input is inverted.
+# updates. Without the file nothing is inverted.
 #
 # The phones are wired differently: an input that reads "pressed" at
 # rest (handset on the hook, buttons released, dial not turned) has to
-# be inverted. Values: yes or no, a missing entry means no.
+# be inverted, and so has the loudspeaker relay if it is on while it
+# should be off. Values: yes or no, a missing entry means no.
 #
 # After a change: sudo systemctl restart telefono
 # The journal shows what was read: journalctl -u telefono | grep inverted
@@ -24,3 +25,6 @@ dial_counter = no
 dial_in_use = no
 # loudspeaker switch (GPIO 17), inverting swaps loud and quiet
 speaker_switch = no
+# loudspeaker relay (GPIO 4, output, powers the loudspeaker's amplifier):
+# no = low is on, yes = high is on
+speaker_relay = no

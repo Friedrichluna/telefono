@@ -24,13 +24,19 @@ PINS = {"hook":           18,
 INPUTS = tuple (PINS)
 
 # outputs: the LED (gpiozero, high is on) and the loudspeaker relay
-# (src/speaker.py, low is on)
+# (src/speaker.py, low is on, high if "speaker_relay" is inverted)
 LED_PIN = 20
 SPEAKER_RELAY_PIN = 4
 
+# the outputs of the [inverted] section
+OUTPUTS = ("speaker_relay", )
+
+# every key of the [inverted] section
+KEYS = (*INPUTS, *OUTPUTS)
+
 
 # what was read from CONFIG_FILE:
-# inverted: {input: bool}
+# inverted: {key: bool} for all KEYS (inputs and the relay)
 # found:    the file was read
 # error:    the file can not be parsed (str), nothing is inverted then
 # unknown_sections, unknown_inputs: ignored names (lists)
@@ -44,7 +50,7 @@ ConfigResult = collections.namedtuple ("ConfigResult",
 # like read_inverted, but without logging (the webapp's hardware test
 # page reads it on every update)
 def load_inverted (path:str=CONFIG_FILE) -> ConfigResult:
-	inverted = dict.fromkeys (INPUTS, False)
+	inverted = dict.fromkeys (KEYS, False)
 	unknown_sections = list ()
 	unknown_inputs = list ()
 	invalid = dict ()
@@ -80,19 +86,20 @@ def load_inverted (path:str=CONFIG_FILE) -> ConfigResult:
 	                     unknown_sections, unknown_inputs, invalid)
 
 
-# which inputs of this phone are inverted, as {input: bool}; a missing
-# file, section or entry and invalid values mean not inverted (the
-# original wiring), so a broken file never stops the phone
+# which pins of this phone are inverted, as {key: bool} (the inputs and
+# the speaker relay); a missing file, section or entry and invalid
+# values mean not inverted (the original wiring), so a broken file
+# never stops the phone
 def read_inverted (path:str=CONFIG_FILE) -> dict:
 	result = load_inverted (path)
 
 	if result.error:
-		log.error ("%s is invalid, no input is inverted: %s",
+		log.error ("%s is invalid, no pin is inverted: %s",
 		           path, result.error)
 		return result.inverted
 
 	if not result.found:
-		log.info ("%s not found or not readable, no input is inverted",
+		log.info ("%s not found or not readable, no pin is inverted",
 		          path)
 		return result.inverted
 
@@ -101,9 +108,9 @@ def read_inverted (path:str=CONFIG_FILE) -> dict:
 		             path, section)
 
 	for key in result.unknown_inputs:
-		log.warning ("%s: unknown input \"%s\" is ignored"
+		log.warning ("%s: unknown key \"%s\" is ignored"
 		             " (known: %s)",
-		             path, key, ", ".join (INPUTS))
+		             path, key, ", ".join (KEYS))
 
 	for key, value in result.invalid.items ():
 		log.error ("%s: \"%s = %s\" is neither yes nor no,"
@@ -111,6 +118,6 @@ def read_inverted (path:str=CONFIG_FILE) -> dict:
 		           path, key, value, key)
 
 	inverted = result.inverted
-	log.info ("inverted inputs (%s): %s", path,
-	          ", ".join (k for k in INPUTS if inverted[k]) or "none")
+	log.info ("inverted pins (%s): %s", path,
+	          ", ".join (k for k in KEYS if inverted[k]) or "none")
 	return inverted

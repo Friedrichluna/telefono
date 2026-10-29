@@ -236,7 +236,7 @@
 					<button type="submit" class="button light">{{ "Blinken lassen" if "led" == spec.key else "2 s einschalten" }}</button>
 				</form>
 			</div>
-			<div class="details hint">GPIO {{ spec.pin }} · Pegel <span data-f="level">{{ item.level if item else "–" }}</span> · {{ "high" if spec.active_high else "low" }} ist an</div>
+			<div class="details hint">GPIO {{ spec.pin }} · Pegel <span data-f="level">{{ item.level if item else "–" }}</span> · <span data-f="active">{% if item %}{{ "high" if item.active_high else "low" }}{% else %}{{ "high" if spec.active_high else "low" }}{% endif %}</span> ist an{% if spec.setting %} · invertiert (<code>{{ spec.setting }}</code>): <span data-f="inverted">{% if item %}{{ "ja" if item.inverted else "nein" }}{% else %}–{% endif %}</span>{% endif %}</div>
 			<p class="fix" data-f="not-output"{% if not item or item.is_output %} hidden{% endif %}>GPIO ist kein Ausgang. Läuft telefono?</p>
 		</li>
 {% endfor %}
@@ -349,6 +349,11 @@
 				setBadge (field (row, "state"), "–");
 
 			field (row, "level").textContent = item ? item.level : "–";
+			if (item)
+				field (row, "active").textContent = item.active_high ? "high" : "low";
+			const inverted = field (row, "inverted");
+			if (inverted)
+				inverted.textContent = item ? (item.inverted ? "ja" : "nein") : "–";
 			field (row, "not-output").hidden = !item || item.is_output;
 		});
 	}

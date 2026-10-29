@@ -187,24 +187,39 @@ def evaluate_inputs (snapshot:Snapshot, config) -> list:
 	return inputs
 
 
+# active_high: whether high is on without inversion
+# setting: the key in telefono.conf that inverts it (None: fixed)
 Output = collections.namedtuple ("Output", ("key", "name", "pin",
-                                            "active_high"))
+                                            "active_high", "setting"))
 
 OUTPUTS = (
-	Output ("led", "LED", LED_PIN, True),
-	Output ("speaker", "Lautsprecher-Relais", SPEAKER_RELAY_PIN, False),
+	Output ("led", "LED", LED_PIN, True, None),
+	Output ("speaker", "Lautsprecher-Relais", SPEAKER_RELAY_PIN, False,
+	        "speaker_relay"),
 )
 
-def evaluate_outputs (snapshot:Snapshot) -> list:
+# whether high is "on" with the settings of telefono.conf
+# (config: config.ConfigResult, None: not inverted)
+def active_high (spec:Output, config=None) -> bool:
+	if spec.setting is None or config is None:
+		return spec.active_high
+
+	return spec.active_high != config.inverted[spec.setting]
+
+# config: config.ConfigResult (the relay's polarity), None: not inverted
+def evaluate_outputs (snapshot:Snapshot, config=None) -> list:
 	outputs = list ()
 
 	for spec in OUTPUTS:
 		high = bool (level (snapshot.levels, spec.pin))
+		on_high = active_high (spec, config)
 		outputs.append ({
 			"key": spec.key,
 			"pin": spec.pin,
 			"level": "high" if high else "low",
-			"on": high == spec.active_high,
+			"active_high": on_high,
+			"inverted": spec.active_high != on_high,
+			"on": high == on_high,
 			"is_output": FUNCTION_OUTPUT == snapshot.functions.get (spec.pin),
 		})
 

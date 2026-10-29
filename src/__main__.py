@@ -251,7 +251,9 @@ def main ():
 
 	dial = Dial (DialInUse, DialCounter)
 
-	speakerThread = SpeakerThread (SpeakerSwitch)
+	# the relay of the loudspeaker (its polarity is in telefono.conf too)
+	speakerThread = SpeakerThread (SpeakerSwitch,
+	                               inverted=inverted["speaker_relay"])
 	speakerThread.start()
 
 	player = Player (Hook, ButtonLeft, ButtonMiddle, speakerThread)

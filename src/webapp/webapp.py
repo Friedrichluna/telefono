@@ -167,15 +167,15 @@ def config_state (config, started) -> dict:
 	problems = list ()
 
 	if config.error:
-		status = "fehlerhaft, kein Eingang ist invertiert"
+		status = "fehlerhaft, nichts ist invertiert"
 		problems.append ("Die Datei kann nicht gelesen werden: %s"
 		                 % config.error)
 
 	elif not config.found:
 		if os.path.exists (config.path):
-			status = "nicht lesbar, kein Eingang ist invertiert"
+			status = "nicht lesbar, nichts ist invertiert"
 		else:
-			status = "nicht vorhanden, kein Eingang ist invertiert"
+			status = "nicht vorhanden, nichts ist invertiert"
 
 	else:
 		status = "vorhanden"
@@ -185,7 +185,7 @@ def config_state (config, started) -> dict:
 		                 % section)
 
 	for key in config.unknown_inputs:
-		problems.append ("Unbekannter Eingang „%s“ wird ignoriert." % key)
+		problems.append ("Unbekannter Eintrag „%s“ wird ignoriert." % key)
 
 	for key, value in config.invalid.items ():
 		problems.append ("„%s = %s“: nur yes oder no erlaubt, %s ist "
@@ -631,7 +631,7 @@ class TelefonoWebApp (Flask):
 		try:
 			snapshot = self.gpio.read (all_pins ())
 			state["inputs"] = evaluate_inputs (snapshot, config)
-			state["outputs"] = evaluate_outputs (snapshot)
+			state["outputs"] = evaluate_outputs (snapshot, config)
 			state["sampler"] = self.sampler.poll (config.inverted)
 
 		except GpioError as error:

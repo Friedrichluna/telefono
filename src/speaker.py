@@ -12,11 +12,13 @@ from .CONSTANTS import SPEAKER_POWERON_DELAY
 
 from .config import SPEAKER_RELAY_PIN
 
-# low is on
 RELAIS_1_GPIO = SPEAKER_RELAY_PIN
 
+# the relay powers the loudspeaker's amplifier: low is on, or high if
+# the relay is inverted ("speaker_relay = yes" in telefono.conf, the
+# phones are wired differently)
 class SpeakerThread (threading.Thread):
-	def __init__ (self, switch, gpio=RELAIS_1_GPIO):
+	def __init__ (self, switch, gpio=RELAIS_1_GPIO, inverted:bool=False):
 		super ().__init__ ()
 
 		self.log = logging.getLogger ("Speaker")
@@ -24,10 +26,15 @@ class SpeakerThread (threading.Thread):
 		self.__switch = switch
 		self.__gpio = gpio
 
+		if inverted:
+			self.__on_level, self.__off_level = GPIO.HIGH, GPIO.LOW
+		else:
+			self.__on_level, self.__off_level = GPIO.LOW, GPIO.HIGH
+
 		# GPIO Numbers instead of board numbers
 		GPIO.setmode(GPIO.BCM)
-		# GPIO Assign mode
-		GPIO.setup (self.__gpio, GPIO.OUT)
+		# output, off from the start
+		GPIO.setup (self.__gpio, GPIO.OUT, initial=self.__off_level)
 
 		self.__event = threading.Event ()
 		self.__stop = threading.Event ()
@@ -42,7 +49,7 @@ class SpeakerThread (threading.Thread):
 		if self.__is_on:
 			return False
 
-		GPIO.output (self.__gpio, GPIO.LOW)
+		GPIO.output (self.__gpio, self.__on_level)
 		self.log.debug ("activated")
 
 		self.__is_on = True
@@ -52,7 +59,7 @@ class SpeakerThread (threading.Thread):
 		if not self.__is_on:
 			return False
 
-		GPIO.output (self.__gpio, GPIO.HIGH)
+		GPIO.output (self.__gpio, self.__off_level)
 		self.log.debug ("deactivated")
 
 		self.__is_on = False
@@ -92,4 +99,11 @@ class SpeakerThread (threading.Thread):
 		                repr (timeout))
 
 		self.__stop.set ()
-		return super ().join (timeout)
+		result = super ().join (timeout)
+
+		# telefono stops: the loudspeaker is off (the pin keeps its
+		# level after the process ended)
+		if not self.is_alive ():
+			self.__set_off ()
+
+		return result
