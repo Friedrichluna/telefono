@@ -10,7 +10,7 @@
 			padding: 0;
 			list-style: none;
 
-			border: 1px solid rgba(0,0,0,.125);
+			border: 1px solid var(--border-subtle);
 			border-radius: .25rem;
 		}
 
@@ -21,7 +21,7 @@
 			gap: .5rem 1rem;
 			padding: .5rem .75rem;
 
-			border-top: 1px solid rgba(0,0,0,.125);
+			border-top: 1px solid var(--border-subtle);
 			scroll-margin-top: 4rem;
 		}
 
@@ -38,7 +38,7 @@
 
 		@keyframes highlight {
 			from {
-				background-color: #fff3bf;
+				background-color: var(--highlight);
 			}
 
 			to {
@@ -63,8 +63,8 @@
 			min-width: 3.5rem;
 			padding: .25rem .5rem;
 
-			color: #495057;
-			background-color: #e9ecef;
+			color: var(--surface-text);
+			background-color: var(--surface);
 			border: 1px solid var(--border);
 			border-radius: .2rem;
 
@@ -102,7 +102,7 @@
 
 		.button.light:focus-visible {
 			outline: 0;
-			box-shadow: 0 0 0 .2rem rgba(130,138,145,.5);
+			box-shadow: 0 0 0 .2rem var(--focus-ring-gray);
 		}
 
 		/* the menu ("…"): a <details>, so it also opens without the
@@ -123,7 +123,7 @@
 		}
 
 		.row-menu[open] > summary {
-			background-color: #e2e6ea;
+			background-color: var(--surface-hover);
 		}
 
 		.menu {
@@ -137,10 +137,10 @@
 			margin: 0;
 			padding: .25rem 0;
 
-			background-color: white;
-			border: 1px solid rgba(0,0,0,.15);
+			background-color: var(--panel-bg);
+			border: 1px solid var(--border);
 			border-radius: .25rem;
-			box-shadow: 0 .25rem .75rem rgba(0,0,0,.15);
+			box-shadow: var(--shadow);
 		}
 
 		/* not enough room below it in the window */
@@ -155,13 +155,13 @@
 			gap: .75rem;
 			padding: .5rem 1rem;
 
-			color: #212529;
+			color: var(--text);
 			text-decoration: none;
 			white-space: nowrap;
 		}
 
 		.menu a:hover, .menu a:focus {
-			background-color: #e9ecef;
+			background-color: var(--surface);
 			outline: 0;
 		}
 
@@ -204,18 +204,18 @@
 			flex: 1;
 			min-width: 0;
 			margin: 0;
-			accent-color: var(--primary);
+			accent-color: var(--accent);
 		}
 
 		.player span {
-			color: var(--secondary);
+			color: var(--muted);
 			font-size: .875rem;
 			font-variant-numeric: tabular-nums;
 			white-space: nowrap;
 		}
 
 		#no-match {
-			color: var(--secondary);
+			color: var(--muted);
 		}
 {% endblock %}
 

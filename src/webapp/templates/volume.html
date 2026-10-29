@@ -8,8 +8,8 @@
 		.alert {
 			margin: 0 0 .75rem;
 			padding: .5rem .75rem;
-			color: #D8000C;
-			background-color: #FFBABA;
+			color: var(--error-text);
+			background-color: var(--error-bg);
 			border-radius: .25rem;
 		}
 
@@ -18,13 +18,13 @@
 			padding: 0;
 			list-style: none;
 
-			border: 1px solid rgba(0,0,0,.125);
+			border: 1px solid var(--border-subtle);
 			border-radius: .25rem;
 		}
 
 		ul.volumes > li {
 			padding: .75rem;
-			border-top: 1px solid rgba(0,0,0,.125);
+			border-top: 1px solid var(--border-subtle);
 		}
 
 		ul.volumes > li:first-child {
@@ -51,7 +51,7 @@
 			display: block;
 			width: 100%;
 			margin: .5rem 0;
-			accent-color: var(--primary);
+			accent-color: var(--accent);
 		}
 
 		.foot .hint {

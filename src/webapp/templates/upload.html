@@ -8,7 +8,7 @@
 			font-size: 1.25rem;
 			font-weight: 500;
 			line-height: 1.2;
-			border-bottom: 1px solid rgba(0,0,0,.125);
+			border-bottom: 1px solid var(--border-subtle);
 			scroll-margin-top: 1rem;
 		}
 
@@ -31,23 +31,23 @@
 		}
 
 		.alert.info {
-			color: #059;
-			background-color: #BEF;
+			color: var(--info-text);
+			background-color: var(--info-bg);
 		}
 
 		.alert.success {
-			color: #270;
-			background-color: #DFF2BF;
+			color: var(--success-text);
+			background-color: var(--success-bg);
 		}
 
 		.alert.warning {
-			color: #9F6000;
-			background-color: #FEEFB3;
+			color: var(--warning-text);
+			background-color: var(--warning-bg);
 		}
 
 		.alert.error {
-			color: #D8000C;
-			background-color: #FFBABA;
+			color: var(--error-text);
+			background-color: var(--error-bg);
 		}
 
 		.alert a:not(.button) {
@@ -81,12 +81,12 @@
 		}
 
 		.file-item.done {
-			background-color: #f3faee;
-			border-color: #c3e6b3;
+			background-color: var(--done-bg);
+			border-color: var(--done-border);
 		}
 
 		.file-item.failed {
-			border-color: #f5a3a3;
+			border-color: var(--failed-border);
 		}
 
 		.js .file-input:disabled + .file-button {
@@ -109,7 +109,7 @@
 
 		.file-head .size {
 			flex: none;
-			color: var(--secondary);
+			color: var(--muted);
 			font-size: .875rem;
 			white-space: nowrap;
 		}
@@ -132,17 +132,17 @@
 		.file-fields label {
 			display: block;
 			margin-bottom: .125rem;
-			color: var(--secondary);
+			color: var(--muted);
 			font-size: .875rem;
 		}
 
 		.file-fields input:disabled {
-			color: var(--secondary);
+			color: var(--muted);
 			background-color: var(--light);
 		}
 
 		.file-fields input[aria-invalid="true"] {
-			border-color: #dc3545;
+			border-color: var(--danger);
 		}
 
 		.file-item progress {
@@ -160,19 +160,19 @@
 		}
 
 		.file-status.info, #results .info {
-			color: var(--secondary);
+			color: var(--muted);
 		}
 
 		.file-status.success, #results .success {
-			color: #270;
+			color: var(--success-text);
 		}
 
 		.file-status.warning, #results .warning {
-			color: #9F6000;
+			color: var(--warning-text);
 		}
 
 		.file-status.error, #results .error {
-			color: #D8000C;
+			color: var(--error-text);
 		}
 
 		.file-status.success::before, #results .success::before {
@@ -201,15 +201,15 @@
 		}
 
 		.button.red {
-			background-color: #dc3545;
-			border-color: #dc3545;
+			background-color: var(--danger);
+			border-color: var(--danger);
 		}
 		.button.red:hover:not(:disabled) {
-			background-color: #c82333;
+			background-color: var(--danger-hover);
 		}
 		.button.red:focus-visible {
 			outline: 0;
-			box-shadow: 0 0 0 .2rem rgba(220,53,69,.5);
+			box-shadow: 0 0 0 .2rem var(--focus-ring-danger);
 		}
 
 		/* a dot (record) or a square (stop) */
@@ -234,7 +234,7 @@
 		}
 
 		#timer.recording {
-			color: #dc3545;
+			color: var(--danger-text);
 		}
 
 		#level {
@@ -249,11 +249,11 @@
 		#level-bar {
 			width: 0;
 			height: 100%;
-			background-color: #28a745;
+			background-color: var(--ok);
 		}
 
 		#level-bar.loud {
-			background-color: #fd7e14;
+			background-color: var(--loud);
 		}
 
 		#playback {

@@ -12,23 +12,136 @@
 
 	<style>
 		:root {
-			color: #212529;
-			background-color: white;
+			/* form controls, scrollbars, <progress> and the audio
+			   players are drawn by the browser; this lets them follow
+			   the setting too instead of staying light */
+			color-scheme: light dark;
 
-			/* bordeaux accent; the focus colours get variables of their
-			   own because rgba() cannot be built from a hex variable, and
-			   re-theming should mean changing this block and nothing else */
+			color: var(--text);
+			background-color: var(--body-bg);
+
+			/* every colour of every page is a variable, so the dark
+			   theme below only has to redefine this block; the focus
+			   colours get variables of their own because rgba() cannot
+			   be built from a hex variable */
+
+			/* page, surfaces, text */
+			--text: #212529;
+			--muted: #6c757d;
+			--body-bg: white;
+			--light: #f8f9fa;
+			--surface: #e9ecef;
+			--surface-text: #495057;
+			--surface-hover: #e2e6ea;
+			--panel-bg: white;
+			--input-bg: white;
+			--input-text: #495057;
+			--border: #ced4da;
+			--border-subtle: rgba(0,0,0,.125);
+			--border-soft: rgba(0,0,0,.1);
+			--shadow: 0 .25rem .75rem rgba(0,0,0,.15);
+			--nav-link: rgba(0,0,0,.55);
+			--nav-link-hover: rgba(0,0,0,.75);
+
+			/* bordeaux accent; --primary is the filled one (white text
+			   on it), --accent the same colour used as text, border,
+			   slider or stroke; on a dark ground that one has to be
+			   much lighter to stay readable */
 			--primary: #7b1e3c;
 			--primary-hover: #5a162c;
 			--primary-border: #c07c92;
+			--accent: #7b1e3c;
 			--focus-ring: rgba(123,30,60,.4);
 			--focus-ring-soft: rgba(123,30,60,.25);
+			--focus-ring-gray: rgba(130,138,145,.5);
 			--secondary: #6c757d;
 			--secondary-hover: #5a6268;
-			--border: #ced4da;
-			--light: #f8f9fa;
+
+			/* the four signals (messages, alerts, badges) and the
+			   single colours of the recorder, the level meter and
+			   the event marks of the status page */
+			--info-text: #059;
+			--info-bg: #BEF;
+			--success-text: #270;
+			--success-bg: #DFF2BF;
+			--warning-text: #9F6000;
+			--warning-bg: #FEEFB3;
+			--error-text: #D8000C;
+			--error-bg: #FFBABA;
+			--danger: #dc3545;
+			--danger-hover: #c82333;
+			--danger-text: #dc3545;
+			--focus-ring-danger: rgba(220,53,69,.5);
+			--ok: #28a745;
+			--loud: #fd7e14;
+			--neutral-mark: #343a40;
+			--highlight: #fff3bf;
+			--done-bg: #f3faee;
+			--done-border: #c3e6b3;
+			--failed-border: #f5a3a3;
 
 			--font-family-sans-serif: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans",sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol","Noto Color Emoji";
+		}
+
+		/* dark theme, following the browser or system setting; there is
+		   no switch in the page on purpose, the browser decides. Only
+		   colours change, and the whole dark palette stands here: a dark
+		   gray ground instead of black (black and bordeaux glare at each
+		   other), slightly lighter surfaces above it, and the bordeaux
+		   lightened wherever it is writing or a thin line */
+		@media (prefers-color-scheme: dark) {
+			:root {
+				--text: #e4e4e7;
+				--muted: #a1a1aa;
+				--body-bg: #18181b;
+				--light: #232327;
+				--surface: #2a2a2f;
+				--surface-text: #e4e4e7;
+				--surface-hover: #35353b;
+				--panel-bg: #26262b;
+				--input-bg: #1f1f23;
+				--input-text: #e4e4e7;
+				--border: #727279;
+				--border-subtle: rgba(255,255,255,.14);
+				--border-soft: rgba(255,255,255,.1);
+				--shadow: 0 .25rem .75rem rgba(0,0,0,.5);
+				--nav-link: rgba(255,255,255,.7);
+				--nav-link-hover: rgba(255,255,255,.9);
+
+				--primary: #8f2a48;
+				--primary-hover: #a63455;
+				--primary-border: #e08ca3;
+				--accent: #e08ca3;
+				--focus-ring: rgba(224,140,163,.45);
+				--focus-ring-soft: rgba(224,140,163,.3);
+				--focus-ring-gray: rgba(161,161,170,.5);
+				--secondary: #5c5c64;
+				--secondary-hover: #6b6b74;
+
+				/* the signals keep their four hues, only with darker
+				   grounds and light writing, so that they stay four
+				   signals and do not turn into mud */
+				--info-text: #9fd4f0;
+				--info-bg: #123042;
+				--success-text: #a3d9a5;
+				--success-bg: #18381e;
+				--warning-text: #f0c96b;
+				--warning-bg: #44340c;
+				--error-text: #f5a3a8;
+				--error-bg: #4a181b;
+				/* --danger stays as it is: the red button is a filled
+				   one, white on it is readable on either ground, and a
+				   lighter red would lose that */
+				--danger-text: #ff7b7b;
+				--focus-ring-danger: rgba(220,53,69,.6);
+				--ok: #3fb950;
+				--loud: #f0883e;
+				--neutral-mark: #adb5bd;
+				--highlight: #4a3c10;
+				--done-bg: #19301d;
+				--done-border: #4a8a56;
+				--failed-border: #a04a4a;
+			}
 		}
 
 		* {
@@ -62,7 +175,7 @@
 		}
 
 		h1 a {
-			color: var(--primary);
+			color: var(--accent);
 			text-decoration: none;
 		}
 
@@ -106,8 +219,8 @@
 			width: 100%;
 			padding: .375rem .75rem;
 
-			color: #495057;
-			background-color: white;
+			color: var(--input-text);
+			background-color: var(--input-bg);
 
 			border: 1px solid var(--border);
 			border-radius: .25rem;
@@ -171,7 +284,7 @@
 
 		.file-input:focus-visible + .file-button {
 			outline: 0;
-			box-shadow: 0 0 0 .2rem rgba(130,138,145,.5);
+			box-shadow: 0 0 0 .2rem var(--focus-ring-gray);
 		}
 
 		.js .file-name {
@@ -181,11 +294,11 @@
 		}
 
 		.file-name.empty {
-			color: var(--secondary);
+			color: var(--muted);
 		}
 
 		.hint {
-			color: var(--secondary);
+			color: var(--muted);
 			font-size: .875rem;
 		}
 
@@ -216,7 +329,7 @@
 			padding: .625rem .75rem;
 
 			border-radius: .25rem;
-			box-shadow: 0 .25rem .75rem rgba(0,0,0,.15);
+			box-shadow: var(--shadow);
 
 			pointer-events: auto;
 			transition: opacity .3s ease, transform .3s ease;
@@ -246,8 +359,8 @@
 		}
 
 		.message.info {
-			color: #059;
-			background-color: #BEF;
+			color: var(--info-text);
+			background-color: var(--info-bg);
 		}
 
 		.message.info::before {
@@ -255,8 +368,8 @@
 		}
 
 		.message.success {
-			color: #270;
-			background-color: #DFF2BF;
+			color: var(--success-text);
+			background-color: var(--success-bg);
 		}
 
 		.message.success::before {
@@ -264,8 +377,8 @@
 		}
 
 		.message.warning {
-			color: #9F6000;
-			background-color: #FEEFB3;
+			color: var(--warning-text);
+			background-color: var(--warning-bg);
 		}
 
 		.message.warning::before {
@@ -273,8 +386,8 @@
 		}
 
 		.message.error {
-			color: #D8000C;
-			background-color: #FFBABA;
+			color: var(--error-text);
+			background-color: var(--error-bg);
 		}
 
 		.message.error::before {
@@ -295,8 +408,9 @@
 			display: none;
 			padding: .25rem .5rem;
 
+			color: var(--nav-link);
 			background: none;
-			border: 1px solid rgba(0,0,0,.1);
+			border: 1px solid var(--border-soft);
 			border-radius: .25rem;
 			cursor: pointer;
 		}
@@ -311,16 +425,16 @@
 			display: inline-block;
 			padding: 8px;
 
-			color: rgba(0,0,0,.55);
+			color: var(--nav-link);
 			text-decoration: none;
 		}
 
 		#menu a.active {
-			color: var(--primary);
+			color: var(--accent);
 		}
 
 		#menu a:focus:not(.active), #menu a:hover:not(.active) {
-			color: rgba(0,0,0,.75);
+			color: var(--nav-link-hover);
 		}
 
 		/* dropdown in the navbar; <details> so that it also opens
@@ -334,7 +448,7 @@
 			display: block;
 			padding: 8px;
 
-			color: rgba(0,0,0,.55);
+			color: var(--nav-link);
 			list-style: none;
 			cursor: pointer;
 		}
@@ -344,11 +458,11 @@
 		}
 
 		#menu summary.active {
-			color: var(--primary);
+			color: var(--accent);
 		}
 
 		#menu summary:focus:not(.active), #menu summary:hover:not(.active) {
-			color: rgba(0,0,0,.75);
+			color: var(--nav-link-hover);
 		}
 
 		#menu summary svg {
@@ -377,7 +491,7 @@
 			background-color: var(--light);
 			border: 1px solid var(--border);
 			border-radius: .25rem;
-			box-shadow: 0 .25rem .75rem rgba(0,0,0,.15);
+			box-shadow: var(--shadow);
 		}
 
 		#menu details > div a {
@@ -492,16 +606,16 @@
 		}
 		.button.gray:focus-visible {
 			outline: 0;
-			box-shadow: 0 0 0 .2rem rgba(130,138,145,.5);
+			box-shadow: 0 0 0 .2rem var(--focus-ring-gray);
 		}
 
 		.button.light {
-			color: #212529;
+			color: var(--text);
 			background-color: var(--light);
 			border-color: var(--border);
 		}
 		.button.light:hover {
-			background-color: #e2e6ea;
+			background-color: var(--surface-hover);
 		}
 {% block style %}
 {% endblock %}
@@ -521,7 +635,7 @@
 		<h1><a href="{{ url_for('list') }}">Telefono</a></h1>
 		<button type="button" id="menu-button" aria-controls="menu" aria-expanded="false" title="Menü">
 			<svg viewBox="0 0 30 30" xmlns="http://www.w3.org/2000/svg">
-				<path stroke="rgba(0, 0, 0, 0.5)" stroke-width="2" stroke-linecap="round" stroke-miterlimit="10" d="M4 7h22M4 15h22M4 23h22"/>
+				<path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-miterlimit="10" d="M4 7h22M4 15h22M4 23h22"/>
 			</svg>
 		</button>
 		<div id="menu">

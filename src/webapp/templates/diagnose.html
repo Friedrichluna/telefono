@@ -15,7 +15,7 @@
 			padding: 0 .25rem;
 			font-size: .875em;
 			background-color: var(--light);
-			border: 1px solid rgba(0,0,0,.1);
+			border: 1px solid var(--border-soft);
 			border-radius: .2rem;
 			overflow-wrap: anywhere;
 		}
@@ -31,16 +31,16 @@
 			content: "";
 			width: .625rem;
 			height: .625rem;
-			background-color: var(--secondary);
+			background-color: var(--muted);
 			border-radius: 50%;
 		}
 
 		#status.live::before {
-			background-color: #28a745;
+			background-color: var(--ok);
 		}
 
 		#status.error::before {
-			background-color: #D8000C;
+			background-color: var(--error-text);
 		}
 
 		.js #reload {
@@ -54,13 +54,13 @@
 		}
 
 		.alert.error {
-			color: #D8000C;
-			background-color: #FFBABA;
+			color: var(--error-text);
+			background-color: var(--error-bg);
 		}
 
 		.alert.warning {
-			color: #9F6000;
-			background-color: #FEEFB3;
+			color: var(--warning-text);
+			background-color: var(--warning-bg);
 		}
 
 		#config-problems {
@@ -73,13 +73,13 @@
 			padding: 0;
 			list-style: none;
 
-			border: 1px solid rgba(0,0,0,.125);
+			border: 1px solid var(--border-subtle);
 			border-radius: .25rem;
 		}
 
 		ul.devices > li {
 			padding: .5rem .75rem;
-			border-top: 1px solid rgba(0,0,0,.125);
+			border-top: 1px solid var(--border-subtle);
 		}
 
 		ul.devices > li:first-child {
@@ -108,25 +108,25 @@
 			font-weight: 500;
 			font-variant-numeric: tabular-nums;
 
-			color: #495057;
-			background-color: #e9ecef;
+			color: var(--surface-text);
+			background-color: var(--surface);
 			border-radius: .2rem;
 			transition: background-color .1s, color .1s;
 		}
 
 		.badge.rest {
-			color: #270;
-			background-color: #DFF2BF;
+			color: var(--success-text);
+			background-color: var(--success-bg);
 		}
 
 		.badge.active {
-			color: #9F6000;
-			background-color: #FEEFB3;
+			color: var(--warning-text);
+			background-color: var(--warning-bg);
 		}
 
 		.badge.on {
-			color: #059;
-			background-color: #BEF;
+			color: var(--info-text);
+			background-color: var(--info-bg);
 		}
 
 		.details {
@@ -139,8 +139,8 @@
 			padding: .25rem .5rem;
 			font-size: .875rem;
 
-			color: #9F6000;
-			background-color: #FEEFB3;
+			color: var(--warning-text);
+			background-color: var(--warning-bg);
 			border-radius: .2rem;
 		}
 
