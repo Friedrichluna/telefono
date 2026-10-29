@@ -317,6 +317,68 @@
 			color: rgba(0,0,0,.75);
 		}
 
+		/* dropdown in the navbar; <details> so that it also opens
+		   without the script, which only closes it again */
+		#menu details {
+			position: relative;
+			display: inline-block;
+		}
+
+		#menu summary {
+			display: block;
+			padding: 8px;
+
+			color: rgba(0,0,0,.55);
+			list-style: none;
+			cursor: pointer;
+		}
+
+		#menu summary::-webkit-details-marker {
+			display: none;
+		}
+
+		#menu summary.active {
+			color: rgba(0,0,0,.9);
+		}
+
+		#menu summary:focus:not(.active), #menu summary:hover:not(.active) {
+			color: rgba(0,0,0,.75);
+		}
+
+		#menu summary svg {
+			width: .7em;
+			height: .7em;
+			margin-left: .3em;
+			transition: transform .25s ease;
+		}
+
+		#menu details[open] summary svg {
+			transform: rotate(180deg);
+		}
+
+		/* the panel floats over the page on wide screens */
+		#menu details > div {
+			position: absolute;
+			z-index: 5;
+			top: 100%;
+			left: 0;
+			min-width: 100%;
+
+			display: flex;
+			flex-direction: column;
+			padding: .25rem 0;
+
+			background-color: var(--light);
+			border: 1px solid var(--border);
+			border-radius: .25rem;
+			box-shadow: 0 .25rem .75rem rgba(0,0,0,.15);
+		}
+
+		#menu details > div a {
+			padding: 8px 16px;
+			white-space: nowrap;
+		}
+
 		/* the menu fits into one line with the title from about 940 px on,
 		   below it would wrap into several lines, so it is collapsed */
 		@media screen and (max-width: 979px) {
@@ -330,6 +392,29 @@
 
 			#menu a {
 				display: block;
+				padding: 8px 0;
+			}
+
+			#menu details {
+				display: block;
+			}
+
+			#menu summary {
+				padding: 8px 0;
+			}
+
+			/* no room to float, the entries are simply indented */
+			#menu details > div {
+				position: static;
+				padding: 0 0 0 16px;
+
+				background-color: transparent;
+				border: 0;
+				border-radius: 0;
+				box-shadow: none;
+			}
+
+			#menu details > div a {
 				padding: 8px 0;
 			}
 
@@ -438,9 +523,20 @@
 {% set active_page = request.endpoint %}
 {% if active_page in ['edit_value', 'old_list'] %}{% set active_page = 'list' %}{% endif %}
 {% if active_page in ['upload_file', 'record_page', 'record_save'] %}{% set active_page = 'upload_page' %}{% endif %}
-{% for endpoint, title in [('list', 'Liste'), ('upload_page', 'Hochladen'), ('say', 'Text ansagen'), ('volume', 'Lautstärke'), ('status', 'Status'), ('diagnose', 'Hardware-Test'), ('help', 'Anleitung')] %}
+{% set other_pages = [('say', 'Text ansagen'), ('volume', 'Lautstärke'), ('status', 'Status'), ('diagnose', 'Hardware-Test')] %}
+{% set other_active = active_page in other_pages|map(attribute=0) %}
+{% for endpoint, title in [('list', 'Liste'), ('upload_page', 'Hochladen')] %}
 				<a {% if active_page == endpoint %}class="active" aria-current="page" {% endif %}href="{{ url_for(endpoint) }}">{{ title }}</a>
 {% endfor %}
+				<details>
+					<summary{% if other_active %} class="active" aria-current="page"{% endif %}>Sonstiges<svg viewBox="0 0 10 10" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" d="M2 4l3 3 3-3"/></svg></summary>
+					<div>
+{% for endpoint, title in other_pages %}
+						<a {% if active_page == endpoint %}class="active" aria-current="page" {% endif %}href="{{ url_for(endpoint) }}">{{ title }}</a>
+{% endfor %}
+					</div>
+				</details>
+				<a {% if active_page == 'help' %}class="active" aria-current="page" {% endif %}href="{{ url_for('help') }}">Anleitung</a>
 			</div>
 		</div>
 	</nav>
@@ -459,6 +555,42 @@
 	menuButton.addEventListener ("click", function () {
 		const open = nav.classList.toggle ("open");
 		menuButton.setAttribute ("aria-expanded", open);
+	});
+
+	/* dropdowns in the menu; they open and close on their own,
+	   the script only closes them again when something else
+	   is clicked (the menu button included) or Escape is pressed */
+	const dropdowns = document.querySelectorAll ("#menu details");
+
+	function closeDropdowns (except) {
+		dropdowns.forEach (function (dropdown) {
+			if (dropdown !== except)
+				dropdown.open = false;
+		});
+	}
+
+	dropdowns.forEach (function (dropdown) {
+		dropdown.addEventListener ("toggle", function () {
+			if (dropdown.open)
+				closeDropdowns (dropdown);
+		});
+	});
+
+	document.addEventListener ("click", function (event) {
+		if (!event.target.closest ("#menu details"))
+			closeDropdowns ();
+	});
+
+	document.addEventListener ("keydown", function (event) {
+		if ("Escape" !== event.key)
+			return;
+
+		dropdowns.forEach (function (dropdown) {
+			if (dropdown.open) {
+				dropdown.open = false;
+				dropdown.querySelector ("summary").focus ();
+			}
+		});
 	});
 
 	/* messages */
