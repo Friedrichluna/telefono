@@ -38,6 +38,13 @@ from ..CONSTANTS import BROWSER_RECORD_MIN
 from ..CONSTANTS import BROWSER_RECORD_MAX
 from ..CONSTANTS import BROWSER_RECORD_TOLERANCE
 
+from ..CONSTANTS import HISTORY_FILE
+from ..CONSTANTS import STATUS_EVENTS
+from ..CONSTANTS import STATUS_EVENTS_MAX
+from ..CONSTANTS import STATUS_DAYS
+from ..CONSTANTS import STATUS_TOP_NUMBERS
+from ..CONSTANTS import STATUS_REFRESH
+
 from ..audio import EncodeError
 from ..audio import EncodeTimeout
 from ..audio import NoAudioError
@@ -55,12 +62,15 @@ from ..diagnose import Sampler
 from ..diagnose import all_pins
 from ..diagnose import evaluate_inputs
 from ..diagnose import evaluate_outputs
+from ..history import HistoryReader
 from ..ipc import IPC_DESCRIPTION_MAX_BYTES
 from ..ipc import IPC_OUTPUT
 from ..ipc import IPC_StringTooLong
 from ..ipc import IPC_Timeout
 from ..ipc import IPC_TTS_MESSAGE_MAX_BYTES
 from ..number import Number
+
+from . import status
 
 
 def getFreeDiskSpace():
@@ -291,6 +301,7 @@ class TelefonoWebApp (Flask):
 		self.add_url_rule ("/record", "record_save", self.record_save, methods=["POST"])
 		self.add_url_rule ("/record/free", "record_free", self.record_free)
 		self.add_url_rule ("/help", "help", self.help)
+		self.add_url_rule ("/status", "status", self.show_status)
 		self.add_url_rule ("/recording/<number>", "recording", self.recording)
 		self.add_url_rule ("/download/<number>", "download", self.download)
 		self.add_url_rule ("/diagnose", "diagnose", self.diagnose, methods=["GET", "POST"])
@@ -301,6 +312,11 @@ class TelefonoWebApp (Flask):
 		self.gpio = GpioRegisters ()
 		self.sampler = Sampler (self.gpio)
 		self.telefono_started = telefono_start_time ()
+
+		# status page: the history file of the main process and the
+		# lengths of the recordings, both read directly
+		self.history = HistoryReader (HISTORY_FILE)
+		self.recordings = status.Recordings (RECORD_DIR)
 
 		# the test page updates several times a second,
 		# that does not belong into the journal
@@ -498,6 +514,56 @@ class TelefonoWebApp (Flask):
 	# also works while the phone is busy
 	def help (self):
 		return render_template ("help.html")
+
+	# state of the phone and its history, read from files (not through
+	# the main process, so it also works while the phone is busy);
+	# filter: see status.FILTERS, limit: number of events shown
+	def show_status (self):
+		filters = {key: types for key, _, types in status.FILTERS}
+
+		selected = request.args.get ("filter", "")
+		if selected not in filters:
+			selected = ""
+
+		try:
+			limit = int (request.args.get ("limit", STATUS_EVENTS))
+		except ValueError:
+			limit = STATUS_EVENTS
+		limit = max (1, min (limit, STATUS_EVENTS_MAX))
+
+		error = None
+		try:
+			events = self.history.read ()
+			size = os.stat (HISTORY_FILE).st_size if events else 0
+
+		except OSError as failure:
+			self.logger.error ("reading the history failed: %s", failure)
+			error = "Der Verlauf kann nicht gelesen werden: %s" 			        % (failure.strerror or failure)
+			events, size = [], 0
+
+		types = filters[selected]
+		count = sum (1 for event in events if status.matches (event, types))
+
+		# "show more": the next step, up to STATUS_EVENTS_MAX
+		more = None
+		if count > limit and limit < STATUS_EVENTS_MAX:
+			more = min (limit * 5, STATUS_EVENTS_MAX)
+
+		response = self.make_response (render_template (
+		        "status.html",
+		        items=status.system_status (self.telefono_started,
+		                                    self.recordings, size,
+		                                    len (events)),
+		        days=status.history_days (events, types, limit),
+		        stats=status.statistics (events, STATUS_DAYS,
+		                                 STATUS_TOP_NUMBERS),
+		        filters=status.FILTERS, selected=selected,
+		        limit=limit, count=count, more=more,
+		        error=error, refresh=STATUS_REFRESH * 1000,
+		        time=time.strftime ("%H:%M:%S")))
+
+		response.cache_control.no_store = True
+		return response
 
 	# what the hardware test page shows; reads the GPIO registers and
 	# telefono.conf on every call, never asks the main process

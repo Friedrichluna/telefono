@@ -316,7 +316,9 @@
 			color: rgba(0,0,0,.75);
 		}
 
-		@media screen and (max-width: 699px) {
+		/* the menu fits into one line with the title from about 850 px on,
+		   below it would wrap into several lines, so it is collapsed */
+		@media screen and (max-width: 879px) {
 			.js #menu-button {
 				display: block;
 			}
@@ -436,7 +438,7 @@
 {% if active_page == 'edit_value' %}{% set active_page = 'list' %}{% endif %}
 {% if active_page == 'upload_file' %}{% set active_page = 'upload_page' %}{% endif %}
 {% if active_page == 'record_save' %}{% set active_page = 'record_page' %}{% endif %}
-{% for endpoint, title in [('home', 'Anrufen'), ('list', 'Liste'), ('upload_page', 'Upload'), ('record_page', 'Aufnehmen'), ('say', 'Text ansagen'), ('diagnose', 'Hardware-Test'), ('help', 'Anleitung')] %}
+{% for endpoint, title in [('home', 'Anrufen'), ('list', 'Liste'), ('upload_page', 'Upload'), ('record_page', 'Aufnehmen'), ('say', 'Text ansagen'), ('status', 'Status'), ('diagnose', 'Hardware-Test'), ('help', 'Anleitung')] %}
 				<a {% if active_page == endpoint %}class="active" aria-current="page" {% endif %}href="{{ url_for(endpoint) }}">{{ title }}</a>
 {% endfor %}
 			</div>

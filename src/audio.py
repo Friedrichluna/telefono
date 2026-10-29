@@ -298,3 +298,70 @@ def convert_legacy_recordings (directory:str=RECORD_DIR) -> int:
 
 	log.info ("converted %d of %d recordings", converted, len (paths))
 	return converted
+
+
+# MPEG audio layer III: sample rates and bit rates (kbit/s) by version
+# (header bits: 3 = MPEG 1, 2 = MPEG 2, 0 = MPEG 2.5)
+MP3_RATES = {3: (44100, 48000, 32000), 2: (22050, 24000, 16000),
+             0: (11025, 12000, 8000)}
+MP3_BITRATES = {3: (0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224,
+                    256, 320),
+                2: (0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144,
+                    160)}
+MP3_HEADER_READ = 4096
+
+# length of an mp3 file in seconds without decoding it (for the status
+# page, no ffprobe): from the frame count in the Xing/Info header that
+# LAME writes (all recordings of the phone), otherwise estimated from
+# the bit rate of the first frame (exact for CBR files); None if no
+# frame is found at the start of the file
+def mp3_duration (path:str):
+	with open (path, "rb") as f:
+		size = os.fstat (f.fileno ()).st_size
+		data = f.read (10)
+
+		# skip an ID3v2 tag (size: 4 x 7 bit, footer flag)
+		start = 0
+		if 10 == len (data) and data.startswith (b"ID3"):
+			start = 10 + ((data[6] & 0x7f) << 21 | (data[7] & 0x7f) << 14
+			              | (data[8] & 0x7f) << 7 | (data[9] & 0x7f))
+			if data[5] & 0x10:
+				start += 10
+
+		f.seek (start)
+		data = f.read (MP3_HEADER_READ)
+
+	index = data.find (b"\xff")
+	while -1 != index and index + 4 <= len (data):
+		version = data[index + 1] >> 3 & 3
+		layer = data[index + 1] >> 1 & 3
+		bitrate = data[index + 2] >> 4
+		rate = data[index + 2] >> 2 & 3
+
+		# frame sync, layer III, valid rates
+		if 0xe0 == data[index + 1] & 0xe0 and 1 == layer \
+		and 1 != version and 3 != rate and bitrate not in (0, 15):
+			break
+
+		index = data.find (b"\xff", index + 1)
+	else:
+		return None
+
+	rate = MP3_RATES[version][rate]
+	samples = 1152 if 3 == version else 576
+	mono = 3 == data[index + 3] >> 6
+
+	# the Xing header follows the side information
+	if 3 == version:
+		offset = index + 4 + (17 if mono else 32)
+	else:
+		offset = index + 4 + (9 if mono else 17)
+
+	tag = data[offset:offset + 4]
+	if tag in (b"Xing", b"Info") and len (data) >= offset + 12 \
+	and data[offset + 7] & 1:
+		frames = int.from_bytes (data[offset + 8:offset + 12], "big")
+		return frames * samples / rate
+
+	kbits = MP3_BITRATES[3 if 3 == version else 2][bitrate]
+	return (size - start - index) * 8 / (kbits * 1000)

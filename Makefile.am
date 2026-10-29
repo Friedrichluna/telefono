@@ -21,6 +21,7 @@ webappdir = $(pkgpythondir)/webapp
 webapp_PYTHON =
 webapp_PYTHON += src/webapp/__init__.py
 webapp_PYTHON += src/webapp/__main__.py
+webapp_PYTHON += src/webapp/status.py
 webapp_PYTHON += src/webapp/webapp.py
 
 nodist_pkgpython_PYTHON =
@@ -70,6 +71,7 @@ dist_template_DATA += src/webapp/templates/list.html
 dist_template_DATA += src/webapp/templates/message.html
 dist_template_DATA += src/webapp/templates/record.html
 dist_template_DATA += src/webapp/templates/say.html
+dist_template_DATA += src/webapp/templates/status.html
 dist_template_DATA += src/webapp/templates/upload.html
 
 staticdir = $(pkgdatadir)/static

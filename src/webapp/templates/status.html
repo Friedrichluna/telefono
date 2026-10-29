@@ -1,0 +1,318 @@
+{% extends "base.html" %}
+
+{% block style %}
+		h3 {
+			margin: 1.5rem 0 .75rem;
+			padding-bottom: .25rem;
+			font-size: 1.25rem;
+			font-weight: 500;
+			line-height: 1.2;
+			border-bottom: 1px solid rgba(0,0,0,.125);
+			scroll-margin-top: 1rem;
+		}
+
+		h4 {
+			margin: 1rem 0 .25rem;
+			font-size: 1rem;
+			font-weight: 600;
+		}
+
+		p {
+			margin: 0 0 .75rem;
+		}
+
+		.js #reload {
+			display: none;
+		}
+
+		.alert {
+			margin: 0 0 .75rem;
+			padding: .5rem .75rem;
+			color: #D8000C;
+			background-color: #FFBABA;
+			border-radius: .25rem;
+		}
+
+		/* status: label and value side by side, below each other on phones */
+		dl {
+			display: grid;
+			grid-template-columns: max-content 1fr;
+			gap: .25rem 1rem;
+			margin: 0;
+		}
+
+		dt {
+			font-weight: 500;
+		}
+
+		dd {
+			margin: 0;
+			overflow-wrap: anywhere;
+			font-variant-numeric: tabular-nums;
+		}
+
+		@media screen and (max-width: 479px) {
+			dl {
+				grid-template-columns: 1fr;
+				gap: 0;
+			}
+
+			dd + dt {
+				margin-top: .375rem;
+			}
+		}
+
+		/* numbers look like the number buttons of the list */
+		.number {
+			display: inline-block;
+			min-width: 2.25rem;
+			padding: 0 .375rem;
+
+			text-align: center;
+			text-decoration: none;
+			color: white;
+			background-color: var(--secondary);
+			border-radius: .2rem;
+		}
+
+		.number:hover {
+			background-color: var(--secondary-hover);
+		}
+
+		#top {
+			display: flex;
+			flex-wrap: wrap;
+			gap: .5rem 1.25rem;
+			margin: 0 0 1rem;
+			padding: 0;
+			list-style: none;
+		}
+
+		table {
+			width: 100%;
+			border-collapse: collapse;
+			font-variant-numeric: tabular-nums;
+		}
+
+		th, td {
+			padding: .25rem .5rem;
+			text-align: right;
+			border-bottom: 1px solid rgba(0,0,0,.125);
+		}
+
+		th:first-child, td:first-child {
+			padding-left: 0;
+			text-align: left;
+			white-space: nowrap;
+		}
+
+		th {
+			font-weight: 500;
+		}
+
+		td.bar {
+			width: 30%;
+			padding-right: 0;
+		}
+
+		td.bar span {
+			display: block;
+			height: .625rem;
+			min-width: 1px;
+			background-color: var(--primary);
+			border-radius: .2rem;
+		}
+
+		@media screen and (max-width: 479px) {
+			th, td {
+				padding: .25rem .25rem;
+				font-size: .875rem;
+			}
+
+			/* no room for the bars */
+			.bar {
+				display: none;
+			}
+		}
+
+		/* history filter, like the jump links of the help page */
+		#filter {
+			display: flex;
+			flex-wrap: wrap;
+			gap: .5rem;
+			margin: 0 0 .5rem;
+		}
+
+		#filter a {
+			padding: .25rem .5rem;
+			font-size: .875rem;
+			border-radius: .2rem;
+		}
+
+		ul.events {
+			margin: 0;
+			padding: 0;
+			list-style: none;
+
+			border: 1px solid rgba(0,0,0,.125);
+			border-radius: .25rem;
+		}
+
+		ul.events li {
+			display: flex;
+			gap: .75rem;
+			padding: .375rem .75rem;
+			border-top: 1px solid rgba(0,0,0,.125);
+		}
+
+		ul.events li:first-child {
+			border-top: 0;
+		}
+
+		/* a colored mark per kind of event */
+		ul.events time {
+			flex: none;
+			padding-left: .5rem;
+			color: var(--secondary);
+			font-variant-numeric: tabular-nums;
+			border-left: 3px solid var(--border);
+		}
+
+		ul.events .call time, ul.events .dial_empty time, ul.events .menu time {
+			border-left-color: var(--primary);
+		}
+
+		ul.events .recording time {
+			border-left-color: #dc3545;
+		}
+
+		ul.events .webapp time {
+			border-left-color: #28a745;
+		}
+
+		ul.events .start time, ul.events .stop time, ul.events .random_planned time {
+			border-left-color: #343a40;
+		}
+
+		ul.events span {
+			min-width: 0;
+			overflow-wrap: anywhere;
+		}
+
+		#more {
+			margin-top: .75rem;
+		}
+{% endblock %}
+
+{% block title %}Status{% endblock %}
+
+{% block content %}
+	<h2>Status</h2>
+
+	<p class="hint" aria-live="polite"><span id="time">Stand {{ time }}</span> <a id="reload" href="{{ request.full_path }}">Neu laden</a></p>
+
+	<div id="content">
+	<dl>
+{% for label, text in items %}
+		<dt>{{ label }}</dt>
+		<dd>{{ text }}</dd>
+{% endfor %}
+	</dl>
+
+	<h3>Statistik</h3>
+{% if stats.dialed %}
+	<p>Am häufigsten gewählt{% if stats.since %} (seit {{ stats.since }}){% endif %}:</p>
+	<ol id="top">
+{% for number, calls in stats.dialed %}
+		<li><a class="number" href="{{ url_for('list') }}#n{{ number }}" title="In der Liste zeigen">{{ number }}</a> {{ calls }}&times;</li>
+{% endfor %}
+	</ol>
+{% else %}
+	<p class="hint">Noch keine Nummer gewählt.</p>
+{% endif %}
+
+	<table>
+		<thead>
+			<tr><th scope="col">Tag</th><th scope="col">Gewählt</th><th scope="col">Anrufe (abgenommen)</th><th scope="col">Aufnahmen</th><th scope="col" class="bar"><span hidden>Anteil</span></th></tr>
+		</thead>
+		<tbody>
+{% for row in stats.days %}
+			<tr><td>{{ row.day }}</td><td>{{ row.dialed }}</td><td>{{ row.incoming }} ({{ row.answered }})</td><td>{{ row.recordings }}</td><td class="bar"><span style="width: {{ (100 * (row.dialed + row.incoming) / stats.most) | round (1) }}%"></span></td></tr>
+{% endfor %}
+		</tbody>
+	</table>
+	<p class="hint">Anrufe: Zufallsanrufe und Anrufe aus der Webapp, ohne Durchsagen.</p>
+
+	<h3 id="verlauf">Verlauf</h3>
+	<div id="filter" role="group" aria-label="Verlauf filtern">
+{% for key, title, _ in filters %}
+		<a class="button {{ 'blue' if key == selected else 'light' }}"{% if key == selected %} aria-current="true"{% endif %} href="{{ url_for('status', filter=key or None) }}#verlauf">{{ title }}</a>
+{% endfor %}
+	</div>
+
+{% if error %}
+	<p class="alert">{{ error }}</p>
+{% elif not days %}
+	<p class="hint">Noch nichts aufgezeichnet.</p>
+{% endif %}
+{% for day, entries in days %}
+	<h4>{{ day }}</h4>
+	<ul class="events">
+{% for clock, text, kind in entries %}
+		<li class="{{ kind }}"><time>{{ clock }}</time><span>{{ text }}</span></li>
+{% endfor %}
+	</ul>
+{% endfor %}
+{% if more %}
+	<p id="more"><a class="button gray" href="{{ url_for('status', filter=selected or None, limit=more) }}#verlauf">Ältere anzeigen</a> <span class="hint">{{ [limit, count] | min }} von {{ count }}</span></p>
+{% elif days %}
+	<p id="more" class="hint">{{ [limit, count] | min }} von {{ count }} Ereignissen</p>
+{% endif %}
+	</div>
+{% endblock %}
+
+{% block script %}
+<script>
+(function () {
+	"use strict";
+
+	/* updates the page every few seconds while it is visible (the
+	   status and the history are read from files, the phone is not
+	   asked); without the script "Neu laden" */
+	const content = document.getElementById ("content");
+	const clock = document.getElementById ("time");
+	let busy = false;
+
+	function update () {
+		if (busy || document.hidden)
+			return;
+
+		busy = true;
+		fetch (location.href, { cache: "no-store" })
+		.then (function (response) {
+			if (!response.ok)
+				throw new Error (response.status);
+			return response.text ();
+		})
+		.then (function (text) {
+			const page = new DOMParser ().parseFromString (text, "text/html");
+			const newContent = page.getElementById ("content");
+			if (!newContent)
+				throw new Error ("no content");
+
+			content.innerHTML = newContent.innerHTML;
+			clock.textContent = page.getElementById ("time").textContent;
+		})
+		.catch (function () {
+			clock.textContent = "Keine Verbindung zum Telefon";
+		})
+		.finally (function () {
+			busy = false;
+		});
+	}
+
+	setInterval (update, {{ refresh }});
+	document.addEventListener ("visibilitychange", update);
+}) ();
+</script>
+{% endblock %}

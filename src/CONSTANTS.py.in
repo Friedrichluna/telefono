@@ -34,6 +34,14 @@ HISTORY_KEEP_SIZE = 512 * 1024
 # longer texts (text to speech) are shortened in the history
 HISTORY_TEXT_MAX = 200
 
+# status page: the newest STATUS_EVENTS events are shown (up to
+# STATUS_EVENTS_MAX with "more"), statistics of the last STATUS_DAYS
+# days; with the script the page updates every STATUS_REFRESH s
+STATUS_EVENTS = 100
+STATUS_EVENTS_MAX = 2000
+STATUS_DAYS = 7
+STATUS_TOP_NUMBERS = 5
+STATUS_REFRESH = 10
 
 # hardware configuration of this phone (which inputs are inverted),
 # see telefono.conf.example
