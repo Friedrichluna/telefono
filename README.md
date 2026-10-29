@@ -12,7 +12,7 @@ Aufnahme:
 Drückt man den linken Knopf wird eine Aufnahme gestartet, die Stimme sagt einem um welche Aufnahme es sich handelt. Wird der linke Knopf nochmal gedrückt oder der Hörer aufgelegt wird die Aufnahme gespeichert. Drückt man stattdessen den mittleren Knopf wird die Aufnahme Gelöscht.
 
 Alte Aufnahme abspielen:
-Fängt man an die Nummernscheibe zu bedienen wird der Freiton unterbrochen und man kann beliebig viele Zahlen wählen. Drückt man dann den linken Knopf wird die Aufnahme mit der entsprechenden Nummer abgespielt.
+Fängt man an die Nummernscheibe zu bedienen wird der Freiton unterbrochen und man kann beliebig viele Zahlen wählen. Drückt man dann den linken Knopf wird die Aufnahme mit der entsprechenden Nummer abgespielt, sonst 4 Sekunden nach der letzten Ziffer. Ist die Nummer eindeutig (keine andere Nummer fängt mit diesen Ziffern an, z. B. 88), wird sofort nach der letzten Ziffer gewählt; fängt keine Nummer mit den gewählten Ziffern an, kommt sofort der Ton für eine nicht vergebene Nummer. Abschalten lässt sich das mit `DIAL_IMMEDIATE = False` in `src/CONSTANTS.py.in`.
 
 Lautsprecher:
 Mit dem Kippschalter rechts, kann man das Telefon auf laut oder leise schalten. Die Klingel ist immer Laut.

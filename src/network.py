@@ -287,6 +287,10 @@ class Subscriber ():
 		if SubscriberType.RESERVED == self.__type:
 			return self
 
+		# a description without a recording: SIT tone
+		if SubscriberType.UNUSED == self.__type:
+			return self
+
 		if SubscriberType.RECORDING == self.__type:
 			return self
 
@@ -359,7 +363,7 @@ class Subscriber ():
 	# complete, aborted (on the hook), no recording (SIT tone) or not
 	# picked up; cause: dial, menu (outbound), random, webapp, shout
 	def __add_history (self, direction:str, cause:str, routed,
-	                   result:str, started:float=None):
+	                   result:str, started:float=None, dialed:str=None):
 		data = dict ()
 
 		if routed is not self:
@@ -367,6 +371,9 @@ class Subscriber ():
 
 		if started is not None:
 			data["seconds"] = round (time.monotonic () - started, 1)
+
+		if dialed is not None:
+			data["dialed"] = dialed
 
 		history.add ("call", direction=direction, cause=cause,
 		             number=self.number, kind=self.type.name.lower (),
@@ -380,7 +387,10 @@ class Subscriber ():
 
 		return "complete" if connected else "aborted"
 
-	def outbound_call (self, player, cause:str="dial") -> bool:
+	# dialed: how dialing ended (dial.DIAL_END: immediate, rejected,
+	# timeout, button or hangup), only for cause dial
+	def outbound_call (self, player, cause:str="dial",
+	                   dialed:str=None) -> bool:
 		self.log.info ("outgoing call to %s", self.number)
 
 		number = self.__route ()
@@ -392,7 +402,8 @@ class Subscriber ():
 		connected = number.__call (player, aloud=False, wind=True)
 
 		self.__add_history ("out", cause, number,
-		                    self.__result (available, connected), started)
+		                    self.__result (available, connected), started,
+		                    dialed)
 		return connected
 
 	def inbound_call (self, player, ring=True, cause:str="webapp") -> bool:
@@ -615,6 +626,50 @@ class Network ():
 		for subscriber in self.__subscribers:
 			if subscriber.exists and not subscriber.hidden:
 				yield subscriber.number
+
+	# what self[number] would return, but None instead of creating an
+	# unassigned subscriber (and without the warning of subroute)
+	def __peek (self, number:Number) -> Subscriber:
+		index, exists = self.__find (number)
+
+		if exists:
+			return self.__subscribers[index]
+
+		if 0 != index \
+		and SubscriberType.LIST == self.__subscribers[index-1].type:
+			return self.__subscribers[index-1].subroute (number)
+
+		return None
+
+	# the numbers whose call plays something (for the dial, which calls
+	# a number as soon as no other one starts with its digits): recordings
+	# with a file, callbacks, lists with a playable member and a list's
+	# members by index (base number + index, e.g. 1000 is the first
+	# member of 100, see Subscriber.subroute; other forms like 10000
+	# reach it as well, they are left out). Not: unassigned numbers
+	# (created on access, e.g. by dialing 555), reserved ones (e.g. 1006)
+	# and numbers without a recording (entries of records.list without
+	# a file, a description only)
+	def callable_numbers (self) -> list:
+		numbers = list ()
+
+		for subscriber in self.__subscribers:
+			if subscriber.is_callable ():
+				numbers.append (str (subscriber.number))
+
+			if SubscriberType.LIST != subscriber.type:
+				continue
+
+			for index, member in enumerate (subscriber.list):
+				number = Number (str (subscriber.number) + str (index))
+
+				# the way a call really goes (an existing number
+				# in between wins over the index)
+				if self.__peek (number) is member \
+				and member.is_callable ():
+					numbers.append (str (number))
+
+		return numbers
 
 	def pop (self, number:Number):
 		ret = self.__del (Number (number))

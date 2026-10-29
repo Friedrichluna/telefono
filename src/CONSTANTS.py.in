@@ -312,6 +312,11 @@ DIAL_SLEEP = 0.01
 DIAL_TIMEOUT_DELAY = 0.01
 DIAL_TIMEOUT = 200 / DIAL_TIMEOUT_DELAY
 DIAL_AUTO_TIMEOUT = 4 / DIAL_TIMEOUT_DELAY
+# call a number right after its last digit, if no other number starts
+# with its digits, and give the SIT tone right away, if no number
+# starts with them; otherwise (and with False always) the number is
+# complete with the left button or DIAL_AUTO_TIMEOUT after the last digit
+DIAL_IMMEDIATE = True
 
 SHUTDOWN_BUTTON_DELAY = 0.5
 BUTTON_DELAY = 0.01

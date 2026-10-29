@@ -277,6 +277,15 @@ def seconds_text (event:dict) -> str:
 	return duration_text (seconds)
 
 
+# how dialing ended (dial.DIAL_END, "dialed"; hangup: see the result)
+DIALED = {
+	"immediate": "sofort, eindeutig",
+	"rejected": "sofort, keine Nummer beginnt so",
+	"timeout": "nach der Wartezeit",
+	"button": "linker Knopf",
+}
+
+
 def call_text (event:dict) -> str:
 	number = number_text (event)
 	cause = event.get ("cause")
@@ -289,6 +298,10 @@ def call_text (event:dict) -> str:
 			text = "Menü ruft %s an" % number
 		else:
 			text = "%s gewählt" % number
+
+			dialed = DIALED.get (event.get ("dialed"))
+			if dialed:
+				text += " (%s)" % dialed
 	elif "random" == cause:
 		text = "Zufallsanruf %s" % number
 	elif "shout" == cause:

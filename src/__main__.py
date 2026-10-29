@@ -21,6 +21,7 @@ from .CONSTANTS import SHUTDOWN_FILE
 
 from .CONSTANTS import WEBAPP_EXEC
 
+from .CONSTANTS import DIAL_IMMEDIATE
 from .CONSTANTS import MAINLOOP_DELAY
 from .CONSTANTS import MENU_DELAY
 from .CONSTANTS import OFF_HOOK_DELAY
@@ -36,6 +37,7 @@ from .audio import convert_legacy_recordings
 from .config import LED_PIN
 from .config import PINS
 from .config import read_inverted
+from .dial import DIAL_END
 from .history import history
 from .ipc import IPC_OUTPUT
 from .ipc import IPC_Server
@@ -65,16 +67,37 @@ def turn_off (button, log):
 def do_dial_call (off_hook, ButtonLeft, dial, network, player, led, log):
 	log.debug ("start dialing")
 
-	def abort ():
-		return ButtonLeft.is_released or not off_hook ()
+	# which one aborted dialing (for the history)
+	aborted = []
 
-	number = dial.get_number (abort, led, player)
+	def abort ():
+		if ButtonLeft.is_released:
+			aborted.append ("button")
+			return True
+
+		if not off_hook ():
+			aborted.append ("hangup")
+			return True
+
+		return False
+
+	# call a number as soon as it is unique, stop at once when no
+	# number starts with the digits (else: left button or timeout)
+	numbers = network.callable_numbers if DIAL_IMMEDIATE else None
+
+	number = dial.get_number (abort, led, player, numbers)
 	if not number:
 		# started dialling, but didn't dial anything
 		history.add ("dial_empty")
 		return player.play_busy_tone ()
 
-	if network[number].outbound_call (player):
+	if DIAL_END.ABORTED == dial.end and aborted:
+		dialed = aborted[-1]
+	else:
+		dialed = dial.end.value
+
+	# a rejected number gets the SIT tone of an unassigned one
+	if network[number].outbound_call (player, dialed=dialed):
 		# still off-hook
 		player.play_busy_tone ()
 	return
