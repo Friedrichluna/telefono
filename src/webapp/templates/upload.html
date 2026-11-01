@@ -295,7 +295,7 @@
 		}
 
 		/* like the labels of the form */
-		#fallback > label {
+		#fallback .alert > label {
 			display: block;
 			margin-bottom: .5rem;
 			font-weight: 500;
@@ -364,11 +364,13 @@
 {% endif %}
 			</div>
 			<p id="unsupported" class="alert neutral" hidden>Dieser Browser kann nicht direkt aufnehmen.</p>
-			<label for="record-file">Mit der Aufnahme-App des Handys aufnehmen oder eine Audiodatei wählen ({{ record_min }} s bis {{ record_max // 60 }} min):</label>
-			<div class="file-picker">
-				<input type="file" id="record-file" name="file" class="file-input" accept="audio/*" capture required>
-				<label for="record-file" class="file-button button gray">Aufnehmen / Datei wählen</label>
-				<span id="record-file-name" class="file-name empty">Keine Aufnahme ausgewählt</span>
+			<div class="alert neutral">
+				<label for="record-file">Mit der Aufnahme-App des Handys aufnehmen oder eine Audiodatei wählen ({{ record_min }} s bis {{ record_max // 60 }} min):</label>
+				<div class="file-picker">
+					<input type="file" id="record-file" name="file" class="file-input" accept="audio/*" capture required>
+					<label for="record-file" class="file-button button gray">Aufnehmen / Datei wählen</label>
+					<span id="record-file-name" class="file-name empty">Keine Aufnahme ausgewählt</span>
+				</div>
 			</div>
 		</div>
 		<label for="record-number">Nummer:</label>
