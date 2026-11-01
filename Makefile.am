@@ -104,6 +104,7 @@ dist_template_DATA += src/webapp/templates/say.html
 dist_template_DATA += src/webapp/templates/status.html
 dist_template_DATA += src/webapp/templates/upload.html
 dist_template_DATA += src/webapp/templates/volume.html
+dist_template_DATA += src/webapp/templates/wlan.html
 
 staticdir = $(pkgdatadir)/static
 dist_static_DATA =

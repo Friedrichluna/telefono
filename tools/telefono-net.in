@@ -12,6 +12,8 @@
 #                          WLAN as soon as it is in range again and nobody
 #                          uses the hotspot (NetworkManager,
 #                          telefono-hotspot.service, runs as root)
+#                          and saves or deletes known WLANs for the
+#                          webapp (page WLAN)
 #
 # Settings: section [network] of telefono.conf (see telefono.conf.example),
 # read again on every check. For the status page of the webapp each one
@@ -29,6 +31,7 @@ import re
 import secrets
 import signal
 import socket
+import stat
 import subprocess
 import sys
 import time
@@ -79,6 +82,22 @@ ACTIVATE_TIMEOUT = 45
 DEACTIVATE_TIMEOUT = 20
 
 STATE_REWRITE = 60
+
+# WLANs saved or deleted on the webapp's page WLAN: the webapp (user of
+# telefono.service) writes a request to its runtime directory, the
+# hotspot service (root, it may change NetworkManager's connections)
+# looks for it every REQUEST_POLL s, does it and puts the answer into
+# its state file. A new WLAN is connected NEW_WLAN_DELAY s later if the
+# phone is in the hotspot or has no WLAN (so the answer still reaches
+# the browser first).
+REQUEST_FILE = "/run/telefono/wifi-request.json"
+REQUEST_MAX = 4096
+REQUEST_POLL = 1
+NEW_WLAN_DELAY = 5
+# the known and visible WLANs in the state file are updated every
+# LISTS_REFRESH s and after every request
+LISTS_REFRESH = 60
+VISIBLE_MAX = 30
 
 log = logging.getLogger ("telefono-net")
 
@@ -392,7 +411,9 @@ def run_mdns (args) -> int:
 #
 
 def run_command (command:list, timeout:float=60):
-	env = dict (os.environ, LC_ALL="C")
+	# English messages, but SSIDs with umlauts as they are (with "C"
+	# nmcli prints "?" for them)
+	env = dict (os.environ, LC_ALL="C.UTF-8")
 	try:
 		result = subprocess.run (command, capture_output=True, text=True,
 		                         timeout=timeout, env=env)
@@ -546,6 +567,33 @@ class NetworkManager ():
 		return sum (1 for line in out.splitlines ()
 		            if line.startswith ("Station "))
 
+	# saves a WLAN NetworkManager connects to by itself (password ""
+	# is an open WLAN); True or the error of nmcli
+	def save_network (self, device:str, ssid:str, password:str,
+	                  uuid:str=None):
+		if password:
+			security = ["wifi-sec.key-mgmt", "wpa-psk", "wifi-sec.psk",
+			            password]
+		elif uuid:
+			security = ["remove", "802-11-wireless-security"]
+		else:
+			security = []
+
+		if uuid:
+			code, _, err = self.nm ("connection", "modify", "uuid", uuid,
+			                        "connection.autoconnect", "yes",
+			                        *security)
+		else:
+			code, _, err = self.nm ("connection", "add", "type", "wifi",
+			                        "ifname", device, "con-name", ssid,
+			                        "ssid", ssid, "connection.autoconnect",
+			                        "yes", *security)
+		return True if not code else err.strip () or "nmcli: %d" % code
+
+	def delete_network (self, uuid:str):
+		code, _, err = self.nm ("connection", "delete", "uuid", uuid)
+		return True if not code else err.strip () or "nmcli: %d" % code
+
 	def up (self, uuid:str, device:str) -> bool:
 		code, _, err = self.nm ("--wait", str (ACTIVATE_TIMEOUT), "connection",
 		                        "up", "uuid", uuid, "ifname", device,
@@ -685,12 +733,71 @@ def write_dnsmasq (name:str, path:str=DNSMASQ_FILE):
 	return
 
 
+def valid_wlan_password (password:str) -> bool:
+	return "" == password or valid_password (password) \
+	       or (64 == len (password)
+	           and all (c in "0123456789abcdefABCDEF" for c in password))
+
+
+# the request of the webapp, removed when read: {"id", "action" ("save"
+# or "delete"), "ssid", "password"}, {"id", "invalid": reason} if it is
+# not valid, None if there is none; the file belongs to the webapp's
+# user, so no links, nothing but a small regular file
+def take_request (path:str=REQUEST_FILE):
+	try:
+		fd = os.open (path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+	except FileNotFoundError:
+		return None
+	except OSError as error:
+		warn_once ("reading %s failed: %s", path, error)
+		try:
+			os.unlink (path)
+		except OSError:
+			pass
+		return None
+
+	try:
+		with os.fdopen (fd, "rb") as f:
+			data = f.read (REQUEST_MAX + 1) \
+			       if stat.S_ISREG (os.fstat (f.fileno ()).st_mode) else b""
+	finally:
+		try:
+			os.unlink (path)
+		except OSError:
+			pass
+
+	try:
+		request = json.loads (data.decode ()) if len (data) <= REQUEST_MAX \
+		          else None
+	except (UnicodeDecodeError, ValueError):
+		request = None
+	if not isinstance (request, dict):
+		return {"id": "", "invalid": "not a request"}
+
+	result = {"id": request.get ("id") if isinstance (request.get ("id"), str)
+	                else ""}
+	action = request.get ("action")
+	ssid = request.get ("ssid")
+	password = request.get ("password", "")
+	if action not in ("save", "delete"):
+		result["invalid"] = "unknown action"
+	elif not isinstance (ssid, str) or not 1 <= len (ssid.encode ()) <= 32:
+		result["invalid"] = "ssid"
+	elif "save" == action and (not isinstance (password, str)
+	                           or not valid_wlan_password (password)):
+		result["invalid"] = "password"
+	else:
+		result.update (action=action, ssid=ssid,
+		               password=password if "save" == action else "")
+	return result
+
+
 class Hotspot ():
 	def __init__ (self, nm:NetworkManager=None, delay:float=HOTSPOT_DELAY,
 	              check:float=HOTSPOT_CHECK, hide=(), clock=time.monotonic,
 	              config=read_config, password=hotspot_password,
 	              dnsmasq=write_dnsmasq, state_file:str=HOTSPOT_STATE_FILE,
-	              sleep=time.sleep):
+	              sleep=time.sleep, request=take_request):
 		self.nm = nm or NetworkManager ()
 		self.delay = delay
 		self.check = check
@@ -711,6 +818,13 @@ class Hotspot ():
 		self.cleaned = False
 		# SSIDs of connections (for the status page)
 		self.ssids = dict ()
+		# for the webapp's page WLAN: known and visible WLANs, the
+		# answer to the last request, the last new WLAN connected
+		self.request = request
+		self.extra = dict ()
+		self.lists_at = 0
+		# (uuid, ssid, when) of a new WLAN to connect
+		self.pending = None
 		return
 
 	def wall (self, moment:float) -> float:
@@ -723,7 +837,7 @@ class Hotspot ():
 			                                  if item[0] in ("network", "ssid",
 			                                                 "device", "reason")))
 			self.mode = mode
-		self.state.write (dict (details, mode=mode))
+		self.state.write (dict (details, mode=mode, **self.extra))
 		return
 
 	def network_ssid (self, connection:str) -> str:
@@ -841,6 +955,132 @@ class Hotspot ():
 		item = self.find (device)
 		return item["connection"] if item else ""
 
+	def refresh_lists (self, device:str, config:dict):
+		known = sorted ({ssid for _, ssid in self.known (device)},
+		                key=str.lower)
+		visible = self.nm.visible (device, rescan=False)
+		visible.pop (config["ssid"], None)
+		self.extra["known"] = known
+		self.extra["visible"] = sorted (visible, key=lambda ssid:
+		                                -visible[ssid])[:VISIBLE_MAX]
+		self.lists_at = self.clock () + LISTS_REFRESH
+		return
+
+	# the webapp's request, if there is one; True if one was done
+	def handle_request (self) -> bool:
+		request = self.request ()
+		if request is None:
+			return False
+
+		answer = {"id": request["id"], "ok": False,
+		          "ssid": request.get ("ssid", "")}
+		devices = self.nm.devices ()
+		item = self.device (devices or [], None)
+		if "invalid" in request:
+			log.warning ("invalid WLAN request: %s", request["invalid"])
+			answer["error"] = "invalid"
+		elif item is None:
+			answer["error"] = "no networkmanager" if devices is None \
+			                  else "no wlan"
+		else:
+			self.do_request (request, item, answer)
+
+		self.extra["request"] = dict (answer, at=time.time ())
+		if item is not None:
+			self.refresh_lists (item["device"], self.config ())
+		self.state.write (dict (self.state.written or {}, **self.extra))
+		return True
+
+	def do_request (self, request:dict, item:dict, answer:dict):
+		device = item["device"]
+		ssid = request["ssid"]
+		uuids = [uuid for uuid, known in self.nm.known_networks (device)
+		         if known == ssid]
+
+		if "delete" == request["action"]:
+			if not uuids:
+				answer["error"] = "unknown"
+				return
+			for uuid in uuids:
+				result = self.nm.delete_network (uuid)
+				if result is not True:
+					log.error ("deleting WLAN %s failed: %s", ssid, result)
+					answer.update (error="failed", detail=result)
+					return
+			log.info ("deleted WLAN %s (webapp)", ssid)
+			self.ssids.clear ()
+			answer.update (ok=True, done="deleted")
+			return
+
+		result = self.nm.save_network (device, ssid, request["password"],
+		                               uuids[0] if uuids else None)
+		if result is not True:
+			log.error ("saving WLAN %s failed: %s", ssid, result)
+			answer.update (error="failed", detail=result)
+			return
+
+		log.info ("%s WLAN %s (webapp)", "changed" if uuids else "saved",
+		          ssid)
+		answer.update (ok=True, done="changed" if uuids else "saved")
+
+		# connected at once only if the phone has no WLAN; it stays in
+		# a WLAN it has (NetworkManager takes the new one when that one
+		# is gone)
+		in_hotspot = HOTSPOT_CONNECTION == item["connection"]
+		if in_hotspot or not item["state"].startswith ("connected"):
+			uuid = uuids[0] if uuids else self.uuid_of (device, ssid)
+			if uuid:
+				self.pending = (uuid, ssid, self.clock () + NEW_WLAN_DELAY)
+				answer["next"] = "switch" if in_hotspot else "connect"
+		else:
+			answer.update (next="stay",
+			               network=self.network_ssid (item["connection"]))
+		return
+
+	def uuid_of (self, device:str, ssid:str):
+		for uuid, known in self.nm.known_networks (device):
+			if known == ssid:
+				return uuid
+		return None
+
+	# the WLAN just saved in the webapp, when it is time
+	def connect_pending (self):
+		uuid, ssid, at = self.pending
+		if self.clock () < at:
+			return
+		self.pending = None
+
+		config = self.config ()
+		item = self.device (self.nm.devices () or [], config)
+		if item is None:
+			return
+		device = item["device"]
+		in_hotspot = HOTSPOT_CONNECTION == item["connection"]
+		if not in_hotspot and item["state"].startswith ("connected"):
+			return
+
+		log.info ("connecting the new WLAN %s", ssid)
+		if in_hotspot:
+			self.nm.hotspot_down (device)
+		connected = self.nm.up (uuid, device)
+		self.extra["switch"] = {"ssid": ssid, "ok": connected,
+		                        "at": time.time ()}
+		if connected:
+			self.set_client (device, self.current_network (device), config)
+		elif in_hotspot:
+			log.info ("connecting %s failed, hotspot again", ssid)
+			self.start_hotspot (device, config, self.clock ())
+		return
+
+	# a check of the WLAN; the time (s) until the next one
+	def step (self) -> float:
+		if self.pending:
+			self.connect_pending ()
+		wait = self.tick ()
+		if self.pending:
+			wait = max (0, min (wait, self.pending[2] - self.clock ()))
+		return wait
+
 	def tick (self):
 		now = self.clock ()
 		config = self.config ()
@@ -860,6 +1100,9 @@ class Hotspot ():
 		device = item["device"]
 		state = item["state"]
 		in_hotspot = HOTSPOT_CONNECTION == item["connection"]
+
+		if now >= self.lists_at:
+			self.refresh_lists (device, config)
 
 		if not config["hotspot"]:
 			if in_hotspot:
@@ -935,11 +1178,20 @@ def run_hotspot (args) -> int:
 	          ", ignoring " + ", ".join (args.hide) if args.hide else "")
 	while True:
 		try:
-			wait = hotspot.tick ()
+			wait = hotspot.step ()
 		except Exception:
 			log.exception ("hotspot check failed")
 			wait = HOTSPOT_TICK
-		time.sleep (wait)
+
+		# requests of the webapp in between, then a check at once
+		end = time.monotonic () + wait
+		while time.monotonic () < end:
+			try:
+				if hotspot.handle_request ():
+					break
+			except Exception:
+				log.exception ("WLAN request failed")
+			time.sleep (min (REQUEST_POLL, max (0, end - time.monotonic ())))
 
 
 def stop (signum, frame):

@@ -222,7 +222,7 @@
 			line-height: inherit;
 		}
 
-		input[type="text"], input[type="search"], textarea {
+		input[type="text"], input[type="search"], input[type="password"], textarea {
 			width: 100%;
 			padding: .375rem .75rem;
 
@@ -234,7 +234,7 @@
 			transition: border-color .15s ease-in-out, box-shadow .15s ease-in-out;
 		}
 
-		input[type="text"]:focus, input[type="search"]:focus, textarea:focus {
+		input[type="text"]:focus, input[type="search"]:focus, input[type="password"]:focus, textarea:focus {
 			border-color: var(--primary-border);
 			outline: 0;
 			box-shadow: 0 0 0 .2rem var(--focus-ring-soft);
@@ -651,7 +651,7 @@
 {% set active_page = request.endpoint %}
 {% if active_page in ['edit_value', 'old_list'] %}{% set active_page = 'list' %}{% endif %}
 {% if active_page in ['upload_file', 'record_page', 'record_save'] %}{% set active_page = 'upload_page' %}{% endif %}
-{% set other_pages = [('say', 'Text ansagen'), ('volume', 'Lautstärke'), ('status', 'Status'), ('diagnose', 'Hardware-Test')] %}
+{% set other_pages = [('say', 'Text ansagen'), ('volume', 'Lautstärke'), ('wlan', 'WLAN'), ('status', 'Status'), ('diagnose', 'Hardware-Test')] %}
 {% set other_active = active_page in other_pages|map(attribute=0) %}
 {% for endpoint, title in [('list', 'Liste'), ('upload_page', 'Hochladen')] %}
 				<a {% if active_page == endpoint %}class="active" aria-current="page" {% endif %}href="{{ url_for(endpoint) }}">{{ title }}</a>

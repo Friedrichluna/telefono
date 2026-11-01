@@ -3,6 +3,7 @@
 
 import contextlib
 import errno
+import json
 import logging
 import math
 import os
@@ -46,6 +47,10 @@ from ..CONSTANTS import STATUS_EVENTS_MAX
 from ..CONSTANTS import STATUS_DAYS
 from ..CONSTANTS import STATUS_TOP_NUMBERS
 from ..CONSTANTS import STATUS_REFRESH
+
+from ..CONSTANTS import NET_HOTSPOT_STATE_FILE
+from ..CONSTANTS import NET_WIFI_REQUEST_FILE
+from ..CONSTANTS import NET_WIFI_TIMEOUT
 
 from ..CONSTANTS import VOLUME_FILE
 from ..CONSTANTS import RING_VOLUME
@@ -231,6 +236,64 @@ TEST_SOUNDS = {
 }
 
 
+# page WLAN: WPA2 passwords are 8 to 63 ASCII characters or 64 hex
+# digits, "" is an open WLAN (the hotspot service checks it again)
+WLAN_PASSWORD_MAX = 64
+
+
+def wlan_password_valid (password:str) -> bool:
+	if "" == password:
+		return True
+	if 64 == len (password):
+		return all (c in "0123456789abcdefABCDEF" for c in password)
+	return 8 <= len (password) <= 63 \
+	       and all (32 <= ord (c) < 127 for c in password)
+
+
+# the hotspot service's answer as (message, message type)
+def wlan_answer_text (answer:dict):
+	ssid = status.quoted (answer.get ("ssid", ""))
+
+	if not answer.get ("ok"):
+		error = answer.get ("error")
+		if "unknown" == error:
+			return "Das WLAN %s ist nicht gespeichert." % ssid, "warning"
+		if "no wlan" == error:
+			return "Das Telefon hat kein WLAN-Gerät.", "error"
+		if "no networkmanager" == error:
+			return "NetworkManager läuft nicht, nichts geändert.", "error"
+		if "invalid" == error:
+			return "Ungültige Eingabe, nichts geändert.", "error"
+		return "Das hat nicht geklappt: %s" % (answer.get ("detail")
+		                                        or "unbekannter Fehler"), "error"
+
+	done = answer.get ("done")
+	if "deleted" == done:
+		return "WLAN %s gelöscht." % ssid, "success"
+
+	message = ("Passwort von WLAN %s geändert." if "changed" == done
+	           else "WLAN %s gespeichert.") % ssid
+	following = answer.get ("next")
+	if "switch" == following:
+		message += " Das Telefon beendet in wenigen Sekunden den Hotspot" \
+		           " und verbindet sich damit. Klappt das nicht (z. B." \
+		           " falsches Passwort), ist der Hotspot nach etwa einer" \
+		           " Minute wieder da."
+	elif "connect" == following:
+		message += " Das Telefon verbindet sich jetzt damit."
+	elif "stay" == following:
+		network = answer.get ("network", "")
+		if network == answer.get ("ssid"):
+			message += " Es gilt ab der nächsten Verbindung, die" \
+			           " jetzige bleibt bestehen."
+		else:
+			message += " Das Telefon bleibt mit %s verbunden und nimmt" \
+			           " %s, wenn %s nicht in Reichweite ist." \
+			           % (status.quoted (network), ssid,
+			              status.quoted (network))
+	return message, "success"
+
+
 # e.g. "85 % (-6 dB)", "stumm"; db None: unknown
 def level_text (percent:int, db, muted:bool) -> str:
 	if muted:
@@ -355,6 +418,7 @@ class TelefonoWebApp (Flask):
 		self.add_url_rule ("/diagnose", "diagnose", self.diagnose, methods=["GET", "POST"])
 		self.add_url_rule ("/diagnose/data", "diagnose_data", self.diagnose_data)
 		self.add_url_rule ("/volume", "volume", self.volume, methods=["GET", "POST"])
+		self.add_url_rule ("/wlan", "wlan", self.wlan, methods=["GET", "POST"])
 
 		# hardware test: GPIO registers read directly, not through
 		# the main process (it does not answer while the phone is used)
@@ -549,6 +613,113 @@ class TelefonoWebApp (Flask):
 	# also works while the phone is busy
 	def help (self):
 		return render_template ("help.html", net=status.network_names ())
+
+	# page WLAN: the WLANs the phone connects to by itself; saving and
+	# deleting needs root, so the hotspot service does it: the request
+	# goes to NET_WIFI_REQUEST_FILE, the answer comes in the service's
+	# state file (never through the main process)
+	def wlan_reply (self, message:str=None, message_type:str=None,
+	                status_code:int=200, ssid:str=""):
+		state = status.net_state (NET_HOTSPOT_STATE_FILE)
+		ready = state is not None and not state.get ("stale") \
+		        and state.get ("mode") not in ("no networkmanager",
+		                                       "no wlan")
+
+		known = state.get ("known") if ready else None
+		visible = state.get ("visible") if ready else None
+		switch = state.get ("switch") if ready else None
+
+		network = None
+		if ready and "client" == state.get ("mode"):
+			network = status.text_of (state, "network")
+		in_hotspot = ready and "hotspot" == state.get ("mode")
+
+		response = self.make_response ((render_template (
+		        "wlan.html", message=message, message_type=message_type,
+		        ready=ready, hotspot=status.hotspot_text (state),
+		        known=[ssid for ssid in known or [] if isinstance (ssid, str)],
+		        visible=[ssid for ssid in visible or []
+		                 if isinstance (ssid, str)],
+		        network=network, in_hotspot=in_hotspot,
+		        switch=switch if isinstance (switch, dict) else None,
+		        switch_time=status.clock_text ((switch or {}).get ("at"))
+		                    if isinstance (switch, dict) else "",
+		        ssid=ssid, password_max=WLAN_PASSWORD_MAX,
+		        net=status.network_names ()),
+		        status_code))
+		response.cache_control.no_store = True
+		return response
+
+	# the request to the hotspot service and its answer (None: none
+	# within NET_WIFI_TIMEOUT s)
+	def wlan_request (self, action:str, ssid:str, password:str=""):
+		request_id = os.urandom (8).hex ()
+		data = json.dumps ({"id": request_id, "action": action,
+		                    "ssid": ssid, "password": password})
+
+		directory = os.path.dirname (NET_WIFI_REQUEST_FILE)
+		fd, temp = tempfile.mkstemp (dir=directory, prefix=".wifi-")
+		try:
+			with os.fdopen (fd, "w", encoding="utf-8") as f:
+				f.write (data)
+			os.replace (temp, NET_WIFI_REQUEST_FILE)
+		except OSError:
+			with contextlib.suppress (OSError):
+				os.unlink (temp)
+			raise
+
+		end = time.monotonic () + NET_WIFI_TIMEOUT
+		while time.monotonic () < end:
+			time.sleep (.25)
+			state = status.net_state (NET_HOTSPOT_STATE_FILE) or {}
+			answer = state.get ("request")
+			if isinstance (answer, dict) and request_id == answer.get ("id"):
+				return answer
+
+		# not taken: nobody should find it later
+		with contextlib.suppress (OSError):
+			os.unlink (NET_WIFI_REQUEST_FILE)
+		return None
+
+	def wlan (self):
+		if "POST" != request.method:
+			return self.wlan_reply ()
+
+		action = request.form.get ("action", "save")
+		ssid = request.form.get ("ssid", "")
+		password = request.form.get ("password", "")
+		if action not in ("save", "delete"):
+			return self.wlan_reply ("Unbekannte Aktion.", "error", 400)
+
+		if not 1 <= len (ssid.encode ()) <= 32:
+			return self.wlan_reply ("Der Name des WLANs (SSID) muss 1 bis"
+			                        " 32 Bytes lang sein.", "error", 400,
+			                        ssid=ssid)
+
+		if "save" == action and not wlan_password_valid (password):
+			return self.wlan_reply ("Das Passwort muss 8 bis 63 Zeichen lang"
+			                        " sein (ohne Umlaute) oder leer für ein"
+			                        " offenes WLAN.", "error", 400,
+			                        ssid=ssid)
+
+		try:
+			answer = self.wlan_request (action, ssid, password)
+		except OSError as failure:
+			self.logger.error ("writing %s failed: %s",
+			                   NET_WIFI_REQUEST_FILE, failure)
+			return self.wlan_reply ("Die Anfrage konnte nicht gestellt"
+			                        " werden.", "error", 500, ssid=ssid)
+
+		if answer is None:
+			return self.wlan_reply ("Der Dienst telefono-hotspot antwortet"
+			                        " nicht, nichts geändert.", "error", 503,
+			                        ssid=ssid)
+
+		message, message_type = wlan_answer_text (answer)
+		self.logger.info ("WLAN %s %s: %s", action, ssid, message)
+		if "success" != message_type:
+			return self.wlan_reply (message, message_type, ssid=ssid)
+		return self.finish (url_for ("wlan"), message, message_type)
 
 	# state of the phone and its history, read from files (not through
 	# the main process, so it also works while the phone is busy);

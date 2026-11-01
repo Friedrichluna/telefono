@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+
+{% block style %}
+		h3 {
+			margin: 1.5rem 0 .75rem;
+			padding-bottom: .25rem;
+			font-size: 1.25rem;
+			font-weight: 500;
+			line-height: 1.2;
+			border-bottom: 1px solid var(--border-subtle);
+		}
+
+		p {
+			margin: 0 0 .75rem;
+		}
+
+		.alert {
+			margin: 0 0 .75rem;
+			padding: .5rem .75rem;
+			color: var(--error-text);
+			background-color: var(--error-bg);
+			border-radius: .25rem;
+		}
+
+		.alert.warning {
+			color: var(--warning-text);
+			background-color: var(--warning-bg);
+		}
+
+		ul.networks {
+			margin: 0 0 1rem;
+			padding: 0;
+			list-style: none;
+			border: 1px solid var(--border-subtle);
+			border-radius: .25rem;
+		}
+
+		ul.networks > li {
+			display: flex;
+			flex-wrap: wrap;
+			align-items: center;
+			gap: .5rem 1rem;
+			padding: .5rem .75rem;
+			border-top: 1px solid var(--border-subtle);
+		}
+
+		ul.networks > li:first-child {
+			border-top: 0;
+		}
+
+		.ssid {
+			flex: 1 1 10rem;
+			min-width: 0;
+			overflow-wrap: anywhere;
+			font-weight: 500;
+		}
+
+		.ssid .hint {
+			font-weight: normal;
+		}
+
+		.actions {
+			display: flex;
+			gap: .5rem;
+		}
+
+		.actions form {
+			margin: 0;
+		}
+
+		#ssid, #password {
+			max-width: 24rem;
+		}
+
+		form.stacked > label.show {
+			display: flex;
+			align-items: center;
+			gap: .5rem;
+			margin-top: -.5rem;
+			font-weight: normal;
+		}
+{% endblock %}
+
+{% block title %}WLAN{% endblock %}
+
+{% block content %}
+	<h2>WLAN</h2>
+	<p>Das Telefon verbindet sich selbst mit einem gespeicherten WLAN in Reichweite. Ist keins da, macht es nach 1,5 min ein eigenes WLAN auf (Hotspot), über das die Webseite erreichbar bleibt.</p>
+{% if not ready %}
+	<p class="alert">Das WLAN lässt sich hier gerade nicht ändern. Hotspot: {{ hotspot }}</p>
+{% else %}
+	<p>
+{%- if network %}Verbunden mit „{{ network }}“.
+{%- elif in_hotspot %}Kein gespeichertes WLAN in Reichweite, das Telefon macht sein eigenes WLAN auf (Hotspot).
+{%- else %}Gerade mit keinem WLAN verbunden. Hotspot: {{ hotspot }}{% endif %}</p>
+{% endif %}
+{% if switch and not switch.ok %}
+	<p class="alert warning">Verbinden mit „{{ switch.ssid }}“ um {{ switch_time }} hat nicht geklappt (falsches Passwort oder nicht in Reichweite).</p>
+{% endif %}
+
+	<h3>Gespeicherte WLANs</h3>
+{% if known %}
+	<ul class="networks">
+{% for name in known %}
+		<li>
+			<span class="ssid">{{ name }}{% if name == network %} <span class="hint">(verbunden)</span>{% endif %}</span>
+			<span class="actions">
+				<button type="button" class="button light change" data-ssid="{{ name }}"{% if not ready %} disabled{% endif %}>Passwort ändern</button>
+				<form method="post" class="delete" data-ssid="{{ name }}" data-current="{{ 'yes' if name == network else '' }}">
+					<input type="hidden" name="action" value="delete">
+					<input type="hidden" name="ssid" value="{{ name }}">
+					<input type="submit" class="button light" value="Löschen"{% if not ready %} disabled{% endif %}>
+				</form>
+			</span>
+		</li>
+{% endfor %}
+	</ul>
+{% elif ready %}
+	<p>Noch keins.</p>
+{% else %}
+	<p>Unbekannt.</p>
+{% endif %}
+
+	<h3 id="neu">WLAN hinzufügen oder Passwort ändern</h3>
+	<form method="post" class="stacked" id="save-form">
+		<input type="hidden" name="action" value="save">
+		<label for="ssid">Name des WLANs (SSID):</label>
+		<input type="text" id="ssid" name="ssid" value="{{ ssid }}" list="visible" maxlength="32" autocomplete="off" autocapitalize="off" spellcheck="false" required aria-describedby="ssid-hint">
+		<p class="hint" id="ssid-hint">{% if visible %}WLANs in Reichweite stehen zur Auswahl im Feld. {% endif %}Groß- und Kleinschreibung zählt.</p>
+		<label for="password">Passwort:</label>
+		<input type="password" id="password" name="password" maxlength="{{ password_max }}" autocomplete="off" aria-describedby="password-hint">
+		<label class="show"><input type="checkbox" id="show-password"> Passwort anzeigen</label>
+		<p class="hint" id="password-hint">Leer lassen für ein offenes WLAN. Ist das WLAN schon gespeichert, wird nur sein Passwort geändert.</p>
+		<input type="submit" class="button primary" value="Speichern"{% if not ready %} disabled{% endif %}>
+		<p class="hint">Mit dem Hotspot verbunden? Dann beendet das Telefon nach dem Speichern den Hotspot und wechselt in das neue WLAN; danach ist die Webseite dort unter <a href="http://{{ net.name }}.local:{{ net.port }}/">{{ net.name }}.local:{{ net.port }}</a> zu finden. Klappt das Verbinden nicht, ist der Hotspot nach etwa einer Minute wieder da.</p>
+	</form>
+	<datalist id="visible">
+{% for name in visible %}
+		<option value="{{ name }}">
+{% endfor %}
+	</datalist>
+{% endblock %}
+
+{% block script %}
+<script>
+(function () {
+	"use strict";
+
+	const ssid = document.getElementById ("ssid");
+	const password = document.getElementById ("password");
+
+	document.getElementById ("show-password").addEventListener ("change", function (event) {
+		password.type = event.target.checked ? "text" : "password";
+	});
+
+	document.querySelectorAll ("button.change").forEach (function (button) {
+		button.addEventListener ("click", function () {
+			ssid.value = button.dataset.ssid;
+			password.value = "";
+			document.getElementById ("neu").scrollIntoView ({ behavior: "smooth" });
+			password.focus ({ preventScroll: true });
+		});
+	});
+
+	document.querySelectorAll ("form.delete").forEach (function (form) {
+		form.addEventListener ("submit", function (event) {
+			let question = "WLAN „" + form.dataset.ssid + "“ löschen?";
+			if (form.dataset.current)
+				question += " Das Telefon ist gerade damit verbunden, die Verbindung bricht ab und die Webseite ist danach eventuell nicht mehr erreichbar.";
+			if (!confirm (question))
+				event.preventDefault ();
+		});
+	});
+
+	document.getElementById ("save-form").addEventListener ("submit", function () {
+		this.querySelector ("[type=submit]").value = "Wird gespeichert …";
+	});
+}) ();
+</script>
+{% endblock %}

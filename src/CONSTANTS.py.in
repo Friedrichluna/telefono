@@ -55,6 +55,11 @@ NET_HOTSPOT_STATE_FILE = "/run/telefono-hotspot/state.json"
 NET_STATE_MAX_AGE = 180
 NET_DEFAULT_NAME = "telefono"
 NET_HOTSPOT_ADDRESS = "10.42.0.1"
+# page WLAN: the request to save or delete a WLAN for the hotspot service
+# (it runs as root and may change NetworkManager's connections, the
+# webapp may not); its answer is awaited NET_WIFI_TIMEOUT s
+NET_WIFI_REQUEST_FILE = "/run/telefono/wifi-request.json"
+NET_WIFI_TIMEOUT = 20
 
 # hardware test page (/diagnose): the GPIO registers are read from
 # DIAGNOSE_GPIO_MEM (read-only, nothing is claimed or changed); while
