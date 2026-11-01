@@ -38,24 +38,20 @@ Die Dienste `telefono`, `telefono-mdns` und `telefono-hotspot` aktiviert `make i
 Update auf eine neue Version:
 
 ```
-git pull --ff-only origin master
-rm -f build/vcs_version build/CONSTANTS.py
-cd build && ../configure --sysconfdir=/etc && make && sudo make install
-sudo systemctl restart telefono
+tools/update.sh --pull
 ```
 
-Das `rm` gehört dazu: der Hook `post-checkout` schreibt `build/vcs_version` nur beim Checkout, ein `git pull` löst `post-merge` aus. Sonst wird die alte Version in `CONSTANTS.py` gebacken und der Dienst meldet beim Start einen Commit, der längst nicht mehr läuft (`journalctl -u telefono | grep started`).
+`tools/update.sh` baut und installiert den Stand, der gerade ausgecheckt ist (`--pull` holt vorher mit `git pull --ff-only origin master` den neuesten), und startet `telefono` neu. Es nimmt dabei drei Fallen mit, die man von Hand leicht übersieht:
 
-`configure` vergisst die Optionen der letzten Installation: wurde mit anderen Pfaden installiert, müssen beim Update dieselben Optionen wieder angegeben werden. Sonst landet ein zweites Paket unter `site-packages`, das der Dienst nie lädt (er läuft mit dem alten weiter), und die Aufnahmen werden unter `/usr/local/var/telefono` gesucht. Welche Pfade installiert sind, zeigt `grep -E "RECORD_DIR|VCS" /usr/local/lib/python3.*/*-packages/telefono/CONSTANTS.py`. Auf dem Pi (`ssh pi`) liegen die Aufnahmen unter `/var/telefono` und das Paket unter `dist-packages`, dort heißt die Zeile:
+- `configure` vergisst die Optionen der letzten Installation. Das Skript liest sie aus `build/config.status --config` und gibt sie wieder an (ohne `build/` gilt `--sysconfdir=/etc`, eigene Optionen mit `tools/update.sh -- <Optionen>`). Mit anderen Optionen landet sonst ein zweites Paket unter `site-packages`, das der Dienst nie lädt, und die Aufnahmen werden unter `/usr/local/var/telefono` gesucht.
+- `build/vcs_version` und `build/CONSTANTS.py` werden gelöscht: der Hook `post-checkout` schreibt die Version nur beim Checkout, ein `git pull` löst `post-merge` aus. Sonst meldet der Dienst beim Start einen alten Commit (`journalctl -u telefono | grep started`).
+- `make install` löscht nichts. Das Skript leert deshalb vorher die installierten Verzeichnisse von Paket, Vorlagen/Tönen und `telefono-net` (z. B. `/usr/local/lib/python3.<x>/*-packages/telefono`, `/usr/local/share/telefono`, `/usr/local/libexec/telefono`), damit umbenannte oder gelöschte Dateien nicht liegen bleiben. Aufnahmen, `telefono.conf`, Zertifikat und Hotspot-Passwort liegen woanders und bleiben.
+
+Welche Pfade installiert sind, zeigt `grep -E "RECORD_DIR|VCS" /usr/local/lib/python3.*/*-packages/telefono/CONSTANTS.py`. Auf dem Pi (`ssh pi`) liegen die Aufnahmen unter `/var/telefono` und das Paket unter `dist-packages`, die erste Installation dort war:
 
 ```
-cd build && ../configure --sysconfdir=/etc --localstatedir=/var \
-    am_cv_python_pythondir=/usr/local/lib/python3.13/dist-packages \
-    am_cv_python_pyexecdir=/usr/local/lib/python3.13/dist-packages \
-    && make && sudo make install
+cd build && ../configure --sysconfdir=/etc --localstatedir=/var     am_cv_python_pythondir=/usr/local/lib/python3.13/dist-packages     am_cv_python_pyexecdir=/usr/local/lib/python3.13/dist-packages     && make && sudo make install
 ```
-
-`make install` löscht nichts. Wurden Dateien im Quellbaum umbenannt oder in ein Paket verschoben, bleiben die alten im installierten Paket liegen – ein altes `webapp.py` neben dem neuen Paket `webapp/` etwa. Beim Update von einer deutlich älteren Version das Paketverzeichnis vorher wegsichern und leeren, mindestens `__pycache__` löschen.
 
 
 ## Funktionsweise

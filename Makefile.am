@@ -187,6 +187,7 @@ endif
 endif
 
 EXTRA_DIST += telefono.service
+EXTRA_DIST += tools/update.sh
 
 ACLOCAL_AMFLAGS = --install -I build-macro
 
