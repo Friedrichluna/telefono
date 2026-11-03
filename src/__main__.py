@@ -45,6 +45,35 @@ from .player import Player
 from .volume import VolumeSettings
 
 
+# The menu numbers belong to telefono itself, but a phone may have used
+# one of them before that menu entry existed (number 400 carried a
+# description from before Menü 4 on the first phone). The assignment
+# then fails with an AttributeError and telefono does not start at all,
+# so drop such a leftover entry first. An entry with a recording is
+# kept, it is worth more than the menu entry.
+def claim_menu_number (network, number, log):
+	subscriber = network[number]
+
+	if subscriber.is_assignable ():
+		return True
+
+	if subscriber.exists:
+		log.error ("number %s holds a recording, its menu "
+		           "entry stays unavailable", number)
+		return False
+
+	log.warning ("dropping leftover entry %r without a recording"
+	             " on menu number %s", subscriber.description, number)
+	network.pop (number)
+
+	# a number routed through a base number is not in the list
+	# and survives the pop
+	if network[number].is_assignable ():
+		return True
+
+	log.error ("menu number %s stays unavailable", number)
+	return False
+
 def turn_off (button, log):
 	if not button.is_pressed:
 		return False
@@ -258,15 +287,23 @@ def main ():
 	network = Network ()
 	network.sync_fs ()
 	# say current time
-	network["0"].callback = Player.say_time
+	if claim_menu_number (network, "0", log):
+		network["0"].callback = Player.say_time
 	# supper prayer songs
-	network["100"].list = ["101", "102", "103", "104", "105", "106"]
+	if claim_menu_number (network, "100", log):
+		network["100"].list = ["101", "102", "103", "104",
+		                       "105", "106"]
 	# supper prayers
-	network["200"].list = ["201", "202", "203", "204", "205", "206"]
+	if claim_menu_number (network, "200", log):
+		network["200"].list = ["201", "202", "203", "204",
+		                       "205", "206"]
 	# pater quotes
-	network["300"].list = ["2", "10", "11", "19", "22", "26", "30", "88"]
+	if claim_menu_number (network, "300", log):
+		network["300"].list = ["2", "10", "11", "19", "22",
+		                       "26", "30", "88"]
 	# say the address of the webapp
-	network["400"].callback = Player.say_address
+	if claim_menu_number (network, "400", log):
+		network["400"].callback = Player.say_address
 
 	# the wiring differs between the phones, see telefono.conf
 	inverted = read_inverted ()
