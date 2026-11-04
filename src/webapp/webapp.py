@@ -75,6 +75,7 @@ from ..diagnose import evaluate_outputs
 from ..history import HistoryReader
 from ..ipc import IPC_DESCRIPTION_MAX_BYTES
 from ..ipc import IPC_OUTPUT
+from ..ipc import IPC_Malformed
 from ..ipc import IPC_StringTooLong
 from ..ipc import IPC_Timeout
 from ..ipc import IPC_TTS_MESSAGE_MAX_BYTES
@@ -443,6 +444,7 @@ class TelefonoWebApp (Flask):
 		        lambda record: "/diagnose/data" not in record.getMessage ())
 
 		self.register_error_handler (IPC_Timeout, self.busy)
+		self.register_error_handler (IPC_Malformed, self.malformed)
 		self.register_error_handler (IPC_StringTooLong, self.too_long)
 		self.register_error_handler (RequestEntityTooLarge, self.too_large)
 
@@ -502,6 +504,17 @@ class TelefonoWebApp (Flask):
 
 		return self.reply ("message.html", message, "warning", 503,
 		                   back=back, back_title=back_title)
+
+	# the main process answered something else than what was asked
+	# for; nothing was lost, so trying again is the right offer
+	def malformed (self, error):
+		self.logger.error ("unexpected answer: %s %s: %s",
+		                   request.method, request.path, error)
+
+		return self.reply ("message.html",
+		                   "Ein Fehler ist aufgetreten.", "error", 500,
+		                   back=request.full_path,
+		                   back_title="Nochmal versuchen")
 
 	# input that does not fit into an IPC message (e.g. a very long
 	# number), the description and text are checked before sending

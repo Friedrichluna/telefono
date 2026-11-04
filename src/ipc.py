@@ -77,6 +77,12 @@ class IPC_StringTooLong (ValueError):
 		return
 
 
+# socket.timeout is only an alias of TimeoutError from python 3.10 on;
+# before that "except TimeoutError" does not catch it, and a timeout
+# escaped as an unhandled error instead of becoming an IPC_Timeout
+SocketTimeout = socket.timeout
+
+
 # received message does not have the expected layout
 class IPC_Malformed (ValueError):
 	pass
@@ -422,8 +428,10 @@ class IPC:
 			return self.__socket.recv (size,
 			                           socket.MSG_DONTWAIT)
 
-		# no queued call
-		except BlockingIOError:
+		# nothing there: a socket without a timeout says so with
+		# BlockingIOError (the server side), one with a timeout
+		# with socket.timeout (the webapp's side)
+		except (BlockingIOError, SocketTimeout):
 			return b""
 
 	# sleep for at most timeout seconds, but wake up as soon as a
@@ -451,9 +459,15 @@ class IPC_Client (IPC):
 
 	def __request (self, data, queued:bool=False) -> bytes:
 		with self.__lock:
+			# an answer that is already there and that nobody waits
+			# for any more does not belong to this request; reading
+			# it as the answer would shift every answer from here on
+			# by one (and the shift would never heal)
+			self.__drop_stale ()
+
 			try:
 				self._send (data)
-			except TimeoutError:
+			except SocketTimeout:
 				raise IPC_Timeout (False)
 
 			try:
@@ -464,9 +478,30 @@ class IPC_Client (IPC):
 
 				return self._recv (IPC_ANSWER_SIZE)
 
-			except TimeoutError:
+			except SocketTimeout:
 				self.__pending += 1
 				raise IPC_Timeout (queued)
+
+	# throws away the answers that arrived for requests that are
+	# not waited on any more, and counts the ones still missing down
+	# (the lock is held)
+	def __drop_stale (self):
+		while True:
+			answer = self._recv (IPC_ANSWER_SIZE, blocking=False)
+			if b"" == answer:
+				return
+
+			if self.__pending:
+				# the late answer of a request that timed out
+				self.__pending -= 1
+				self.log.info ("skipped a late answer,"
+				               " %d still missing",
+				               self.__pending)
+			else:
+				# nobody ever waited for this one, so a request
+				# was given up on without being counted
+				self.log.warning ("dropped an unexpected answer"
+				                  " (%d bytes)", len (answer))
 
 	def get_description (self, number:Number):
 		data = self._serialize_record_get (number)
@@ -494,7 +529,14 @@ class IPC_Client (IPC):
 	def get_list (self):
 		data = self._serialize_record_list ()
 		data = self.__request (data)
-		_, network_list = self._deserialize_answer (data)
+		answer, network_list = self._deserialize_answer (data)
+
+		# every other caller falls back to None or False on an
+		# unexpected answer; the list is rendered, so it must not
+		# hand the template something that is not a list
+		if IPC_ANSWER.LIST != answer:
+			raise IPC_Malformed ("expected the list, got %s"
+			                     % answer.name)
 
 		return network_list
 
