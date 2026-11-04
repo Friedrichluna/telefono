@@ -398,10 +398,19 @@ def main ():
 			history.add ("off_hook")
 			lifted = time.monotonic ()
 
-			off_hook_loop (network, player, off_hook, dial,
-			               ButtonLeft, ButtonMiddle, led,
-			               log)
-			log.debug ("leaving off-hook loop")
+			# one broken call must not take the whole phone
+			# down: log it, hang up and keep serving the
+			# webapp and the scheduled calls
+			try:
+				off_hook_loop (network, player, off_hook,
+				               dial, ButtonLeft,
+				               ButtonMiddle, led, log)
+				log.debug ("leaving off-hook loop")
+
+			except Exception:
+				log.exception ("off-hook loop failed")
+				history.add ("error", where="off_hook_loop")
+				player.stop_tone ()
 
 			history.add ("on_hook", seconds=round (time.monotonic ()
 			                                       - lifted, 1))

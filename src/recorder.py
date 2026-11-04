@@ -33,6 +33,9 @@ CHANNELS = 2
 RATE = 44100
 FRAME_PER_BUFFER = 512
 
+# fcntl.F_SETPIPE_SZ was added in Python 3.10, the value is stable on Linux
+F_SETPIPE_SZ = getattr (fcntl, "F_SETPIPE_SZ", 1031)
+
 class Recorder ():
 	def __init__ (self, subscriber, indicator,
 	              channels=CHANNELS, rate=RATE,
@@ -43,6 +46,25 @@ class Recorder ():
 		self.__subscriber = subscriber
 		self.indicator = indicator
 
+		self._pa = None
+		self._stream = None
+		self.fd = None
+		self.file = None
+		self.encoder = None
+
+		# a recorder that fails half way through must not leave
+		# the stream, the temporary file or the encoder behind
+		try:
+			self.__setup (channels, rate, frames_per_buffer)
+
+		except BaseException:
+			self.log.error ("setup failed, cleaning up")
+			self.__cleanup ()
+			raise
+
+		return
+
+	def __setup (self, channels, rate, frames_per_buffer):
 		self.log.debug ("setting up PyAudio")
 		self._pa = pyaudio.PyAudio ()
 
@@ -56,7 +78,7 @@ class Recorder ():
 
 		self.log.debug ("setting up file")
 		# create temporary file
-		self.fd = os.open (os.path.dirname (subscriber.filename),
+		self.fd = os.open (os.path.dirname (self.__subscriber.filename),
 		                   os.O_TMPFILE | os.O_WRONLY,
 		                   mode=0o600)
 
@@ -72,9 +94,18 @@ class Recorder ():
 		                                 stdout=subprocess.DEVNULL,
 		                                 pass_fds=(self.fd, ))
 
-		# the callback must not block while ffmpeg starts
-		fcntl.fcntl (self.encoder.stdin, fcntl.F_SETPIPE_SZ,
-		             RECORD_PIPE_SIZE)
+		# the callback must not block while ffmpeg starts; a
+		# smaller pipe only makes that less likely, so a kernel
+		# that refuses the size (pipe-max-size) is no error
+		try:
+			fcntl.fcntl (self.encoder.stdin, F_SETPIPE_SZ,
+			             RECORD_PIPE_SIZE)
+
+		except OSError as error:
+			self.log.warning ("cannot resize the encoder pipe"
+			                  " to %d bytes: %s",
+			                  RECORD_PIPE_SIZE, error)
+
 		return
 
 	def __on_data (self, in_data, frame_count, time_info, status):
@@ -112,6 +143,9 @@ class Recorder ():
 		return True
 
 	def __kill_encoder (self):
+		if None is self.encoder:
+			return
+
 		if None is self.encoder.poll ():
 			self.encoder.kill ()
 			self.encoder.wait ()
@@ -158,18 +192,39 @@ class Recorder ():
 
 		return self
 
+	# release everything that was set up, in any order of
+	# construction: this also runs on a failed setup
+	def __cleanup (self):
+		if None is not self._stream:
+			self._stream.close ()
+			self._stream = None
+
+		if None is not self._pa:
+			self._pa.terminate ()
+			self._pa = None
+
+		# not saved (aborted, too short, error): discard it all
+		self.__kill_encoder ()
+		self.encoder = None
+
+		if None is not self.file:
+			self.file.close ()
+
+		# only an open file owns the descriptor
+		elif None is not self.fd:
+			os.close (self.fd)
+
+		self.file = None
+		self.fd = None
+		return
+
 	def __exit__ (self, exception, value, traceback):
 		self.log.info ("stop recording")
 
 		self._stream.stop_stream ()
 		self.indicator.off ()
 
-		self._stream.close ()
-		self._pa.terminate ()
-
-		# not saved (aborted, too short, error): discard it all
-		self.__kill_encoder ()
-		self.file.close ()
+		self.__cleanup ()
 		return False
 
 

@@ -19,7 +19,10 @@ RELAIS_1_GPIO = SPEAKER_RELAY_PIN
 # phones are wired differently)
 class SpeakerThread (threading.Thread):
 	def __init__ (self, switch, gpio=RELAIS_1_GPIO, inverted:bool=False):
-		super ().__init__ ()
+		# a daemon thread does not keep the interpreter alive: an
+		# unexpected exception in the main loop must end the
+		# process (systemd restarts it) instead of hanging it
+		super ().__init__ (daemon=True)
 
 		self.log = logging.getLogger ("Speaker")
 
