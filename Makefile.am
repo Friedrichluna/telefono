@@ -154,7 +154,6 @@ install-data-local:
 	    echo "WARNING: making the https certificate failed, the webapp has no https"; }; \
 	fi
 
-# the hotspot's password ($(sysconfdir)/telefono-hotspot.conf) is kept
 uninstall-local:
 	rm -f "$(DESTDIR)$(https_cert)" "$(DESTDIR)$(https_key)"
 	rm -f "$(DESTDIR)/etc/NetworkManager/dnsmasq-shared.d/telefono.conf"

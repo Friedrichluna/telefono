@@ -37,8 +37,9 @@ speaker_relay = no
 # each its own name, otherwise the second one gets telefono-2.local.
 #name = telefono
 # own WLAN (access point) when no known WLAN is in range for 90 s,
-# back to the known WLAN when it is in range and nobody uses the hotspot
+# back to the known WLAN when it is in range and nobody uses the hotspot.
+# That WLAN has no password, and every device in it is sent to the webapp
+# (captive portal), so a visitor only has to join it.
 #hotspot = yes
-# name of that WLAN (default telefono-<hostname>); its password is in
-# /etc/telefono-hotspot.conf (made at the first start, root only)
-#hotspot_ssid = telefono-pi
+# name of that WLAN (default: the name above)
+#hotspot_ssid = telefono

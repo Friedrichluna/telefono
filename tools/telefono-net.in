@@ -7,11 +7,13 @@
 #                          with the IPv4 address of every interface, in
 #                          addition to <hostname>.local (avahi over D-Bus,
 #                          telefono-mdns.service)
-#   telefono-net hotspot   turns the WLAN into an access point when no
-#                          known WLAN is in range and goes back to a known
-#                          WLAN as soon as it is in range again and nobody
-#                          uses the hotspot (NetworkManager,
-#                          telefono-hotspot.service, runs as root)
+#   telefono-net hotspot   turns the WLAN into an open access point when
+#                          no known WLAN is in range and goes back to a
+#                          known WLAN as soon as it is in range again and
+#                          nobody uses the hotspot (NetworkManager,
+#                          telefono-hotspot.service, runs as root),
+#                          answers every name and every http request in
+#                          that WLAN with the webapp (captive portal)
 #                          and saves or deletes known WLANs for the
 #                          webapp (page WLAN)
 #
@@ -24,28 +26,27 @@
 
 import argparse
 import configparser
+import http.server
 import json
 import logging
 import os
 import re
-import secrets
 import signal
 import socket
 import stat
 import subprocess
 import sys
+import threading
 import time
 
 
 CONFIG_FILE = "@sysconfdir@/telefono.conf"
-# the password of the hotspot, generated at the first start (root only)
-PASSWORD_FILE = "@sysconfdir@/telefono-hotspot.conf"
 
 MDNS_STATE_FILE = "/run/telefono-mdns/state.json"
 HOTSPOT_STATE_FILE = "/run/telefono-hotspot/state.json"
 
-# names of the phone for the devices in the hotspot that ask DNS instead
-# of mDNS (read by the dnsmasq NetworkManager starts for the hotspot)
+# the names of the phone and the captive portal for the devices in the
+# hotspot (read by the dnsmasq NetworkManager starts for the hotspot)
 DNSMASQ_FILE = "/etc/NetworkManager/dnsmasq-shared.d/telefono.conf"
 
 DEFAULT_NAME = "telefono"
@@ -68,7 +69,17 @@ HOTSPOT_RETRY_MAX = 1800
 HOTSPOT_CONNECTION = "telefono-hotspot"
 HOTSPOT_ADDRESS = "10.42.0.1"
 HOTSPOT_PREFIX = 24
-PASSWORD_ALPHABET = "abcdefghijkmnpqrstuvwxyz23456789"
+
+# the captive portal of the hotspot: port 80 answers every request with
+# a redirect to the webapp, so the device that joins the WLAN opens it
+# by itself ("sign in to the network"). WEBAPP_PORT is FLASK_PORT of
+# src/CONSTANTS.py.in, PORTAL_URL what the devices are sent to.
+WEBAPP_PORT = 5000
+PORTAL_PORT = 80
+PORTAL_URL = "http://%s:%d/" % (HOTSPOT_ADDRESS, WEBAPP_PORT)
+# the modes (state file) in which the phone is its own access point and
+# the portal runs
+PORTAL_MODES = ("hotspot", "hotspot starting")
 
 # after the hotspot is stopped: NetworkManager gets up to SWITCH_WAIT s
 # to connect a known WLAN by itself (checked every SWITCH_POLL s), less if
@@ -122,11 +133,12 @@ NAME_PATTERN = re.compile (r"^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$")
 
 
 # the [network] section: {"name": mDNS name without .local,
-# "hotspot": bool, "ssid": SSID of the hotspot}; missing or invalid
-# entries are the defaults, a broken file never stops anything
+# "hotspot": bool, "ssid": SSID of the hotspot, the name by default};
+# missing or invalid entries are the defaults, a broken file never stops
+# anything
 def read_config (path:str=CONFIG_FILE) -> dict:
-	result = {"name": DEFAULT_NAME, "hotspot": True,
-	          "ssid": "telefono-" + short_hostname ()}
+	# the early returns below keep the default of both
+	result = {"name": DEFAULT_NAME, "hotspot": True, "ssid": DEFAULT_NAME}
 
 	config = configparser.ConfigParser ()
 	try:
@@ -156,13 +168,17 @@ def read_config (path:str=CONFIG_FILE) -> dict:
 		warn_once ("%s: hotspot = %s is neither yes nor no, using yes",
 		           path, section.get ("hotspot"))
 
+	# the WLAN carries the name of the phone, so its WLAN and the
+	# address of its webapp are the same word
+	result["ssid"] = result["name"]
+
 	ssid = section.get ("hotspot_ssid", "").strip ()
 	if ssid:
 		if len (ssid.encode ()) <= 32:
 			result["ssid"] = ssid
 		else:
 			warn_once ("%s: hotspot_ssid is longer than 32 bytes, using %s",
-			           path, result["ssid"])
+			           path, result["name"])
 
 	return result
 
@@ -602,12 +618,13 @@ class NetworkManager ():
 			log.info ("connecting %s failed: %s", uuid, err.strip ())
 		return not code
 
-	# the hotspot connection: (ssid, password, interface) or None
+	# the hotspot connection: (ssid, key management, interface) or None
+	# (the key management of the open hotspot is "", see make_hotspot)
 	def hotspot_settings (self):
 		return self.settings ("id " + HOTSPOT_CONNECTION,
 		                      ("802-11-wireless.ssid",
-		                       "802-11-wireless-security.psk",
-		                       "connection.interface-name"), show_secrets=True)
+		                       "802-11-wireless-security.key-mgmt",
+		                       "connection.interface-name"))
 
 	def delete_hotspot (self):
 		code, _, _ = self.nm ("connection", "delete", "id", HOTSPOT_CONNECTION)
@@ -616,9 +633,14 @@ class NetworkManager ():
 	# the hotspot is an in-memory connection (nothing written to
 	# /etc/NetworkManager or /etc/netplan), made again after every start
 	# of NetworkManager; without autoconnect, so NetworkManager itself
-	# never starts it, only this script
-	def make_hotspot (self, device:str, ssid:str, password:str) -> bool:
-		if self.hotspot_settings () == (ssid, password, device):
+	# never starts it, only this script.
+	# It has no password: whoever stands next to the phone shall reach
+	# its webapp without being told a key first (and the webapp is not
+	# protected either). Everything in that WLAN is therefore readable
+	# by everyone in range, so no key management at all (an open AP),
+	# not WPA with a known password.
+	def make_hotspot (self, device:str, ssid:str) -> bool:
+		if self.hotspot_settings () == (ssid, "", device):
 			return True
 
 		self.delete_hotspot ()
@@ -631,12 +653,7 @@ class NetworkManager ():
 		        "802-11-wireless.band", "bg",
 		        "ipv4.method", "shared",
 		        "ipv4.addresses", "%s/%d" % (HOTSPOT_ADDRESS, HOTSPOT_PREFIX),
-		        "ipv6.method", "disabled",
-		        "wifi-sec.key-mgmt", "wpa-psk",
-		        "wifi-sec.proto", "rsn",
-		        "wifi-sec.pairwise", "ccmp",
-		        "wifi-sec.group", "ccmp",
-		        "wifi-sec.psk", password)
+		        "ipv6.method", "disabled")
 		if code:
 			log.error ("making the hotspot connection failed: %s", err.strip ())
 		return not code
@@ -658,62 +675,25 @@ class NetworkManager ():
 		return
 
 
+# a WPA passphrase (the WLANs of the page WLAN; the hotspot of the phone
+# itself has none)
 def valid_password (password:str) -> bool:
 	return 8 <= len (password) <= 63 \
 	       and all (32 <= ord (c) < 127 for c in password)
 
 
-# the password of the hotspot from PASSWORD_FILE, made and saved
-# (root only) if there is none
-def hotspot_password (path:str=PASSWORD_FILE) -> str:
-	try:
-		with open (path, encoding="utf-8") as f:
-			for line in f:
-				key, separator, value = line.partition ("=")
-				if separator and "password" == key.strip ():
-					value = value.strip ()
-					if valid_password (value):
-						return value
-					warn_once ("%s: the password must have 8 to 63 characters"
-					           " (ASCII), making a new one", path)
-	except FileNotFoundError:
-		pass
-	except (OSError, UnicodeDecodeError) as error:
-		warn_once ("reading %s failed (%s), making a new password",
-		           path, error)
-
-	password = "-".join ("".join (secrets.choice (PASSWORD_ALPHABET)
-	                              for _ in range (4))
-	                     for _ in range (3))
-
-	temp = path + ".tmp"
-	try:
-		if os.path.exists (temp):
-			os.unlink (temp)
-		fd = os.open (temp, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
-		with os.fdopen (fd, "w", encoding="utf-8") as f:
-			f.write ("# Password of the WLAN hotspot of telefono (WPA2, 8 to 63"
-			         " characters),\n# made at the first start, only readable"
-			         " by root. After a change:\n# sudo systemctl restart"
-			         " telefono-hotspot\npassword = %s\n" % password)
-			f.flush ()
-			os.fsync (f.fileno ())
-		os.replace (temp, path)
-		log.info ("made a new hotspot password, see %s", path)
-	except OSError as error:
-		# the hotspot works with it until the next start
-		log.error ("saving the hotspot password in %s failed: %s",
-		           path, error)
-
-	return password
-
-
-# the names of the phone for DNS in the hotspot (some phones do not ask
-# mDNS for .local names)
+# what the dnsmasq of the hotspot tells the devices in it: the names of
+# the phone (some phones do not ask mDNS for .local names), every other
+# name as well (address=/#/, so a browser reaches the webapp whatever it
+# asks for and the captive portal is found, see Portal) and the address
+# of the portal in the DHCP lease (option 114, RFC 8910: newer phones
+# open it without any detection)
 def write_dnsmasq (name:str, path:str=DNSMASQ_FILE):
-	text = ("# written by telefono-hotspot: names of this phone for the"
-	        " devices in its hotspot\naddress=/%s.local/%s\naddress=/%s/%s\n"
-	        % (name, HOTSPOT_ADDRESS, name, HOTSPOT_ADDRESS))
+	text = ("# written by telefono-hotspot: this phone for the devices in"
+	        " its hotspot\naddress=/%s.local/%s\naddress=/%s/%s\n"
+	        "address=/#/%s\ndhcp-option=114,%s\n"
+	        % (name, HOTSPOT_ADDRESS, name, HOTSPOT_ADDRESS,
+	           HOTSPOT_ADDRESS, PORTAL_URL))
 	try:
 		with open (path, encoding="utf-8") as f:
 			if f.read () == text:
@@ -731,6 +711,110 @@ def write_dnsmasq (name:str, path:str=DNSMASQ_FILE):
 	except OSError as error:
 		warn_once ("writing %s failed: %s", path, error)
 	return
+
+
+# The captive portal of the hotspot: port 80 of the phone, answering
+# every request with a redirect to the webapp. The devices in an open
+# WLAN check whether they have internet by fetching a well known http
+# page (connectivitycheck.gstatic.com, captive.apple.com,
+# msftconnecttest.com, ...); dnsmasq points every name at the phone
+# (write_dnsmasq), so those checks land here, the redirect tells the
+# device that it is behind a portal and it opens the webapp by itself.
+# Only in the hotspot: in a known WLAN port 80 belongs to whatever else
+# runs there, so the server is started with the hotspot and stopped with
+# it.
+class Portal ():
+	def __init__ (self, url:str=PORTAL_URL, port:int=PORTAL_PORT):
+		self.url = url
+		self.port = port
+		self.server = None
+		self.thread = None
+		self.failed = False
+		return
+
+	def __handler (self):
+		url = self.url
+
+		class Handler (http.server.BaseHTTPRequestHandler):
+			protocol_version = "HTTP/1.1"
+
+			def do_GET (self):
+				body = ("<!DOCTYPE html><html><head><meta charset=\"utf-8\">"
+				        "<title>telefono</title><meta http-equiv=\"refresh\""
+				        " content=\"0; url=%s\"></head><body>"
+				        "<a href=\"%s\">%s</a></body></html>\n"
+				        % (url, url, url)).encode ()
+
+				# 302 and the address: that is what makes a device show
+				# "sign in to the network" and open the page; the body is
+				# for the browsers that show it instead of following
+				self.send_response (302)
+				self.send_header ("Location", url)
+				self.send_header ("Content-Type", "text/html; charset=utf-8")
+				self.send_header ("Content-Length", str (len (body)))
+				self.send_header ("Cache-Control", "no-store")
+				self.end_headers ()
+				self.wfile.write (body)
+				return
+
+			def do_HEAD (self):
+				self.send_response (302)
+				self.send_header ("Location", url)
+				self.send_header ("Content-Length", "0")
+				self.send_header ("Cache-Control", "no-store")
+				self.end_headers ()
+				return
+
+			def do_POST (self):
+				self.do_GET ()
+				return
+
+			# the detection requests of every device would fill the
+			# journal
+			def log_message (self, format, *args):
+				log.debug ("portal: " + format, *args)
+				return
+
+		return Handler
+
+	# nothing happens if it already runs; a port 80 that is taken is
+	# logged once (the hotspot works without the portal, the webapp is
+	# still reachable at its address)
+	def start (self):
+		if self.server is not None or self.failed:
+			return False
+
+		try:
+			self.server = http.server.ThreadingHTTPServer (("", self.port),
+			                                               self.__handler ())
+		except OSError as error:
+			self.failed = True
+			log.error ("no captive portal on port %d: %s", self.port, error)
+			return False
+
+		self.server.daemon_threads = True
+		self.thread = threading.Thread (target=self.server.serve_forever,
+		                                kwargs={"poll_interval": 0.5},
+		                                name="portal", daemon=True)
+		self.thread.start ()
+		log.info ("captive portal on port %d points to %s", self.port,
+		          self.url)
+		return True
+
+	def stop (self):
+		# port 80 may be free again at the next hotspot
+		self.failed = False
+
+		if self.server is None:
+			return
+
+		self.server.shutdown ()
+		self.server.server_close ()
+		self.thread.join (timeout=5)
+		self.server = None
+		self.thread = None
+		log.info ("captive portal stopped")
+		return
 
 
 def valid_wlan_password (password:str) -> bool:
@@ -795,8 +879,8 @@ def take_request (path:str=REQUEST_FILE):
 class Hotspot ():
 	def __init__ (self, nm:NetworkManager=None, delay:float=HOTSPOT_DELAY,
 	              check:float=HOTSPOT_CHECK, hide=(), clock=time.monotonic,
-	              config=read_config, password=hotspot_password,
-	              dnsmasq=write_dnsmasq, state_file:str=HOTSPOT_STATE_FILE,
+	              config=read_config, dnsmasq=write_dnsmasq,
+	              portal:Portal=None, state_file:str=HOTSPOT_STATE_FILE,
 	              sleep=time.sleep, request=take_request):
 		self.nm = nm or NetworkManager ()
 		self.delay = delay
@@ -806,8 +890,9 @@ class Hotspot ():
 		self.clock = clock
 		self.sleep = sleep
 		self.config = config
-		self.password = password
 		self.dnsmasq = dnsmasq
+		# the captive portal, running only while the hotspot is up
+		self.portal = portal if portal is not None else Portal ()
 		self.state = StateFile (state_file)
 		self.started = time.time () - clock ()
 		self.last_good = clock ()
@@ -831,6 +916,11 @@ class Hotspot ():
 		return self.started + moment
 
 	def set_mode (self, mode:str, **details):
+		if mode in PORTAL_MODES:
+			self.portal.start ()
+		else:
+			self.portal.stop ()
+
 		if mode != self.mode:
 			log.info ("%s%s", mode, "".join (" %s=%s" % item for item
 			                                  in sorted (details.items ())
@@ -880,9 +970,8 @@ class Hotspot ():
 		return False
 
 	def start_hotspot (self, device:str, config:dict, now:float):
-		password = self.password ()
 		self.dnsmasq (config["name"])
-		if self.nm.make_hotspot (device, config["ssid"], password) \
+		if self.nm.make_hotspot (device, config["ssid"]) \
 		and self.nm.hotspot_up (device):
 			self.failures = 0
 			self.next_check = now + self.check

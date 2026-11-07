@@ -227,7 +227,7 @@ def clock_text (timestamp) -> str:
 def network_names (config_file:str=CONFIG_FILE) -> dict:
 	hostname = socket.gethostname ().split (".")[0]
 	names = {"name": NET_DEFAULT_NAME, "hostname": hostname,
-	         "ssid": "telefono-" + hostname, "address": NET_HOTSPOT_ADDRESS,
+	         "ssid": NET_DEFAULT_NAME, "address": NET_HOTSPOT_ADDRESS,
 	         "port": FLASK_PORT}
 
 	config = configparser.ConfigParser ()
@@ -236,8 +236,9 @@ def network_names (config_file:str=CONFIG_FILE) -> dict:
 		section = config["network"] if config.has_section ("network") else {}
 		names["name"] = section.get ("name", "").strip ().lower () \
 		                .removesuffix (".local") or names["name"]
+		# the hotspot carries the name of the phone (tools/telefono-net.in)
 		names["ssid"] = section.get ("hotspot_ssid", "").strip () \
-		                or names["ssid"]
+		                or names["name"]
 	except (configparser.Error, UnicodeDecodeError):
 		pass
 
@@ -309,14 +310,14 @@ def hotspot_text (state) -> str:
 	ssid = quoted (text_of (state, "ssid") or "?")
 
 	if "hotspot" == mode:
-		return "an: WLAN %s, http://%s:%d, %s (sucht alle paar Minuten das" \
-		       " bekannte WLAN, wenn kein Gerät verbunden ist)" \
+		return "an: WLAN %s ohne Passwort, http://%s:%d, %s (sucht alle paar" \
+		       " Minuten das bekannte WLAN, wenn kein Gerät verbunden ist)" \
 		       % (ssid, text_of (state, "address") or NET_HOTSPOT_ADDRESS,
 		          FLASK_PORT, devices_text (state.get ("clients")))
 
 	if "client" == mode:
 		return "aus, im bekannten WLAN; ohne bekanntes WLAN geht nach" \
-		       " 1,5 min das WLAN %s an" % ssid
+		       " 1,5 min das WLAN %s (ohne Passwort) an" % ssid
 
 	if "waiting" == mode or "connecting" == mode:
 		return "kein bekanntes WLAN, WLAN %s geht um %s an" \
