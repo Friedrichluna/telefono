@@ -228,12 +228,17 @@ class Recorder ():
 		return False
 
 
-	def record (self, end, abort):
+	# service: called on every tick, it answers the requests of the
+	# webapp that only read (see IPC_Server); the samples come in in
+	# PyAudio's own thread, so this loop may take a moment
+	def record (self, end, abort, service=None):
 		timer = 0
 
 		with self:
 			while timer <= RECORD_TIME_MAX and not end ():
 				# tick
+				if service is not None:
+					service ()
 				time.sleep (RECORD_DELAY)
 				timer += 1
 

@@ -118,6 +118,12 @@ class Player ():
 		# process: the only thing that ends a shout early
 		self.stopping = self.__never
 
+		# called in every waiting loop below (the main loop only gets
+		# to it again after the hangup), set by the main process: it
+		# answers the requests of the webapp that only read, so its
+		# list does not wait for the phone, see IPC_Server
+		self.service = self.__nothing
+
 		return
 
 	def __on_hook (self):
@@ -132,6 +138,9 @@ class Player ():
 
 	def __never (self):
 		return False
+
+	def __nothing (self):
+		return
 
 	def __back (self):
 		return self.__wind_back.is_released
@@ -244,6 +253,7 @@ class Player ():
 		stalls = 0
 
 		while process.poll () is None:
+			self.service ()
 			time.sleep (FFPLAY_POLL_DELAY)
 
 			if abort ():
@@ -434,6 +444,7 @@ class Player ():
 		self.start_tone (command)
 
 		while self.__process.poll () is None:
+			self.service ()
 			time.sleep (TONE_DELAY)
 
 		self.stop_tone ()
@@ -458,6 +469,7 @@ class Player ():
 				self.stop_tone ()
 				return False
 
+			self.service ()
 			time.sleep (BUSY_DELAY)
 			timer += 1
 
@@ -472,6 +484,7 @@ class Player ():
 		self.start_release_tone ()
 
 		while self.__off_hook ():
+			self.service ()
 			time.sleep (RELEASE_DELAY)
 
 		self.stop_tone ()
@@ -496,6 +509,7 @@ class Player ():
 				self.stop_tone (aloud)
 				return False
 
+			self.service ()
 			time.sleep (NO_NUMBER_DELAY)
 			timer += 1
 
@@ -572,6 +586,7 @@ class Player ():
 				self.stop_tone ()
 				return False
 
+			self.service ()
 			time.sleep (SAY_DELAY)
 
 		self.stop_tone ()

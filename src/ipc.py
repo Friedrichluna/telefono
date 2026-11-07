@@ -612,6 +612,13 @@ class IPC_Client (IPC):
 		return "Ein Fehler ist aufgetreten.", "error"
 
 
+# the requests that only read, so they can be answered while the phone
+# is busy (see IPC_Server.handle_message): they touch neither the
+# loudspeaker nor the handset and they are over in milliseconds
+IPC_READ_ONLY = (IPC_MESSAGE.GET_DESCRIPTION, IPC_MESSAGE.LIST,
+                 IPC_MESSAGE.FREE, IPC_MESSAGE.NEXT_FREE)
+
+
 class IPC_Server (IPC):
 	def __init__ (self):
 
@@ -624,18 +631,54 @@ class IPC_Server (IPC):
 		# needs to store the whole socket object,
 		# as otherwise it is GC'ed
 		self.__client = client
+
+		# requests taken from the socket while the phone was busy
+		# that have to wait for the main loop (see handle_message)
+		self.__deferred = list ()
 		return
 
 	def get_client_fd (self):
 		return self.__client.fileno ()
 
+	# whether a request may be answered while the phone is busy
+	def __is_read_only (self, data:bytes) -> bool:
+		if not data:
+			return False
+
+		try:
+			return IPC_MESSAGE (data[0]) in IPC_READ_ONLY
+		except ValueError:
+			return False
+
 	# outputs: {IPC_OUTPUT: function} for TEST_OUTPUT, called after
 	# the answer was sent (it may take a while)
-	def handle_message (self, queue, network, outputs:dict=None):
+	# busy: called from the off-hook loop or while something plays, not
+	#       from the main loop: only the reading requests are answered
+	#       (the list of the webapp would otherwise wait for the hangup
+	#       and time out), everything else is kept for the main loop.
+	#       From the first kept request on, the reading ones wait too:
+	#       the webapp expects the answers in the order of its requests.
+	def handle_message (self, queue, network, outputs:dict=None,
+	                    busy:bool=False):
+
+		if not busy:
+			# the requests of the off-hook loop, oldest first
+			while self.__deferred:
+				self.__handle (self.__deferred.pop (0), queue,
+				               network, outputs)
 
 		data = self._recv (IPC_MAX_DATA, blocking=False)
 		if b"" == data:
 			return
+
+		if busy and (self.__deferred or not self.__is_read_only (data)):
+			self.__deferred.append (data)
+			return
+
+		self.__handle (data, queue, network, outputs)
+		return
+
+	def __handle (self, data:bytes, queue, network, outputs:dict=None):
 
 		try:
 			message_type, payload = self._deserialize (data)

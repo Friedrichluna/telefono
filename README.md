@@ -108,6 +108,11 @@ Neues WLAN am anderen Ort einrichten: mit dem Hotspot verbinden, `http://10.42.0
 
 Abschalten: `hotspot = no` in `[network]` (beendet einen laufenden Hotspot innerhalb von 15 s) oder `sudo systemctl disable --now telefono-hotspot` (bzw. `telefono-mdns`). Der Status der Webapp zeigt beides an („Name im Netzwerk“, „WLAN-Hotspot“), das Journal die Wechsel: `journalctl -u telefono-hotspot -u telefono-mdns`. `sudo make install` installiert und aktiviert beide Dienste (danach einmal `sudo systemctl start telefono-mdns telefono-hotspot` oder neu starten).
 
+## Webapp, während das Telefon benutzt wird
+Die Webapp fragt alles beim Hauptprozess nach (ein Socketpaar, `src/ipc.py`), und der kommt nur zwischen zwei Anrufen dazu zu antworten. Ein abgehobener Hörer (Freizeichen, Besetztton, eine laufende Aufnahme oder Ansage) hat deshalb früher jede Seite in den IPC-Timeout laufen lassen – besonders die Liste, also die Startseite, obwohl sie nur liest.
+
+Die Warteschleifen des Telefons (`src/player.py`, die Schleife bei abgehobenem Hörer, die Aufnahme) holen jetzt selbst die Anfragen ab, die nur lesen: die Liste, die Beschreibung einer Nummer und die nächste freie Nummer (`IPC_READ_ONLY`). Alles, was etwas ändert oder einen Ton abspielt (Anruf, Text, Beschreibung ändern, Hochladen, Hardware-Test), bleibt liegen, bis das Telefon frei ist, und wird dann wie bisher ausgeführt; von der ersten liegengebliebenen Anfrage an warten auch die lesenden, weil die Webapp die Antworten in der Reihenfolge ihrer Anfragen erwartet. Lesende Anfragen spielen nichts und dauern Millisekunden, der Ton auf dem Telefon bleibt davon unberührt.
+
 ## Läuft es?
 
 ```

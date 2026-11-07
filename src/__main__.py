@@ -147,7 +147,7 @@ def do_recording (off_hook, ButtonLeft, ButtonMiddle, network, player, led):
 
 	recorder = Recorder (subscriber, led)
 	started = time.monotonic ()
-	result = recorder.record (end, abort)
+	result = recorder.record (end, abort, player.service)
 
 	history.add ("recording", number=subscriber.number,
 	             result=result.name.lower (),
@@ -178,6 +178,7 @@ def do_menu (off_hook, dial, network, player, led, log):
 			player.stop_tone ()
 			return
 
+		player.service ()
 		time.sleep (MENU_DELAY)
 
 	player.stop_tone ()
@@ -246,6 +247,7 @@ def off_hook_loop (network, player, off_hook, dial, ButtonLeft, ButtonMiddle, le
 			return do_menu (off_hook, dial, network, player,
 			                led, log)
 
+		player.service ()
 		time.sleep (OFF_HOOK_DELAY)
 
 	player.stop_tone ()
@@ -388,6 +390,14 @@ def main ():
 		                                VOLUME_TEST_SPEAKER_TEXT, aloud=True),
 		IPC_OUTPUT.RING_SOUND: player.play_ring_test,
 	}
+
+	# while the phone is busy (off the hook, a tone, a recording) the
+	# main loop does not come back to the webapp: the waiting loops of
+	# the player answer the requests that only read (the list, a
+	# description, a free number) themselves, everything else waits for
+	# the main loop as before
+	player.service = lambda: ipc.handle_message (queue, network,
+	                                             test_outputs, busy=True)
 
 	log.info ("startup finished")
 	history.add ("start", version=VCS_VERSION)
