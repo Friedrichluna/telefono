@@ -424,15 +424,23 @@ class IPC:
 		if blocking:
 			return self.__socket.recv (size)
 
+		# MSG_DONTWAIT is not enough: on a socket with a timeout
+		# (the webapp's side) python waits for it to become
+		# readable before it reads at all, so recv waits the whole
+		# timeout for a message that is not there. The timeout has
+		# to be 0 for this read instead.
+		timeout = self.__socket.gettimeout ()
 		try:
-			return self.__socket.recv (size,
-			                           socket.MSG_DONTWAIT)
+			self.__socket.settimeout (0)
+			return self.__socket.recv (size)
 
-		# nothing there: a socket without a timeout says so with
-		# BlockingIOError (the server side), one with a timeout
-		# with socket.timeout (the webapp's side)
+		# nothing there (BlockingIOError; a timeout of 0 never
+		# raises socket.timeout, but it costs nothing to say so)
 		except (BlockingIOError, SocketTimeout):
 			return b""
+
+		finally:
+			self.__socket.settimeout (timeout)
 
 	# sleep for at most timeout seconds, but wake up as soon as a
 	# message arrives (the main loop answers the webapp at once)
